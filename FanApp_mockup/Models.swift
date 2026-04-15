@@ -41,37 +41,84 @@ struct CalendarDay: Identifiable {
     let matches: [Match]
 }
 
-// MARK: - Home Header Match (carousel)
+// MARK: - Club Team Types
+/// Identifies one of the three Real Madrid teams the user can follow.
+enum ClubTeamType: String, CaseIterable, Hashable {
+    case mensFootball    = "Fútbol Masculino"
+    case womensFootball  = "Fútbol Femenino"
+    case mensBasketball  = "Baloncesto Masculino"
+
+    var shortName: String {
+        switch self {
+        case .mensFootball:   return "1er Equipo"
+        case .womensFootball: return "Equipo Femenino"
+        case .mensBasketball: return "Baloncesto"
+        }
+    }
+
+    /// Accent color for badges and UI elements tied to this team.
+    var badgeColor: Color {
+        switch self {
+        case .mensFootball:   return Color(red: 0.29, green: 0.24, blue: 0.91)
+        case .womensFootball: return Color(red: 0.78, green: 0.18, blue: 0.52)
+        case .mensBasketball: return Color(red: 0.88, green: 0.52, blue: 0.08)
+        }
+    }
+
+    /// Gradient pair used as the card background for this team.
+    var cardGradient: [Color] {
+        switch self {
+        case .mensFootball:
+            return [Color(red: 0.11, green: 0.12, blue: 0.28),
+                    Color(red: 0.20, green: 0.17, blue: 0.44)]
+        case .womensFootball:
+            return [Color(red: 0.16, green: 0.08, blue: 0.28),
+                    Color(red: 0.28, green: 0.10, blue: 0.38)]
+        case .mensBasketball:
+            return [Color(red: 0.18, green: 0.10, blue: 0.06),
+                    Color(red: 0.32, green: 0.18, blue: 0.06)]
+        }
+    }
+}
+
+/// Groups the next and last match data for a single followed team.
+struct TeamMatchData {
+    let teamType: ClubTeamType
+    let nextMatch: MatchHeaderData?   // upcoming – nil if none scheduled
+    let lastMatch: MatchHeaderData?   // most recent result – nil if no history
+}
+
+// MARK: - Home Header Match
 enum MatchStatus {
-    case upcoming   // not played yet
-    case live       // in progress
-    case finished   // ended
+    case upcoming
+    case live
+    case finished
 }
 
 struct MatchHeaderData: Identifiable {
     let id = UUID()
-    let competition: String         // "LA LIGA" / "CHAMPIONS LEAGUE"
-    let dateString: String          // "Vie 10 abr · 21:00"
+    let competition: String
+    let dateString: String
     let homeTeam: String
     let homeTeamColor: Color
     let homeTeamSymbol: String
-    let homeScore: Int?             // nil = upcoming
-    let homeScorers: String         // "F. Valverde 51'"
+    let homeScore: Int?
+    let homeScorers: String
     let awayTeam: String
     let awayTeamColor: Color
     let awayTeamSymbol: String
     let awayScore: Int?
     let awayScorers: String
-    let matchInfo: String           // "Fútbol · Primer Equipo\nJornada 31 · Bernabéu"
+    /// Two-line info string separated by "\n": sport/category + round · venue.
+    let matchInfo: String
     let status: MatchStatus
-    // Stats (for Estadísticas tab)
     let stats: [MatchStat]
 }
 
 struct MatchStat: Identifiable {
     let id = UUID()
     let label: String
-    let home: Double    // absolute value (e.g. 35.7 for %)
+    let home: Double
     let away: Double
     let isPercent: Bool
 }
@@ -100,14 +147,35 @@ struct StorePromo: Identifiable {
     let ctaText: String
 }
 
-// MARK: - Video
-struct VideoItem: Identifiable {
+// MARK: - Highlights
+/// Category of a highlight clip, used for filtering in HighlightsView.
+enum HighlightCategory: String, CaseIterable, Identifiable {
+    case all            = "Todos"
+    case match          = "Partidos"
+    case training       = "Entrenamiento"
+    case interview      = "Entrevistas"
+    case pressConference = "Rueda de prensa"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .all:             return "square.grid.2x2.fill"
+        case .match:           return "figure.run"
+        case .training:        return "sportscourt"
+        case .interview:       return "person.fill"
+        case .pressConference: return "mic.fill"
+        }
+    }
+}
+
+struct HighlightItem: Identifiable {
     let id = UUID()
+    let category: HighlightCategory
     let title: String
-    let duration: String            // "4:32"
-    let category: String            // "RESUMEN" / "ENTREVISTA" / "HIGHLIGHTS"
-    let thumbnailColors: [Color]    // gradient stops
-    let icon: String                // SF Symbol for watermark
+    let duration: String          // e.g. "4:32"
+    let thumbnailColors: [Color]  // gradient stops for the thumbnail
+    let teamType: ClubTeamType?   // nil = cross-team or generic content
 }
 
 // MARK: - Survey / Trivia

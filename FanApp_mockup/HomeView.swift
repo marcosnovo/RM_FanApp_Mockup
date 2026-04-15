@@ -11,16 +11,19 @@ struct HomeView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
-                        // 1. Próximo partido
-                        NextMatchSection()
+                        // 1. Próximos partidos (hasta 3 equipos)
+                        NextMatchesSection(teams: MockDataProvider.followedTeams)
 
-                        // 2. Noticias recientes
+                        // 2. Último resultado por equipo
+                        LastResultsSection(teams: MockDataProvider.followedTeams)
+
+                        // 3. Noticias recientes
                         HomeNewsSectionView()
 
-                        // 3. Vídeos y highlights
-                        HomeVideosSectionView()
+                        // 4. Highlights (carrusel + ver todos)
+                        HomeHighlightsSectionView()
 
-                        // 4. Trivia del día
+                        // 5. Trivia del día
                         HomeSurveySectionView()
 
                         Color.clear.frame(height: 8)
@@ -42,12 +45,9 @@ struct HoyNavBar: View {
     var body: some View {
         ZStack {
             Color(red: 0.11, green: 0.12, blue: 0.22).ignoresSafeArea(edges: .top)
-
             VStack(spacing: 0) {
                 Color.clear.frame(height: 52)
-
                 HStack(alignment: .center, spacing: 0) {
-                    // Left: person icon + label
                     Button { showSideMenu = true } label: {
                         VStack(spacing: 2) {
                             Image(systemName: "person.circle")
@@ -61,16 +61,12 @@ struct HoyNavBar: View {
                     .frame(width: 52)
 
                     Spacer()
-
-                    // Center: HOY title
                     Text("HOY")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
                         .tracking(3)
-
                     Spacer()
 
-                    // Right: radio icon + label
                     Button {} label: {
                         VStack(spacing: 2) {
                             Image(systemName: "antenna.radiowaves.left.and.right")
@@ -91,7 +87,7 @@ struct HoyNavBar: View {
     }
 }
 
-// MARK: - Shared Section Header
+// MARK: - Shared: Section Header
 struct HomeSectionHeader: View {
     let title: String
     var showAll: Bool = true
@@ -103,8 +99,8 @@ struct HomeSectionHeader: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(Color(UIColor.label))
             Spacer()
-            if showAll {
-                Button { onShowAll?() } label: {
+            if showAll, let action = onShowAll {
+                Button(action: action) {
                     HStack(spacing: 3) {
                         Text("Ver todos")
                             .font(.system(size: 13, weight: .medium))
@@ -119,7 +115,24 @@ struct HomeSectionHeader: View {
     }
 }
 
-// MARK: - Shared Crest View
+// MARK: - Shared: Team Type Badge
+/// Small pill label that identifies one of the three RM teams.
+struct TeamTypeBadge: View {
+    let teamType: ClubTeamType
+
+    var body: some View {
+        Text(teamType.shortName)
+            .font(.system(size: 9, weight: .bold))
+            .foregroundColor(teamType.badgeColor)
+            .tracking(0.5)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(teamType.badgeColor.opacity(0.14))
+            .cornerRadius(20)
+    }
+}
+
+// MARK: - Shared: Match Crest View
 struct MatchCrestView: View {
     let color: Color
     let symbol: String
@@ -137,144 +150,310 @@ struct MatchCrestView: View {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MARK: - 1. NEXT MATCH SECTION
+// MARK: - 1. PRÓXIMOS PARTIDOS
 // ─────────────────────────────────────────────────────────────────────────────
-struct NextMatchSection: View {
-    private let match = MockHeaderMatches.all.first(where: { $0.status == .upcoming })
-                     ?? MockHeaderMatches.all[0]
+
+/// Shows one upcoming match card per followed team (up to 3).
+/// Teams without a scheduled match are silently omitted.
+struct NextMatchesSection: View {
+    let teams: [TeamMatchData]
+
+    private var teamsWithNext: [TeamMatchData] {
+        teams.filter { $0.nextMatch != nil }
+    }
 
     var body: some View {
         VStack(spacing: 12) {
-            HomeSectionHeader(title: "Próximo partido", showAll: false)
+            HomeSectionHeader(title: "Próximos partidos", showAll: false)
 
-            NavigationLink(destination: MatchCentreView(match: match)) {
-                NextMatchCardView(match: match)
-                    .padding(.horizontal, 16)
+            VStack(spacing: 10) {
+                ForEach(teamsWithNext, id: \.teamType) { data in
+                    NavigationLink(destination: MatchCentreView(match: data.nextMatch!)) {
+                        TeamNextMatchCard(match: data.nextMatch!, teamType: data.teamType)
+                            .padding(.horizontal, 16)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .buttonStyle(.plain)
         }
     }
 }
 
-// MARK: - NextMatchCardView
-struct NextMatchCardView: View {
+// MARK: - TeamNextMatchCard
+struct TeamNextMatchCard: View {
     let match: MatchHeaderData
+    let teamType: ClubTeamType
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: 16)
                 .fill(LinearGradient(
-                    colors: [
-                        Color(red: 0.11, green: 0.12, blue: 0.28),
-                        Color(red: 0.20, green: 0.17, blue: 0.44)
-                    ],
+                    colors: teamType.cardGradient,
                     startPoint: .topLeading, endPoint: .bottomTrailing
                 ))
 
             VStack(spacing: 0) {
-                // Competition + CTA hint
+                // Top row: team badge + competition + arrow hint
                 HStack {
+                    TeamTypeBadge(teamType: teamType)
                     Text(match.competition)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.60))
-                        .tracking(1.2)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.white.opacity(0.50))
+                        .lineLimit(1)
                     Spacer()
-                    HStack(spacing: 3) {
-                        Text("Centro del partido")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white.opacity(0.45))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white.opacity(0.45))
-                    }
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white.opacity(0.35))
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 16)
-                .padding(.bottom, 16)
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 12)
 
                 // Teams row
                 HStack(alignment: .center) {
                     // Home team
-                    VStack(spacing: 6) {
+                    VStack(spacing: 5) {
                         MatchCrestView(color: match.homeTeamColor,
-                                       symbol: match.homeTeamSymbol, size: 50)
+                                       symbol: match.homeTeamSymbol, size: 44)
                         Text(match.homeTeam)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.white.opacity(0.85))
                             .multilineTextAlignment(.center)
                             .lineLimit(2)
-                            .frame(maxWidth: 100)
+                            .frame(maxWidth: 90)
                     }
 
                     Spacer()
 
-                    // Center: score or VS + date
-                    Group {
-                        if match.status == .upcoming {
-                            VStack(spacing: 6) {
-                                Text("VS")
-                                    .font(.system(size: 18, weight: .black))
-                                    .foregroundColor(.white.opacity(0.30))
-                                Text(match.dateString)
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .multilineTextAlignment(.center)
+                    // Center: VS + date (upcoming) or score (finished/live)
+                    if match.status == .upcoming {
+                        VStack(spacing: 5) {
+                            Text("VS")
+                                .font(.system(size: 14, weight: .black))
+                                .foregroundColor(.white.opacity(0.28))
+                            Text(match.dateString)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.center)
+                        }
+                    } else {
+                        VStack(spacing: 2) {
+                            HStack(spacing: 7) {
+                                Text("\(match.homeScore ?? 0)")
+                                    .font(.system(size: 30, weight: .bold)).foregroundColor(.white)
+                                Text("-")
+                                    .font(.system(size: 18)).foregroundColor(.white.opacity(0.45))
+                                Text("\(match.awayScore ?? 0)")
+                                    .font(.system(size: 30, weight: .bold)).foregroundColor(.white)
                             }
-                        } else {
-                            VStack(spacing: 3) {
-                                HStack(spacing: 8) {
-                                    Text("\(match.homeScore ?? 0)")
-                                        .font(.system(size: 34, weight: .bold))
-                                        .foregroundColor(.white)
-                                    Text("-")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.white.opacity(0.45))
-                                    Text("\(match.awayScore ?? 0)")
-                                        .font(.system(size: 34, weight: .bold))
-                                        .foregroundColor(.white)
-                                }
-                                Text(match.status == .live ? "EN VIVO" : "FIN")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundColor(match.status == .live
-                                                     ? Color(red: 0.20, green: 0.85, blue: 0.45)
-                                                     : .white.opacity(0.38))
-                                    .tracking(1)
-                            }
+                            Text(match.status == .live ? "EN VIVO" : "FIN")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(match.status == .live
+                                                 ? Color(red: 0.20, green: 0.85, blue: 0.45)
+                                                 : .white.opacity(0.35))
+                                .tracking(1)
                         }
                     }
 
                     Spacer()
 
                     // Away team
-                    VStack(spacing: 6) {
+                    VStack(spacing: 5) {
                         MatchCrestView(color: match.awayTeamColor,
-                                       symbol: match.awayTeamSymbol, size: 50)
+                                       symbol: match.awayTeamSymbol, size: 44)
                         Text(match.awayTeam)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.white.opacity(0.85))
                             .multilineTextAlignment(.center)
                             .lineLimit(2)
-                            .frame(maxWidth: 100)
+                            .frame(maxWidth: 90)
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 12)
+                .padding(.bottom, 10)
 
-                // Venue line
-                let venueLine = match.matchInfo.components(separatedBy: "\n").last ?? ""
-                Text(venueLine)
-                    .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.36))
-                    .padding(.bottom, 16)
+                // Venue line (second line of matchInfo)
+                let venue = match.matchInfo.components(separatedBy: "\n").last ?? ""
+                Text(venue)
+                    .font(.system(size: 10))
+                    .foregroundColor(.white.opacity(0.34))
+                    .padding(.bottom, 14)
             }
         }
-        .shadow(color: Color(red: 0.11, green: 0.12, blue: 0.28).opacity(0.45),
-                radius: 16, x: 0, y: 6)
+        .shadow(color: Color(teamType.cardGradient.first ?? .black).opacity(0.40),
+                radius: 12, x: 0, y: 5)
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MARK: - 2. NEWS SECTION
+// MARK: - 2. ÚLTIMO RESULTADO
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Shows the most recent result for each followed team.
+struct LastResultsSection: View {
+    let teams: [TeamMatchData]
+
+    private var teamsWithLast: [TeamMatchData] {
+        teams.filter { $0.lastMatch != nil }
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HomeSectionHeader(title: "Último resultado", showAll: false)
+
+            VStack(spacing: 10) {
+                ForEach(teamsWithLast, id: \.teamType) { data in
+                    MatchSummaryCardView(match: data.lastMatch!, teamType: data.teamType)
+                        .padding(.horizontal, 16)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - MatchSummaryCardView
+struct MatchSummaryCardView: View {
+    let match: MatchHeaderData
+    let teamType: ClubTeamType
+
+    /// W / D / L from RM's perspective (crown.fill = RM is home).
+    private var resultLabel: String {
+        guard let hs = match.homeScore, let as_ = match.awayScore else { return "" }
+        let rm  = match.homeTeamSymbol == "crown.fill" ? hs : as_
+        let opp = match.homeTeamSymbol == "crown.fill" ? as_ : hs
+        if rm > opp { return "G" }
+        if rm == opp { return "E" }
+        return "P"
+    }
+
+    private var resultColor: Color {
+        switch resultLabel {
+        case "G": return Color(red: 0.15, green: 0.70, blue: 0.38)
+        case "E": return Color(UIColor.systemGray)
+        default:  return Color(red: 0.85, green: 0.18, blue: 0.18)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header row
+            HStack {
+                TeamTypeBadge(teamType: teamType)
+                Text(match.competition)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(Color(UIColor.secondaryLabel))
+                    .lineLimit(1)
+                Spacer()
+                Text(match.dateString)
+                    .font(.system(size: 10))
+                    .foregroundColor(Color(UIColor.tertiaryLabel))
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+
+            Divider().padding(.horizontal, 14)
+
+            // Score row
+            HStack(alignment: .center, spacing: 0) {
+                // Home crest + name
+                VStack(spacing: 4) {
+                    MatchCrestView(color: match.homeTeamColor,
+                                   symbol: match.homeTeamSymbol, size: 36)
+                    Text(match.homeTeam)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(Color(UIColor.label))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .frame(maxWidth: 80)
+                }
+
+                Spacer()
+
+                // Score
+                HStack(spacing: 6) {
+                    Text("\(match.homeScore ?? 0)")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(Color(UIColor.label))
+                    Text("-")
+                        .font(.system(size: 18))
+                        .foregroundColor(Color(UIColor.tertiaryLabel))
+                    Text("\(match.awayScore ?? 0)")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(Color(UIColor.label))
+                }
+
+                Spacer()
+
+                // Away crest + name
+                VStack(spacing: 4) {
+                    MatchCrestView(color: match.awayTeamColor,
+                                   symbol: match.awayTeamSymbol, size: 36)
+                    Text(match.awayTeam)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(Color(UIColor.label))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .frame(maxWidth: 80)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+
+            // Scorers row (if any)
+            if !match.homeScorers.isEmpty || !match.awayScorers.isEmpty {
+                HStack {
+                    Text(match.homeScorers)
+                        .font(.system(size: 10))
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                        .lineLimit(1)
+                    Spacer()
+                    Text(match.awayScorers)
+                        .font(.system(size: 10))
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 8)
+            }
+
+            Divider().padding(.horizontal, 14)
+
+            // Footer: result badge + Ver resumen link
+            HStack {
+                // Result badge
+                ZStack {
+                    Circle()
+                        .fill(resultColor.opacity(0.12))
+                        .frame(width: 28, height: 28)
+                    Text(resultLabel)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(resultColor)
+                }
+
+                Spacer()
+
+                NavigationLink(destination: MatchCentreView(match: match)) {
+                    HStack(spacing: 4) {
+                        Text("Ver resumen")
+                            .font(.system(size: 13, weight: .medium))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundColor(RMTheme.primary)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+        }
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MARK: - 3. NEWS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
 struct HomeNewsSectionView: View {
     private let news = Array(MockNews.items.prefix(5))
@@ -293,8 +472,7 @@ struct HomeNewsSectionView: View {
                     .buttonStyle(.plain)
 
                     if idx < news.count - 1 {
-                        Divider()
-                            .padding(.leading, 16 + 68 + 12)
+                        Divider().padding(.leading, 16 + 68 + 12)
                     }
                 }
             }
@@ -303,9 +481,7 @@ struct HomeNewsSectionView: View {
             .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
             .padding(.horizontal, 16)
         }
-        .sheet(item: $selectedNews) { item in
-            NewsDetailView(item: item)
-        }
+        .sheet(item: $selectedNews) { NewsDetailView(item: $0) }
     }
 }
 
@@ -315,7 +491,6 @@ struct HomeNewsRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Thumbnail
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(item.imageColor)
@@ -324,8 +499,6 @@ struct HomeNewsRowView: View {
                     .font(.system(size: 18))
                     .foregroundColor(.white.opacity(0.35))
             }
-
-            // Text stack
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.category)
                     .font(.system(size: 9, weight: .bold))
@@ -339,9 +512,7 @@ struct HomeNewsRowView: View {
                     .font(.system(size: 11))
                     .foregroundColor(Color(UIColor.tertiaryLabel))
             }
-
             Spacer(minLength: 0)
-
             Image(systemName: "chevron.right")
                 .font(.system(size: 11))
                 .foregroundColor(Color(UIColor.quaternaryLabel))
@@ -351,20 +522,37 @@ struct HomeNewsRowView: View {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MARK: - 3. VIDEOS SECTION
+// MARK: - 4. HIGHLIGHTS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
-struct HomeVideosSectionView: View {
-    @State private var selectedVideo: VideoItem? = nil
+struct HomeHighlightsSectionView: View {
+    @State private var selectedHighlight: HighlightItem? = nil
 
     var body: some View {
         VStack(spacing: 12) {
-            HomeSectionHeader(title: "Vídeos", onShowAll: {})
+            // Custom header with NavigationLink "Ver todos"
+            HStack {
+                Text("Highlights")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(Color(UIColor.label))
+                Spacer()
+                NavigationLink(destination: HighlightsView()) {
+                    HStack(spacing: 3) {
+                        Text("Ver todos")
+                            .font(.system(size: 13, weight: .medium))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundColor(RMTheme.primary)
+                }
+            }
+            .padding(.horizontal, 16)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(MockVideos.all) { video in
-                        Button { selectedVideo = video } label: {
-                            VideoCardView(video: video)
+                    // Show up to 6 items in the carousel (mix of categories)
+                    ForEach(MockHighlights.all.prefix(6)) { item in
+                        Button { selectedHighlight = item } label: {
+                            HighlightCardView(item: item)
                         }
                         .buttonStyle(.plain)
                     }
@@ -373,15 +561,13 @@ struct HomeVideosSectionView: View {
                 .padding(.vertical, 2)
             }
         }
-        .sheet(item: $selectedVideo) { video in
-            VideoPlayerView(video: video)
-        }
+        .sheet(item: $selectedHighlight) { HighlightPlayerView(item: $0) }
     }
 }
 
-// MARK: - VideoCardView
-struct VideoCardView: View {
-    let video: VideoItem
+// MARK: - HighlightCardView
+struct HighlightCardView: View {
+    let item: HighlightItem
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -389,18 +575,17 @@ struct VideoCardView: View {
             ZStack(alignment: .bottomTrailing) {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(LinearGradient(
-                        colors: video.thumbnailColors,
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                        colors: item.thumbnailColors,
+                        startPoint: .topLeading, endPoint: .bottomTrailing
                     ))
                     .frame(width: 190, height: 116)
 
-                // Watermark icon
-                Image(systemName: video.icon)
-                    .font(.system(size: 50, weight: .ultraLight))
-                    .foregroundColor(.white.opacity(0.08))
+                // Category icon watermark
+                Image(systemName: item.category.icon)
+                    .font(.system(size: 48, weight: .ultraLight))
+                    .foregroundColor(.white.opacity(0.07))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                    .padding(8)
+                    .padding(10)
 
                 // Play button
                 Image(systemName: "play.circle.fill")
@@ -409,7 +594,7 @@ struct VideoCardView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 // Duration badge
-                Text(video.duration)
+                Text(item.duration)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 6).padding(.vertical, 3)
@@ -419,114 +604,31 @@ struct VideoCardView: View {
             }
             .clipped()
 
-            // Label
+            // Category + title
             VStack(alignment: .leading, spacing: 2) {
-                Text(video.category)
+                Text(item.category.rawValue)
                     .font(.system(size: 9, weight: .bold))
                     .foregroundColor(RMTheme.primary)
                     .tracking(0.8)
-                Text(video.title)
+                Text(item.title)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(Color(UIColor.label))
                     .lineLimit(2)
                     .frame(width: 190, alignment: .leading)
+
+                // Team type indicator (if applicable)
+                if let teamType = item.teamType {
+                    Text(teamType.shortName)
+                        .font(.system(size: 9))
+                        .foregroundColor(teamType.badgeColor)
+                }
             }
         }
-    }
-}
-
-// MARK: - VideoPlayerView (simulated)
-struct VideoPlayerView: View {
-    let video: VideoItem
-    @Environment(\.dismiss) private var dismiss
-    @State private var isPlaying = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Close button
-            HStack {
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 30))
-                        .foregroundColor(Color(UIColor.tertiaryLabel))
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-            }
-
-            // Video area
-            ZStack {
-                LinearGradient(
-                    colors: video.thumbnailColors,
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                )
-
-                Image(systemName: video.icon)
-                    .font(.system(size: 80, weight: .ultraLight))
-                    .foregroundColor(.white.opacity(0.07))
-
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) { isPlaying.toggle() }
-                } label: {
-                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 70))
-                        .foregroundColor(.white.opacity(0.90))
-                        .scaleEffect(isPlaying ? 0.9 : 1.0)
-                        .animation(.spring(response: 0.3), value: isPlaying)
-                }
-            }
-            .frame(height: 260)
-
-            // Info panel
-            VStack(alignment: .leading, spacing: 10) {
-                Text(video.category)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(RMTheme.primary)
-                    .tracking(1)
-
-                Text(video.title)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(Color(UIColor.label))
-
-                HStack(spacing: 6) {
-                    Image(systemName: "clock")
-                        .font(.system(size: 12))
-                    Text(video.duration)
-                        .font(.system(size: 13))
-                }
-                .foregroundColor(Color(UIColor.secondaryLabel))
-
-                // Simulated progress bar
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(UIColor.tertiarySystemFill))
-                        .frame(height: 4)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(RMTheme.primaryGradient)
-                        .frame(width: isPlaying ? 160 : 0, height: 4)
-                        .animation(.easeInOut(duration: 1.4), value: isPlaying)
-                }
-                .padding(.top, 6)
-
-                if isPlaying {
-                    Text("Reproduciendo...")
-                        .font(.system(size: 12))
-                        .foregroundColor(Color(UIColor.tertiaryLabel))
-                        .transition(.opacity)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(22)
-
-            Spacer()
-        }
-        .background(Color(UIColor.systemBackground))
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MARK: - 4. SURVEY / TRIVIA SECTION
+// MARK: - 5. SURVEY / TRIVIA SECTION
 // ─────────────────────────────────────────────────────────────────────────────
 struct HomeSurveySectionView: View {
     var body: some View {
@@ -548,78 +650,56 @@ struct SurveyCardView: View {
             // Header
             HStack(spacing: 10) {
                 ZStack {
-                    Circle()
-                        .fill(RMTheme.primary.opacity(0.12))
-                        .frame(width: 36, height: 36)
+                    Circle().fill(RMTheme.primary.opacity(0.12)).frame(width: 36, height: 36)
                     Image(systemName: "questionmark.circle.fill")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(RMTheme.primary)
+                        .font(.system(size: 18, weight: .bold)).foregroundColor(RMTheme.primary)
                 }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("TRIVIA")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(RMTheme.primary)
-                        .tracking(1)
+                    Text("TRIVIA").font(.system(size: 9, weight: .bold))
+                        .foregroundColor(RMTheme.primary).tracking(1)
                     Text("Demuestra tu conocimiento")
-                        .font(.system(size: 12))
-                        .foregroundColor(Color(UIColor.secondaryLabel))
+                        .font(.system(size: 12)).foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 Spacer()
                 if selectedOption != nil {
                     Text("\(survey.totalVotes.formatted()) votos")
-                        .font(.system(size: 11))
-                        .foregroundColor(Color(UIColor.tertiaryLabel))
+                        .font(.system(size: 11)).foregroundColor(Color(UIColor.tertiaryLabel))
                         .transition(.opacity)
                 }
             }
 
-            // Question
             Text(survey.question)
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(Color(UIColor.label))
-                .lineSpacing(2)
+                .foregroundColor(Color(UIColor.label)).lineSpacing(2)
 
-            // Options
             VStack(spacing: 9) {
                 ForEach(Array(survey.options.enumerated()), id: \.offset) { idx, option in
                     if let selected = selectedOption {
-                        // Result mode
-                        SurveyResultRow(
-                            option: option,
-                            totalVotes: survey.totalVotes,
-                            isSelected: selected == idx,
-                            isCorrect: idx == survey.correctIndex
-                        )
-                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                        SurveyResultRow(option: option, totalVotes: survey.totalVotes,
+                                        isSelected: selected == idx,
+                                        isCorrect: idx == survey.correctIndex)
+                            .transition(.opacity.combined(with: .scale(scale: 0.97)))
                     } else {
-                        // Button mode
                         Button {
-                            withAnimation(.easeInOut(duration: 0.30)) {
-                                selectedOption = idx
-                            }
+                            withAnimation(.easeInOut(duration: 0.30)) { selectedOption = idx }
                         } label: {
                             Text(option.text)
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(Color(UIColor.label))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 46)
+                                .frame(maxWidth: .infinity).frame(height: 46)
                                 .background(Color(UIColor.secondarySystemBackground))
                                 .cornerRadius(10)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color(UIColor.separator), lineWidth: 0.5)
-                                )
+                                .overlay(RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color(UIColor.separator), lineWidth: 0.5))
                         }
                     }
                 }
             }
 
-            // Correct answer callout
             if let selected = selectedOption {
                 HStack(spacing: 6) {
                     Image(systemName: selected == survey.correctIndex
-                          ? "checkmark.circle.fill"
-                          : "lightbulb.fill")
+                          ? "checkmark.circle.fill" : "lightbulb.fill")
                         .font(.system(size: 13))
                         .foregroundColor(selected == survey.correctIndex
                                          ? Color(red: 0.15, green: 0.72, blue: 0.40)
@@ -650,27 +730,20 @@ struct SurveyResultRow: View {
     private var fraction: CGFloat {
         totalVotes > 0 ? CGFloat(option.votes) / CGFloat(totalVotes) : 0
     }
-
     private var fillColor: Color {
-        if isCorrect { return Color(red: 0.15, green: 0.72, blue: 0.40) }
-        if isSelected { return RMTheme.primary }
-        return Color(UIColor.tertiarySystemFill)
+        isCorrect ? Color(red: 0.15, green: 0.72, blue: 0.40)
+            : isSelected ? RMTheme.primary
+            : Color(UIColor.tertiarySystemFill)
     }
 
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                // Background
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(UIColor.secondarySystemBackground))
-                    .frame(height: 46)
-
-                // Fill bar
+                    .fill(Color(UIColor.secondarySystemBackground)).frame(height: 46)
                 RoundedRectangle(cornerRadius: 10)
                     .fill(fillColor.opacity(isCorrect || isSelected ? 0.22 : 0.10))
                     .frame(width: max(0, geo.size.width * fraction), height: 46)
-
-                // Text row
                 HStack {
                     HStack(spacing: 7) {
                         if isCorrect {
@@ -679,17 +752,14 @@ struct SurveyResultRow: View {
                                 .foregroundColor(Color(red: 0.15, green: 0.72, blue: 0.40))
                         } else if isSelected {
                             Image(systemName: "circle.fill")
-                                .font(.system(size: 8))
-                                .foregroundColor(RMTheme.primary)
+                                .font(.system(size: 8)).foregroundColor(RMTheme.primary)
                         }
                         Text(option.text)
                             .font(.system(size: 14, weight: isCorrect || isSelected ? .semibold : .regular))
                             .foregroundColor(Color(UIColor.label))
                     }
                     .padding(.leading, 12)
-
                     Spacer()
-
                     Text("\(Int(fraction * 100))%")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(Color(UIColor.secondaryLabel))
@@ -697,15 +767,10 @@ struct SurveyResultRow: View {
                 }
             }
             .cornerRadius(10)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(
-                        isCorrect ? Color(red: 0.15, green: 0.72, blue: 0.40).opacity(0.45)
-                            : isSelected ? RMTheme.primary.opacity(0.30)
-                            : Color(UIColor.separator).opacity(0.4),
-                        lineWidth: 0.8
-                    )
-            )
+            .overlay(RoundedRectangle(cornerRadius: 10)
+                .stroke(isCorrect ? Color(red: 0.15, green: 0.72, blue: 0.40).opacity(0.45)
+                        : isSelected ? RMTheme.primary.opacity(0.30)
+                        : Color(UIColor.separator).opacity(0.4), lineWidth: 0.8))
         }
         .frame(height: 46)
     }
@@ -714,33 +779,33 @@ struct SurveyResultRow: View {
 // ─────────────────────────────────────────────────────────────────────────────
 // MARK: - Previews
 // ─────────────────────────────────────────────────────────────────────────────
-#Preview("HOY Screen") {
-    HomeView(showSideMenu: .constant(false))
-}
+#Preview("HOY Screen") { HomeView(showSideMenu: .constant(false)) }
 
-#Preview("NextMatchCardView") {
+#Preview("TeamNextMatchCard – Football") {
     ZStack {
         Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-        NextMatchCardView(match: MockHeaderMatches.all[0])
+        TeamNextMatchCard(match: MockDataProvider.followedTeams[0].nextMatch!,
+                          teamType: .mensFootball)
             .padding(16)
     }
 }
 
-#Preview("HomeNewsRowView") {
-    HomeNewsRowView(item: MockNews.items[0])
-        .padding(16)
-        .background(Color(UIColor.systemBackground))
+#Preview("MatchSummaryCardView") {
+    ZStack {
+        Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+        MatchSummaryCardView(match: MockDataProvider.followedTeams[0].lastMatch!,
+                             teamType: .mensFootball)
+            .padding(16)
+    }
 }
 
-#Preview("VideoCardView") {
-    VideoCardView(video: MockVideos.all[0])
-        .padding(16)
+#Preview("HighlightCardView") {
+    HighlightCardView(item: MockHighlights.all[0]).padding(16)
 }
 
 #Preview("SurveyCardView") {
     ZStack {
         Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-        SurveyCardView(survey: MockSurvey.trivia)
-            .padding(16)
+        SurveyCardView(survey: MockSurvey.trivia).padding(16)
     }
 }
