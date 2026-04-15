@@ -99,3 +99,29 @@ struct StorePromo: Identifiable {
     let heroColor: Color
     let ctaText: String
 }
+
+// MARK: - Video
+struct VideoItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let duration: String            // "4:32"
+    let category: String            // "RESUMEN" / "ENTREVISTA" / "HIGHLIGHTS"
+    let thumbnailColors: [Color]    // gradient stops
+    let icon: String                // SF Symbol for watermark
+}
+
+// MARK: - Survey / Trivia
+struct SurveyOption: Identifiable {
+    let id = UUID()
+    let text: String
+    let votes: Int
+}
+
+struct SurveyItem: Identifiable {
+    let id = UUID()
+    let question: String
+    let options: [SurveyOption]
+    let correctIndex: Int
+
+    var totalVotes: Int { options.reduce(0) { $0 + $1.votes } }
+}

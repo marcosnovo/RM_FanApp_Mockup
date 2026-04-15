@@ -152,13 +152,6 @@ enum MockTV {
 
 // MARK: - Home Header Matches (horizontal carousel)
 enum MockHeaderMatches {
-    private static let rmBlue    = Color(red: 0.29, green: 0.24, blue: 0.91)
-    private static let bayernRed = Color(red: 0.75, green: 0.05, blue: 0.05)
-    private static let mcityBlue = Color(red: 0.42, green: 0.72, blue: 0.92)
-    private static let betisGrn  = Color(red: 0.05, green: 0.55, blue: 0.25)
-    private static let mallRed   = Color(red: 0.65, green: 0.05, blue: 0.10)
-    private static let gironaRed = Color(red: 0.80, green: 0.10, blue: 0.15)
-
     static let all: [MatchHeaderData] = [
 
         // 1 — Bayern vs RM · Q/F Champions vuelta (próximo)
@@ -288,4 +281,59 @@ enum MockHeaderMatches {
             ]
         )
     ]
+}
+
+// MARK: - Videos
+enum MockVideos {
+    static let all: [VideoItem] = [
+        VideoItem(
+            title: "Resumen: Bayern 0-3 Real Madrid",
+            duration: "4:32",
+            category: "RESUMEN",
+            thumbnailColors: [Color(red: 0.08, green: 0.10, blue: 0.32), Color(red: 0.18, green: 0.15, blue: 0.44)],
+            icon: "figure.run"
+        ),
+        VideoItem(
+            title: "Rueda de prensa: Carlo Ancelotti",
+            duration: "12:18",
+            category: "RUEDA DE PRENSA",
+            thumbnailColors: [Color(red: 0.10, green: 0.16, blue: 0.24), Color(red: 0.16, green: 0.24, blue: 0.38)],
+            icon: "mic.fill"
+        ),
+        VideoItem(
+            title: "Bellingham: 'Es una final'",
+            duration: "3:45",
+            category: "ENTREVISTA",
+            thumbnailColors: [Color(red: 0.22, green: 0.10, blue: 0.32), Color(red: 0.32, green: 0.16, blue: 0.44)],
+            icon: "person.fill"
+        ),
+        VideoItem(
+            title: "Mejores jugadas · Jornada 31",
+            duration: "6:10",
+            category: "HIGHLIGHTS",
+            thumbnailColors: [Color(red: 0.05, green: 0.15, blue: 0.30), Color(red: 0.12, green: 0.22, blue: 0.45)],
+            icon: "star.fill"
+        ),
+        VideoItem(
+            title: "Entrenamiento en el Allianz Arena",
+            duration: "2:55",
+            category: "ENTRENAMIENTO",
+            thumbnailColors: [Color(red: 0.08, green: 0.22, blue: 0.16), Color(red: 0.14, green: 0.32, blue: 0.24)],
+            icon: "sportscourt.fill"
+        )
+    ]
+}
+
+// MARK: - Survey / Trivia
+enum MockSurvey {
+    static let trivia = SurveyItem(
+        question: "¿Cuántas UEFA Champions League ha ganado el Real Madrid?",
+        options: [
+            SurveyOption(text: "13", votes: 996),
+            SurveyOption(text: "14", votes: 1494),
+            SurveyOption(text: "15", votes: 8964),
+            SurveyOption(text: "16", votes: 996)
+        ],
+        correctIndex: 2
+    )
 }
