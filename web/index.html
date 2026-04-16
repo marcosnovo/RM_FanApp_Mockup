@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Madrid · Fan App Mockup</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- ── Left navigation panel ────────────────────────────── -->
+        <aside class="side-panel" id="sidePanel">
+            <div class="side-header">
+                <div class="side-logo">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2 L14 7 L19 7 L15 11 L17 17 L12 13 L7 17 L9 11 L5 7 L10 7 Z"/></svg>
+                </div>
+                <div>
+                    <div class="side-title">Real Madrid</div>
+                    <div class="side-subtitle" id="sideSubtitle">Fan App Mockup</div>
+                </div>
+            </div>
+
+            <!-- App switcher -->
+            <div class="app-switcher" id="appSwitcher">
+                <button class="app-switch-btn active" data-app="fan">
+                    <span class="app-switch-icon">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
+                    </span>
+                    Fan App
+                </button>
+                <button class="app-switch-btn" data-app="vip">
+                    <span class="app-switch-icon">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2 L15.5 8.5 L23 9.5 L17.5 14.5 L18.5 22 L12 18.5 L5.5 22 L6.5 14.5 L1 9.5 L8.5 8.5 Z"/></svg>
+                    </span>
+                    VIP App
+                </button>
+            </div>
+
+            <div class="side-search">
+                <span>iPhone 14 Pro · iOS</span>
+            </div>
+
+            <!-- Sidebar navigation (populated dynamically) -->
+            <nav class="side-nav" id="sideNav"></nav>
+
+            <div class="side-footer">
+                <div class="side-version" id="sideVersion">10.2.11 (Build 15970)</div>
+                <div class="side-note">Mockup · Rama <code>main</code></div>
+            </div>
+        </aside>
+
+        <!-- ── Center: iPhone mockup ────────────────────────────── -->
+        <main class="stage">
+            <div class="stage-title">
+                <h1>Real Madrid Fan App</h1>
+                <p id="stageSubtitle">Hoy · Directo</p>
+            </div>
+
+            <div class="phone">
+                <div class="phone-frame">
+                    <div class="phone-notch">
+                        <div class="notch-camera"></div>
+                        <div class="notch-speaker"></div>
+                    </div>
+                    <div class="phone-screen" id="phoneScreen">
+                        <!-- Status bar (fixed) -->
+                        <div class="status-bar">
+                            <span class="status-time">10:17</span>
+                            <span class="status-icons">
+                                <span class="status-signal">
+                                    <span></span><span></span><span></span><span></span>
+                                </span>
+                                <span class="status-wifi">
+                                    <svg viewBox="0 0 20 14" width="16" height="12" fill="currentColor"><path d="M10 12.5 a1.5 1.5 0 1 0 0 -3 a1.5 1.5 0 0 0 0 3z M5.3 7.8 a6.7 6.7 0 0 1 9.4 0 l-1.1 1.1 a5.2 5.2 0 0 0 -7.2 0 z M2 4.5 a11.3 11.3 0 0 1 16 0 l-1.1 1.1 a9.7 9.7 0 0 0 -13.8 0 z"/></svg>
+                                </span>
+                                <span class="status-battery">99</span>
+                            </span>
+                        </div>
+
+                        <!-- Scrollable content -->
+                        <div class="screen-body" id="screenBody"></div>
+
+                        <!-- Fixed tab bar (injected by JS) -->
+                        <div class="tab-bar-slot" id="tabBarSlot"></div>
+
+                        <!-- News detail sheet (overlays, injected by JS) -->
+                        <div class="news-sheet-slot" id="newsSheetSlot"></div>
+
+                        <!-- Home indicator -->
+                        <div class="home-indicator"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stage-caption" id="stageCaption">
+                Traducción HTML/CSS/JS del mockup SwiftUI — incluye carrusel de partidos, sub-tabs y flujos originales.
+            </div>
+        </main>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
