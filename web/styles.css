@@ -2874,14 +2874,33 @@ html, body {
     margin-left: 6px;
 }
 
+/* ── Gold "//" slash separator ───────────────────────────────── */
+.g-slash {
+    display: inline-flex;
+    align-items: center;
+    transform: skewX(-14deg);
+    flex-shrink: 0;
+}
+.g-slash > span {
+    display: block;
+    background: linear-gradient(180deg, #efd084 0%, #c69950 50%, #7e5c2b 100%);
+    border-radius: 1px;
+}
+
 /* Recommended match card */
 .vip-reco-card {
     margin: 0 16px;
-    height: 330px;
-    border-radius: 20px;
-    padding: 18px;
+    min-height: 350px;
+    border-radius: 22px;
+    padding: 20px 22px 24px;
     background:
-        linear-gradient(145deg, #0e2a23 0%, #0a1917 50%, #1a2922 100%);
+        /* Soft gleam on top */
+        radial-gradient(ellipse at 30% 0%, rgba(180, 220, 200, 0.12) 0%, transparent 50%),
+        /* Diagonal stripes */
+        repeating-linear-gradient(115deg,
+            transparent 0px, transparent 40px,
+            rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 42px),
+        linear-gradient(150deg, #11322a 0%, #0b1e1a 45%, #0c201c 100%);
     border: 1px solid #1f3a32;
     display: flex;
     flex-direction: column;
@@ -2889,6 +2908,8 @@ html, body {
     align-items: center;
     position: relative;
     overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 10px 30px #00000055;
 }
 
 .vip-reco-ball {
@@ -2909,27 +2930,20 @@ html, body {
 .vip-reco-teams {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
     justify-content: center;
-    margin: 10px 0 22px;
-}
-
-.vip-reco-slash {
-    color: var(--vip-gold);
-    font-size: 32px;
-    font-weight: 300;
-    margin: 0 4px;
-    transform: skew(-14deg);
+    margin: 14px 0 30px;
 }
 
 .vip-reco-crest {
-    width: 84px;
-    height: 84px;
+    width: 90px;
+    height: 90px;
     display: flex;
     align-items: center;
     justify-content: center;
+    filter: drop-shadow(0 4px 10px #00000060);
 }
-.vip-reco-crest > svg { width: 84px !important; height: 84px !important; }
+.vip-reco-crest > svg { width: 90px !important; height: 90px !important; }
 
 .vip-reco-title {
     font-size: 22px;
@@ -2939,12 +2953,13 @@ html, body {
     text-align: left;
     width: 100%;
     padding-left: 2px;
+    letter-spacing: -0.2px;
 }
 
 .vip-reco-meta {
     font-size: 13px;
     color: var(--vip-text-secondary);
-    line-height: 1.5;
+    line-height: 1.6;
     text-align: left;
     width: 100%;
     padding-left: 2px;
@@ -2952,7 +2967,7 @@ html, body {
 
 /* Upcoming event (middle banner) */
 .vip-proximo {
-    padding: 30px 20px 6px;
+    padding: 30px 20px 16px;
     text-align: center;
     color: var(--vip-text);
 }
@@ -2960,7 +2975,7 @@ html, body {
 .vip-proximo-ball {
     width: 42px;
     height: 42px;
-    margin: 0 auto 12px;
+    margin: 0 auto 18px;
     border-radius: 50%;
     background: #1f1f28;
     border: 1px solid var(--vip-card-border);
@@ -2971,32 +2986,49 @@ html, body {
 .vip-proximo-ball > svg { width: 24px !important; height: 24px !important; }
 
 .vip-proximo-teams {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     line-height: 1.3;
-    margin-bottom: 4px;
+    margin-bottom: 14px;
 }
 
+/* Center row: [crest] — 15 abril - 21:00h — [crest] */
+.vip-proximo-center {
+    display: grid;
+    grid-template-columns: 80px 1fr 80px;
+    align-items: center;
+    padding: 8px 0 14px;
+}
+
+.vip-proximo-side-crest {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.vip-proximo-side-crest.left { justify-content: flex-start; padding-left: 6px; }
+.vip-proximo-side-crest.right { justify-content: flex-end; padding-right: 6px; }
+.vip-proximo-side-crest > svg {
+    width: 74px !important;
+    height: 74px !important;
+    /* Half-bleed outside the card on each side */
+    transform: translateX(0);
+    filter: drop-shadow(0 3px 8px #00000070);
+}
+.vip-proximo-side-crest.left > svg { transform: translateX(-16px); }
+.vip-proximo-side-crest.right > svg { transform: translateX(16px); }
+
 .vip-proximo-date {
-    font-size: 13px;
-    color: var(--vip-text-secondary);
-    margin-bottom: 4px;
+    font-size: 14px;
+    color: var(--vip-text);
+    font-weight: 500;
 }
 
 .vip-proximo-sub {
     font-size: 12px;
     color: var(--vip-text-tertiary);
-    margin-bottom: 20px;
+    line-height: 1.5;
+    margin-top: 0;
 }
-
-.vip-proximo-crests {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    padding: 12px 0;
-}
-.vip-proximo-crests > div > svg { width: 64px !important; height: 64px !important; }
 
 /* Próximos eventos list (compact cards) */
 .vip-events-list {
@@ -3010,51 +3042,66 @@ html, body {
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 12px;
-    background: var(--vip-card);
-    border: 1px solid var(--vip-card-border);
-    border-radius: 16px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
     cursor: pointer;
+    margin-bottom: 8px;
 }
 
 .vip-event-crests {
-    width: 64px;
-    height: 56px;
-    background: #0f0f17;
-    border-radius: 10px;
+    width: 70px;
+    height: 62px;
+    background:
+        repeating-linear-gradient(115deg,
+            transparent 0px, transparent 12px,
+            rgba(255,255,255,0.03) 12px, rgba(255,255,255,0.03) 14px),
+        #191923;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 4px;
     flex-shrink: 0;
+    border: 1px solid #2a2a35;
 }
-.vip-event-crests > div > svg { width: 24px !important; height: 24px !important; }
-.vip-event-crests .vip-reco-slash { font-size: 14px; margin: 0 2px; }
+.vip-event-crests > div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.vip-event-crests > div > svg { width: 26px !important; height: 26px !important; }
+.vip-event-crests > .g-slash > span {
+    width: 3px !important;
+    height: 14px !important;
+}
 
 .vip-event-info { flex: 1; min-width: 0; }
 
 .vip-event-title {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--vip-text);
     margin-bottom: 4px;
+    line-height: 1.2;
 }
 
 .vip-event-date {
     font-size: 13px;
     color: var(--vip-text-secondary);
-    margin-bottom: 3px;
+    margin-bottom: 5px;
 }
 
 .vip-event-cat {
-    font-size: 11.5px;
-    color: var(--vip-text-tertiary);
+    font-size: 12px;
+    color: var(--vip-gold);
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
 }
 
-.vip-event-cat > svg { width: 11px !important; height: 11px !important; }
+.vip-event-cat > svg { width: 11px !important; height: 11px !important; color: var(--vip-gold); }
 
 /* Bernabéu Gastro horizontal carousel */
 .vip-gastro-scroll {
@@ -3085,50 +3132,64 @@ html, body {
     justify-content: space-between;
     color: white;
     cursor: pointer;
-    background-size: cover;
-    background-position: center;
+    background: #0e0e15;
+}
+
+.vip-gastro-scene {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.vip-gastro-scene > svg.scene-svg {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .vip-gastro-card::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, #00000033 0%, #00000099 65%, #000000c9 100%);
-    z-index: 0;
+    background: linear-gradient(180deg, #00000020 0%, #00000070 55%, #000000d0 100%);
+    z-index: 1;
+    pointer-events: none;
 }
 
 .vip-gastro-tag {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     align-self: flex-start;
     background: #0e0e16d9;
     border: 1px solid var(--vip-card-border);
     color: var(--vip-text);
-    padding: 5px 11px;
+    padding: 6px 12px;
     border-radius: 20px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
-.vip-gastro-tag > svg { width: 11px !important; height: 11px !important; color: var(--vip-gold); }
+.vip-gastro-tag > svg { width: 12px !important; height: 12px !important; color: var(--vip-gold); }
 
 .vip-gastro-title {
     position: relative;
-    z-index: 1;
-    font-size: 24px;
+    z-index: 2;
+    font-size: 26px;
     font-weight: 700;
     color: white;
     margin-bottom: 4px;
+    letter-spacing: -0.3px;
 }
 
 .vip-gastro-sub {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     font-size: 13px;
     font-weight: 400;
-    color: #ffffffc7;
+    color: #ffffffd9;
 }
 
 .vip-gastro-dots {
@@ -3312,21 +3373,34 @@ html, body {
 }
 
 .vip-event-card {
-    background: #0f1820;
-    border: 1px solid #1a2a36;
-    border-radius: 18px;
-    padding: 20px;
+    background:
+        radial-gradient(ellipse at 20% 0%, rgba(180, 220, 200, 0.10) 0%, transparent 50%),
+        repeating-linear-gradient(115deg,
+            transparent 0px, transparent 40px,
+            rgba(255,255,255,0.025) 40px, rgba(255,255,255,0.025) 42px),
+        linear-gradient(150deg, #0f2a25 0%, #0a1c19 45%, #0b1e1b 100%);
+    border: 1px solid #1f3a32;
+    border-radius: 20px;
+    padding: 22px 20px 18px;
     position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 24px #00000048;
 }
 
 .vip-event-card-head {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 14px;
     margin-bottom: 14px;
 }
-.vip-event-card-head > div > svg { width: 60px !important; height: 60px !important; }
+.vip-event-card-head > div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 3px 6px #00000060);
+}
+.vip-event-card-head > div > svg { width: 64px !important; height: 64px !important; }
 
 .vip-event-date-big {
     font-size: 14px;
@@ -3374,10 +3448,10 @@ html, body {
 }
 
 .vip-peticiones-btn {
-    margin-top: 14px;
-    padding: 14px 16px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #3e2c17 0%, #6a4c28 100%);
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #b09473 0%, #907656 100%);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -3389,19 +3463,19 @@ html, body {
     text-align: left;
 }
 
-.vip-peticiones-btn > svg { width: 16px !important; height: 16px !important; color: var(--vip-gold); }
+.vip-peticiones-btn > svg { width: 16px !important; height: 16px !important; color: #2a1e10; }
 
 .vip-peticiones-btn strong {
     display: block;
     font-size: 14px;
     font-weight: 700;
-    color: var(--vip-gold);
-    margin-bottom: 2px;
+    color: #2a1e10;
+    margin-bottom: 3px;
 }
 
 .vip-peticiones-btn span {
     font-size: 11.5px;
-    color: #f2e7d4cc;
+    color: #2a1e10bf;
 }
 
 /* Event detail screen */
@@ -3442,19 +3516,23 @@ html, body {
 .vip-event-hero > div > svg { width: 110px !important; height: 110px !important; }
 
 .vip-mis-entradas-btn {
-    margin: 0 20px;
+    margin: 0 30px 22px;
     padding: 15px 30px;
     border-radius: 30px;
-    background: linear-gradient(180deg, #e8d8be 0%, #a69176 100%);
-    color: #1a1309;
+    background:
+        linear-gradient(180deg, #f4e6cc 0%, #e3cfa6 40%, #b99d72 100%);
+    color: #1e1608;
     font-family: inherit;
     font-size: 16px;
     font-weight: 700;
-    border: 0;
+    border: 1px solid #d4b47e;
     cursor: pointer;
-    width: calc(100% - 40px);
+    width: calc(100% - 60px);
     height: 56px;
-    margin-bottom: 22px;
+    letter-spacing: 0.3px;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.7),
+        0 4px 16px rgba(212, 175, 121, 0.2);
 }
 
 .vip-event-meta {
@@ -3552,11 +3630,17 @@ html, body {
 /* Entradas detail (seats) */
 .vip-tickets-card {
     margin: 14px 20px;
-    padding: 20px;
-    border-radius: 18px;
-    border: 1px solid var(--vip-card-border);
-    background: var(--vip-card);
+    padding: 22px 20px 18px;
+    border-radius: 20px;
+    border: 1px solid #1f3a32;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(180, 220, 200, 0.12) 0%, transparent 60%),
+        repeating-linear-gradient(115deg,
+            transparent 0px, transparent 40px,
+            rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 42px),
+        linear-gradient(150deg, #0f2a25 0%, #0a1c19 45%, #0b1e1b 100%);
     text-align: center;
+    box-shadow: 0 10px 24px #00000048;
 }
 
 .vip-tickets-crests {
@@ -3613,10 +3697,11 @@ html, body {
 .vip-segmented {
     margin: 0 20px 14px;
     padding: 4px;
-    background: #1a1a22;
+    background: #0e1a24;
     border-radius: 30px;
     display: flex;
     gap: 2px;
+    border: 1px solid #1a2a36;
 }
 
 .vip-segment {
@@ -3634,8 +3719,9 @@ html, body {
 }
 
 .vip-segment.active {
-    background: linear-gradient(180deg, #e8d8be 0%, #a69176 100%);
-    color: #1a1309;
+    background: linear-gradient(180deg, #f4e6cc 0%, #e3cfa6 40%, #b99d72 100%);
+    color: #1e1608;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
 }
 
 .vip-seat-card {
@@ -3734,20 +3820,34 @@ html, body {
 }
 
 .vip-gestor-avatar {
-    width: 150px;
-    height: 150px;
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
     background:
-        radial-gradient(ellipse at 50% 40%, #43362099 0%, transparent 60%),
-        linear-gradient(135deg, #1a1510 0%, #08080c 100%);
+        radial-gradient(circle at 30% 30%, #d4af79 0%, #8c6f48 35%, #332614 75%, #1a1309 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 22px;
-    border: 1px solid #2a2a35;
+    margin-bottom: 26px;
+    box-shadow:
+        inset 0 -20px 30px #00000088,
+        inset 0 10px 20px rgba(255, 220, 170, 0.15),
+        0 10px 30px #00000066;
     position: relative;
 }
-.vip-gestor-avatar > svg { width: 76px !important; height: 76px !important; color: var(--vip-gold); }
+.vip-gestor-avatar::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70%;
+    height: 45%;
+    background: linear-gradient(180deg, transparent 0%, #000 70%);
+    border-radius: 0 0 50% 50% / 0 0 100% 100%;
+    opacity: 0.4;
+}
+.vip-gestor-avatar > svg { width: 68px !important; height: 68px !important; color: #f3dbaa; z-index: 1; filter: drop-shadow(0 2px 4px #000); }
 
 .vip-gestor-title {
     font-size: 20px;
@@ -3760,19 +3860,23 @@ html, body {
 .vip-call-btn {
     width: 100%;
     height: 56px;
-    border-radius: 28px;
-    background: linear-gradient(180deg, #e8d8be 0%, #a69176 100%);
-    color: #1a1309;
+    border-radius: 30px;
+    background:
+        linear-gradient(180deg, #f4e6cc 0%, #e3cfa6 40%, #b99d72 100%);
+    color: #1e1608;
     font-family: inherit;
     font-size: 16px;
     font-weight: 700;
-    border: 0;
+    border: 1px solid #d4b47e;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
     margin-bottom: 20px;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.7),
+        0 4px 16px rgba(212, 175, 121, 0.2);
 }
 .vip-call-btn > svg { width: 18px !important; height: 18px !important; }
 
@@ -3824,13 +3928,14 @@ html, body {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: #4a3c2e;
+    background: linear-gradient(180deg, #e8d0a6 0%, #b29072 100%);
     color: #1a1309;
     border: 0;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
 }
 .vip-perfil-close > svg { width: 16px !important; height: 16px !important; }
 
@@ -3938,29 +4043,13 @@ html, body {
 
 /* ── VIP Tab bar ─────────────────────────────────────────────── */
 .vip-tab-bar {
-    background: #0a0a0f;
+    background: rgba(10, 10, 15, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-top: 0.5px solid var(--vip-separator);
     color: var(--vip-text-secondary);
 }
 
-.vip-tab-bar .tab-bar-item { color: var(--vip-text-secondary); }
+.vip-tab-bar .tab-bar-item { color: #6b6b7a; }
 .vip-tab-bar .tab-bar-item.active { color: var(--vip-text); }
-
-.vip-tab-bar .tab-bar-item.active::after {
-    content: '';
-    position: absolute;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 34px;
-    height: 34px;
-    background: #1a1a22;
-    border-radius: 12px;
-    z-index: -1;
-}
-
-.vip-tab-bar .tab-bar-item {
-    position: relative;
-    z-index: 1;
-}
 

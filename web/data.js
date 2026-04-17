@@ -15,41 +15,53 @@ const ICON_SHIELD = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2
 
 // ── Club crest renderers — richer, logo-like SVGs ───────────────
 const CREST_REAL_MADRID = `
-    <svg viewBox="0 0 56 56" class="club-crest crest-rm">
+    <svg viewBox="0 0 60 60" class="club-crest crest-rm">
       <defs>
         <linearGradient id="rmFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#fff"/>
-          <stop offset="1" stop-color="#e7e7f2"/>
+          <stop offset="0.55" stop-color="#f3f3f9"/>
+          <stop offset="1" stop-color="#e0e0ea"/>
+        </linearGradient>
+        <linearGradient id="rmGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f5cf7c"/>
+          <stop offset="0.6" stop-color="#cfa266"/>
+          <stop offset="1" stop-color="#9f7736"/>
         </linearGradient>
       </defs>
-      <circle cx="28" cy="28" r="26" fill="url(#rmFill)" stroke="#3b2f8e" stroke-width="1.5"/>
-      <circle cx="28" cy="30" r="19" fill="none" stroke="#c8a24a" stroke-width="1.2"/>
-      <!-- Crown on top -->
-      <path d="M17 15 L20 10 L23 14 L28 8 L33 14 L36 10 L39 15 Q35 18 28 18 Q21 18 17 15 Z" fill="#c8a24a" stroke="#a88930" stroke-width="0.5"/>
-      <circle cx="20" cy="10" r="1.3" fill="#c8a24a"/>
-      <circle cx="28" cy="8" r="1.5" fill="#c8a24a"/>
-      <circle cx="36" cy="10" r="1.3" fill="#c8a24a"/>
-      <!-- Monogram M + C + F -->
-      <text x="28" y="38" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="700" fill="#3b2f8e" font-style="italic">R</text>
-      <text x="22" y="42" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="700" fill="#3b2f8e">M</text>
-      <text x="34" y="42" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="700" fill="#3b2f8e">C</text>
+      <circle cx="30" cy="30" r="28" fill="url(#rmFill)" stroke="url(#rmGold)" stroke-width="1.4"/>
+      <circle cx="30" cy="30" r="23.5" fill="none" stroke="url(#rmGold)" stroke-width="1"/>
+      <!-- Crown base band -->
+      <path d="M14 13 L46 13 L43 18 L17 18 Z" fill="url(#rmGold)" opacity="0.5"/>
+      <!-- Crown jewels top -->
+      <path d="M14 13 L18 6 L22 11 L26 4 L30 10 L34 4 L38 11 L42 6 L46 13 Z" fill="url(#rmGold)" stroke="#8a6630" stroke-width="0.35"/>
+      <circle cx="18" cy="6" r="1.4" fill="url(#rmGold)"/>
+      <circle cx="26" cy="4" r="1.5" fill="url(#rmGold)"/>
+      <circle cx="34" cy="4" r="1.5" fill="url(#rmGold)"/>
+      <circle cx="42" cy="6" r="1.4" fill="url(#rmGold)"/>
+      <!-- Iconic RMCF monogram inside shield area -->
+      <g transform="translate(30, 34)" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-style="italic" text-anchor="middle">
+        <text y="5" font-size="14" fill="#2c2778">M</text>
+        <text y="-4" x="-3" font-size="11" fill="url(#rmGold)">R</text>
+        <text y="14" font-size="11" fill="url(#rmGold)">C</text>
+        <text y="14" x="10" font-size="11" fill="url(#rmGold)">F</text>
+      </g>
     </svg>`;
 
 const CREST_BAYERN = `
-    <svg viewBox="0 0 56 56" class="club-crest">
-      <circle cx="28" cy="28" r="26" fill="#dc052d" stroke="#fff" stroke-width="1.5"/>
-      <circle cx="28" cy="28" r="20" fill="#fff" stroke="#dc052d" stroke-width="1"/>
-      <!-- Bavarian rhombus pattern -->
+    <svg viewBox="0 0 60 60" class="club-crest">
+      <circle cx="30" cy="30" r="28" fill="#dc052d" stroke="#fff" stroke-width="1.5"/>
+      <circle cx="30" cy="30" r="22" fill="#fff"/>
+      <!-- Rhombus pattern (Bavarian flag) -->
       <g fill="#0066b2">
-        <polygon points="18,22 23,26 18,30 13,26"/>
-        <polygon points="28,22 33,26 28,30 23,26"/>
-        <polygon points="38,22 43,26 38,30 33,26"/>
-        <polygon points="13,30 18,34 23,30"/>
-        <polygon points="23,30 28,34 33,30"/>
-        <polygon points="33,30 38,34 43,30"/>
+        <polygon points="18,27 24,31.5 18,36 12,31.5"/>
+        <polygon points="30,27 36,31.5 30,36 24,31.5"/>
+        <polygon points="42,27 48,31.5 42,36 36,31.5"/>
+        <polygon points="12,36 18,40.5 24,36"/>
+        <polygon points="24,36 30,40.5 36,36"/>
+        <polygon points="36,36 42,40.5 48,36"/>
       </g>
-      <text x="28" y="16" text-anchor="middle" font-family="serif" font-size="7" font-weight="700" fill="#fff">FCB</text>
-      <text x="28" y="42" text-anchor="middle" font-family="serif" font-size="6" font-weight="700" fill="#dc052d">MÜNCHEN</text>
+      <text x="30" y="17" text-anchor="middle" font-family="serif" font-size="6.5" font-weight="900" fill="#fff" letter-spacing="0.5">FC BAYERN</text>
+      <text x="30" y="46" text-anchor="middle" font-family="serif" font-size="5.5" font-weight="900" fill="#dc052d" letter-spacing="0.5">MÜNCHEN</text>
     </svg>`;
 
 const CREST_MALLORCA = `
@@ -453,14 +465,21 @@ const STORE_CATEGORIES = [
 // ================================================================
 
 const CREST_ALAVES = `
-    <svg viewBox="0 0 56 56" class="club-crest">
-      <circle cx="28" cy="28" r="26" fill="#0060b2" stroke="#fff" stroke-width="1.5"/>
-      <circle cx="28" cy="28" r="21" fill="#fff"/>
-      <circle cx="28" cy="28" r="18" fill="#0060b2"/>
-      <text x="28" y="22" text-anchor="middle" font-family="serif" font-size="6" font-weight="700" fill="#fff">DEPORTIVO</text>
-      <text x="28" y="36" text-anchor="middle" font-family="serif" font-size="6" font-weight="700" fill="#fff">ALAVÉS</text>
-      <line x1="18" y1="26" x2="38" y2="26" stroke="#fff" stroke-width="0.6"/>
-      <line x1="18" y1="30" x2="38" y2="30" stroke="#fff" stroke-width="0.6"/>
+    <svg viewBox="0 0 60 60" class="club-crest">
+      <circle cx="30" cy="30" r="28" fill="#0060b2" stroke="#fff" stroke-width="1.4"/>
+      <circle cx="30" cy="30" r="24" fill="#fff"/>
+      <circle cx="30" cy="30" r="20" fill="#0060b2"/>
+      <!-- Subtle stripes -->
+      <g stroke="#0a4d90" stroke-width="0.6" opacity="0.6">
+        <line x1="13" y1="22" x2="47" y2="22"/>
+        <line x1="13" y1="28" x2="47" y2="28"/>
+        <line x1="13" y1="34" x2="47" y2="34"/>
+      </g>
+      <text x="30" y="22" text-anchor="middle" font-family="serif" font-size="5.5" font-weight="700" fill="#fff" letter-spacing="0.3">DEPORTIVO</text>
+      <text x="30" y="40" text-anchor="middle" font-family="serif" font-size="6.5" font-weight="700" fill="#fff" letter-spacing="0.3">ALAVÉS</text>
+      <!-- Star detail -->
+      <circle cx="22" cy="29" r="2.5" fill="#fff"/>
+      <polygon points="22,27 22.8,28.6 24.4,28.8 23.2,30 23.5,31.6 22,30.8 20.5,31.6 20.8,30 19.6,28.8 21.2,28.6" fill="#0060b2"/>
     </svg>`;
 
 const CREST_OVIEDO = `
@@ -553,8 +572,7 @@ const VIP_RESTAURANTS = [
         name: 'Puerta 57',
         sub: 'Experiencia única en el Bernabéu',
         tag: 'Restaurante',
-        bg: 'linear-gradient(145deg, #2a3a4a 0%, #1a232e 50%, #0d1218 100%)',
-        imageBg: 'url("data:image/svg+xml;utf8,<svg xmlns=\\"http://www.w3.org/2000/svg\\" viewBox=\\"0 0 400 300\\"><rect fill=\\"%231d2831\\" width=\\"400\\" height=\\"300\\"/><rect fill=\\"%232a3a4a\\" x=\\"30\\" y=\\"60\\" width=\\"340\\" height=\\"180\\"/><g fill=\\"%233d5267\\"><rect x=\\"50\\" y=\\"140\\" width=\\"60\\" height=\\"80\\"/><rect x=\\"130\\" y=\\"140\\" width=\\"60\\" height=\\"80\\"/><rect x=\\"210\\" y=\\"140\\" width=\\"60\\" height=\\"80\\"/><rect x=\\"290\\" y=\\"140\\" width=\\"60\\" height=\\"80\\"/></g><g fill=\\"%23556b80\\" opacity=\\"0.8\\"><ellipse cx=\\"80\\" cy=\\"180\\" rx=\\"22\\" ry=\\"6\\"/><ellipse cx=\\"160\\" cy=\\"180\\" rx=\\"22\\" ry=\\"6\\"/><ellipse cx=\\"240\\" cy=\\"180\\" rx=\\"22\\" ry=\\"6\\"/><ellipse cx=\\"320\\" cy=\\"180\\" rx=\\"22\\" ry=\\"6\\"/></g></svg>")',
+        scene: 'puerta57',   // CSS-drawn scene variant
         description: 'El primer restaurante en un estadio en España que ofrece una experiencia única en el Bernabéu, con vistas al campo y sabor de una tradición que perdura.',
         phone: '+34 914 573 361',
         web: 'Visitar Web',
@@ -573,7 +591,7 @@ const VIP_RESTAURANTS = [
         name: 'Plaza Mahou',
         sub: 'Fábrica de cerveza en un estadio',
         tag: 'Restaurante',
-        bg: 'linear-gradient(145deg, #42332a 0%, #2a1e17 50%, #161010 100%)',
+        scene: 'plaza',
         description: 'Un espacio único en el que se mezcla la tradición cervecera con la pasión futbolística. Experiencia de maridaje con cervezas especiales.',
         phone: '+34 914 573 362',
         web: 'Visitar Web',
@@ -586,7 +604,7 @@ const VIP_RESTAURANTS = [
         name: 'Arzábal Bernabéu',
         sub: 'Experiencia única con vistas al campo',
         tag: 'Restaurante',
-        bg: 'linear-gradient(145deg, #1b3a2e 0%, #102a22 50%, #091814 100%)',
+        scene: 'arzabal',
         description: 'La icónica marca Arzábal aterriza en el Bernabéu con su cocina tradicional y vistas privilegiadas al terreno de juego.',
         phone: '+34 914 573 363',
         web: 'Visitar Web',
@@ -599,7 +617,7 @@ const VIP_RESTAURANTS = [
         name: 'KŌ by 99 Sushi Bar',
         sub: 'Izakaya en el Bernabéu',
         tag: 'Restaurante',
-        bg: 'linear-gradient(145deg, #32271b 0%, #241912 50%, #120c08 100%)',
+        scene: 'sushi',
         description: 'Izakaya japonesa con la firma de 99 Sushi Bar. Experiencia gastronómica nipona con vistas al Santiago Bernabéu.',
         phone: '+34 914 573 364',
         web: 'Visitar Web',

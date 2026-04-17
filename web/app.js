@@ -825,9 +825,190 @@ function renderTienda() {
 // VIP APP
 // ================================================================
 
+// Restaurant scene backgrounds — CSS-drawn stylized interiors
+function renderGastroScene(scene) {
+    switch (scene) {
+        case 'puerta57':
+            return `
+                <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" class="scene-svg">
+                  <defs>
+                    <linearGradient id="p57Sky" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#1a2a38"/>
+                      <stop offset="0.5" stop-color="#2a4458"/>
+                      <stop offset="1" stop-color="#1a2e3e"/>
+                    </linearGradient>
+                    <linearGradient id="p57Field" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#2a6e3e"/>
+                      <stop offset="1" stop-color="#1a4e2a"/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="400" height="300" fill="url(#p57Sky)"/>
+                  <!-- Stadium tiers seen through windows -->
+                  <rect x="0" y="160" width="400" height="80" fill="url(#p57Field)"/>
+                  <g stroke="#fff" stroke-width="0.8" opacity="0.4">
+                    <line x1="0" y1="170" x2="400" y2="170"/>
+                    <line x1="200" y1="160" x2="200" y2="240"/>
+                    <ellipse cx="200" cy="200" rx="50" ry="24" fill="none"/>
+                  </g>
+                  <!-- Ceiling / roof lighting -->
+                  <g fill="#e8d8a8" opacity="0.9">
+                    <rect x="40" y="20" width="60" height="8" rx="3"/>
+                    <rect x="150" y="20" width="100" height="8" rx="3"/>
+                    <rect x="300" y="20" width="60" height="8" rx="3"/>
+                  </g>
+                  <!-- Tables in foreground -->
+                  <g>
+                    <rect x="30" y="200" width="70" height="70" rx="6" fill="#2a3a4a"/>
+                    <rect x="115" y="200" width="70" height="70" rx="6" fill="#2a3a4a"/>
+                    <rect x="215" y="200" width="70" height="70" rx="6" fill="#2a3a4a"/>
+                    <rect x="300" y="200" width="70" height="70" rx="6" fill="#2a3a4a"/>
+                  </g>
+                  <!-- Plates/glasses on tables -->
+                  <g fill="#c8d4e0" opacity="0.8">
+                    <circle cx="65" cy="220" r="8"/>
+                    <circle cx="150" cy="220" r="8"/>
+                    <circle cx="250" cy="220" r="8"/>
+                    <circle cx="335" cy="220" r="8"/>
+                  </g>
+                </svg>`;
+
+        case 'plaza':
+            return `
+                <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" class="scene-svg">
+                  <defs>
+                    <linearGradient id="plWall" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#3a2a1a"/>
+                      <stop offset="1" stop-color="#1a1108"/>
+                    </linearGradient>
+                    <linearGradient id="plBeer" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#f5c04a"/>
+                      <stop offset="1" stop-color="#a87320"/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="400" height="300" fill="url(#plWall)"/>
+                  <!-- Brewery vat silhouettes -->
+                  <g fill="#c8a86a" opacity="0.85">
+                    <path d="M60 100 Q60 80 80 80 L140 80 Q160 80 160 100 L160 240 L60 240 Z"/>
+                    <path d="M240 100 Q240 80 260 80 L320 80 Q340 80 340 100 L340 240 L240 240 Z"/>
+                  </g>
+                  <!-- Tap handles -->
+                  <g fill="#2a1a0a">
+                    <rect x="105" y="160" width="10" height="30" rx="2"/>
+                    <rect x="285" y="160" width="10" height="30" rx="2"/>
+                  </g>
+                  <!-- Beer glasses -->
+                  <g>
+                    <rect x="95" y="180" width="30" height="50" rx="3" fill="url(#plBeer)" opacity="0.95"/>
+                    <rect x="275" y="180" width="30" height="50" rx="3" fill="url(#plBeer)" opacity="0.95"/>
+                  </g>
+                  <!-- Foam on top -->
+                  <g fill="#fff8e0">
+                    <ellipse cx="110" cy="180" rx="16" ry="4"/>
+                    <ellipse cx="290" cy="180" rx="16" ry="4"/>
+                  </g>
+                </svg>`;
+
+        case 'arzabal':
+            return `
+                <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" class="scene-svg">
+                  <defs>
+                    <linearGradient id="azField" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#2e7d44"/>
+                      <stop offset="0.5" stop-color="#1f5e31"/>
+                      <stop offset="1" stop-color="#0f3a1e"/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="400" height="300" fill="#0a1a12"/>
+                  <!-- Big window revealing the pitch -->
+                  <rect x="20" y="40" width="360" height="180" fill="url(#azField)" rx="6"/>
+                  <g stroke="#fff" stroke-width="1.2" opacity="0.5">
+                    <line x1="20" y1="130" x2="380" y2="130"/>
+                    <line x1="200" y1="40" x2="200" y2="220"/>
+                    <circle cx="200" cy="130" r="28" fill="none"/>
+                  </g>
+                  <!-- Window frame -->
+                  <g stroke="#2a1e10" stroke-width="3" fill="none">
+                    <rect x="20" y="40" width="360" height="180" rx="6"/>
+                    <line x1="140" y1="40" x2="140" y2="220"/>
+                    <line x1="260" y1="40" x2="260" y2="220"/>
+                  </g>
+                  <!-- Foreground table silhouette -->
+                  <rect x="0" y="240" width="400" height="60" fill="#1a1309"/>
+                  <g fill="#c8a86a" opacity="0.7">
+                    <circle cx="90" cy="260" r="10"/>
+                    <circle cx="200" cy="260" r="10"/>
+                    <circle cx="310" cy="260" r="10"/>
+                  </g>
+                </svg>`;
+
+        case 'sushi':
+            return `
+                <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" class="scene-svg">
+                  <defs>
+                    <linearGradient id="suWall" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#2a1c10"/>
+                      <stop offset="1" stop-color="#0a0604"/>
+                    </linearGradient>
+                    <linearGradient id="suLantern" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#ffd9a0"/>
+                      <stop offset="1" stop-color="#c48840"/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="400" height="300" fill="url(#suWall)"/>
+                  <!-- Bar counter -->
+                  <rect x="0" y="190" width="400" height="110" fill="#1a0e08"/>
+                  <line x1="0" y1="190" x2="400" y2="190" stroke="#8c6f48" stroke-width="1"/>
+                  <!-- Hanging lanterns -->
+                  <g>
+                    <circle cx="80" cy="60" r="28" fill="url(#suLantern)" opacity="0.9"/>
+                    <rect x="78" y="30" width="4" height="12" fill="#2a1e10"/>
+                    <circle cx="200" cy="80" r="34" fill="url(#suLantern)" opacity="0.95"/>
+                    <rect x="198" y="42" width="4" height="18" fill="#2a1e10"/>
+                    <circle cx="320" cy="60" r="28" fill="url(#suLantern)" opacity="0.9"/>
+                    <rect x="318" y="30" width="4" height="12" fill="#2a1e10"/>
+                  </g>
+                  <!-- Sushi plates on counter -->
+                  <g>
+                    <ellipse cx="100" cy="230" rx="36" ry="10" fill="#2a2018"/>
+                    <circle cx="88" cy="228" r="6" fill="#d64a4a"/>
+                    <circle cx="100" cy="228" r="6" fill="#efd9b8"/>
+                    <circle cx="112" cy="228" r="6" fill="#2a2a2a"/>
+                    <ellipse cx="220" cy="240" rx="36" ry="10" fill="#2a2018"/>
+                    <circle cx="208" cy="238" r="6" fill="#efd9b8"/>
+                    <circle cx="220" cy="238" r="6" fill="#d64a4a"/>
+                    <circle cx="232" cy="238" r="6" fill="#2a2a2a"/>
+                    <ellipse cx="320" cy="235" rx="36" ry="10" fill="#2a2018"/>
+                    <circle cx="308" cy="233" r="6" fill="#2a2a2a"/>
+                    <circle cx="320" cy="233" r="6" fill="#d64a4a"/>
+                    <circle cx="332" cy="233" r="6" fill="#efd9b8"/>
+                  </g>
+                </svg>`;
+
+        default: return '';
+    }
+}
+
+// Gold "//" slash separator — two skewed bronze/gold parallelograms
+function gSlash(size = 'md') {
+    const cfg = {
+        xs: { h: 14, w: 3, gap: 2 },
+        sm: { h: 22, w: 5, gap: 3 },
+        md: { h: 36, w: 7, gap: 5 },
+        lg: { h: 52, w: 10, gap: 7 },
+        xl: { h: 72, w: 14, gap: 10 }
+    }[size] || { h: 36, w: 7, gap: 5 };
+    return `
+        <span class="g-slash" style="height:${cfg.h}px; gap:${cfg.gap}px">
+            <span style="width:${cfg.w}px; height:${cfg.h}px"></span>
+            <span style="width:${cfg.w}px; height:${cfg.h}px"></span>
+        </span>
+    `;
+}
+
 // VIP-specific icons
 const VIP_I = {
     soccerBall: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><polygon points="12,7 16,10 14.5,14.5 9.5,14.5 8,10" fill="currentColor" stroke="none"/><line x1="12" y1="3" x2="12" y2="7"/><line x1="16" y1="10" x2="20.5" y2="10.5"/><line x1="8" y1="10" x2="3.5" y2="10.5"/><line x1="9.5" y1="14.5" x2="7" y2="19"/><line x1="14.5" y1="14.5" x2="17" y2="19"/></svg>`,
+    person: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20 a8 6 0 0 1 16 0 z"/></svg>`,
     restaurante: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 3 L7 10 A3 3 0 0 0 10 13 L10 21 L8 21 L8 13 Q5 13 5 10 L5 3 Z M9 3 L9 9 L7 9 L7 3 Z"/><path d="M16 3 C13 3 12 6 12 9 C12 11 13 12 14 12 L14 21 L16 21 L16 3 Z"/></svg>`,
     calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>`,
     calendarPlus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18M12 14v4M10 16h4"/></svg>`,
@@ -880,7 +1061,7 @@ function renderVipInicio() {
     return `
         <div class="vip-screen-head">
             <div class="vip-screen-title">Inicio</div>
-            <button class="vip-avatar-btn" data-vip-perfil>${VIP_I.headset}</button>
+            <button class="vip-avatar-btn" data-vip-perfil>${VIP_I.person}</button>
         </div>
 
         <div class="vip-section-title">
@@ -891,7 +1072,7 @@ function renderVipInicio() {
             <div class="vip-reco-ball">${VIP_I.soccerBall}</div>
             <div class="vip-reco-teams">
                 <div class="vip-reco-crest">${bigCrestForVip(reco.home)}</div>
-                <span class="vip-reco-slash">//</span>
+                ${gSlash('md')}
                 <div class="vip-reco-crest">${bigCrestForVip(reco.away)}</div>
             </div>
             <div class="vip-reco-title">${reco.home} vs ${reco.away}</div>
@@ -901,11 +1082,11 @@ function renderVipInicio() {
         <div class="vip-proximo">
             <div class="vip-proximo-ball">${VIP_I.soccerBall}</div>
             <div class="vip-proximo-teams">${next.home}<br>${next.away}</div>
-            <div class="vip-proximo-crests">
-                <div>${bigCrestForVip(next.home)}</div>
-                <div>${bigCrestForVip(next.away)}</div>
+            <div class="vip-proximo-center">
+                <div class="vip-proximo-side-crest left">${bigCrestForVip(next.home)}</div>
+                <div class="vip-proximo-date">${next.date}</div>
+                <div class="vip-proximo-side-crest right">${bigCrestForVip(next.away)}</div>
             </div>
-            <div class="vip-proximo-date">${next.date}</div>
             <div class="vip-proximo-sub">${next.league}<br>${next.venue}</div>
         </div>
 
@@ -919,7 +1100,7 @@ function renderVipInicio() {
                 <div class="vip-event-row" data-vip-event-id="${ev.id}">
                     <div class="vip-event-crests">
                         <div>${bigCrestForVip(ev.home)}</div>
-                        <span class="vip-reco-slash">//</span>
+                        ${gSlash('sm')}
                         <div>${bigCrestForVip(ev.away)}</div>
                     </div>
                     <div class="vip-event-info">
@@ -936,7 +1117,8 @@ function renderVipInicio() {
         <div class="vip-gastro-scroll" id="vipGastroScroll">
             ${VIP_RESTAURANTS.map((r, i) => `
                 <div class="vip-gastro-slide" data-vip-gastro="${i}">
-                    <div class="vip-gastro-card" data-vip-restaurant="${r.id}" style="background: ${r.bg}">
+                    <div class="vip-gastro-card scene-${r.scene}" data-vip-restaurant="${r.id}">
+                        <div class="vip-gastro-scene">${renderGastroScene(r.scene)}</div>
                         <span class="vip-gastro-tag">${VIP_I.restaurante} ${r.tag}</span>
                         <div>
                             <div class="vip-gastro-title">${r.name}</div>
@@ -966,7 +1148,7 @@ function renderVipEventos() {
             <div class="vip-screen-title">Mis eventos</div>
             <div class="vip-head-actions">
                 <button class="vip-head-icon-btn">${VIP_I.history}</button>
-                <button class="vip-avatar-btn" data-vip-perfil>${VIP_I.headset}</button>
+                <button class="vip-avatar-btn" data-vip-perfil>${VIP_I.person}</button>
             </div>
         </div>
 
@@ -975,7 +1157,7 @@ function renderVipEventos() {
                 <div class="vip-event-card" data-vip-event-id="${ev.id}" style="cursor: pointer">
                     <div class="vip-event-card-head">
                         <div>${bigCrestForVip(ev.home)}</div>
-                        <span class="vip-reco-slash">//</span>
+                        ${gSlash('sm')}
                         <div>${bigCrestForVip(ev.away)}</div>
                     </div>
                     <div class="vip-event-date-big">${ev.date}</div>
@@ -1011,7 +1193,7 @@ function renderVipEventDetail() {
 
         <div class="vip-event-hero">
             <div>${bigCrestForVip(ev.home)}</div>
-            <span class="vip-reco-slash" style="font-size: 46px">//</span>
+            ${gSlash('xl')}
             <div>${bigCrestForVip(ev.away)}</div>
         </div>
 
@@ -1051,7 +1233,7 @@ function renderVipEventDetail() {
                     <div class="vip-event-row" data-vip-event-id="${e.id}" style="margin-bottom: 10px">
                         <div class="vip-event-crests">
                             <div>${bigCrestForVip(e.home)}</div>
-                            <span class="vip-reco-slash">//</span>
+                            ${gSlash('sm')}
                             <div>${bigCrestForVip(e.away)}</div>
                         </div>
                         <div class="vip-event-info">
@@ -1068,7 +1250,7 @@ function renderVipEventDetail() {
                     <div class="vip-event-row" data-vip-event-id="${e.id}" style="margin-bottom: 10px">
                         <div class="vip-event-crests">
                             <div>${bigCrestForVip(e.home)}</div>
-                            <span class="vip-reco-slash">//</span>
+                            ${gSlash('sm')}
                             <div>${bigCrestForVip(e.away)}</div>
                         </div>
                         <div class="vip-event-info">
@@ -1116,7 +1298,7 @@ function renderVipTickets() {
         <div class="vip-tickets-card">
             <div class="vip-tickets-crests">
                 <div>${bigCrestForVip(ev.home)}</div>
-                <span class="vip-reco-slash" style="font-size: 28px">//</span>
+                ${gSlash('lg')}
                 <div>${bigCrestForVip(ev.away)}</div>
             </div>
             <div class="vip-tickets-title">${ev.home} vs ${ev.away}</div>
@@ -1168,7 +1350,7 @@ function renderVipGestor() {
     return `
         <div class="vip-screen-head">
             <div class="vip-screen-title">Gestor</div>
-            <button class="vip-avatar-btn" data-vip-perfil>${VIP_I.headset}</button>
+            <button class="vip-avatar-btn" data-vip-perfil>${VIP_I.person}</button>
         </div>
 
         <div class="vip-gestor-wrap">
