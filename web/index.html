@@ -46,11 +46,17 @@
             <!-- Sidebar navigation (populated dynamically) -->
             <nav class="side-nav" id="sideNav"></nav>
 
+            <!-- User + Settings section (bottom) -->
+            <div class="side-user" id="sideUser"></div>
+
             <div class="side-footer">
                 <div class="side-version" id="sideVersion">10.2.11 (Build 15970)</div>
                 <div class="side-note">Mockup · Rama <code>main</code></div>
             </div>
         </aside>
+
+        <!-- Settings drawer (admin only) -->
+        <div id="settingsDrawer" class="settings-drawer" hidden></div>
 
         <!-- ── Center: iPhone mockup ────────────────────────────── -->
         <main class="stage">
@@ -101,6 +107,10 @@
         </main>
     </div>
 
+    <!-- Auth overlay (login / forgot / reset / setup) -->
+    <div id="authOverlay" class="auth-overlay" hidden></div>
+
+    <script src="auth.js"></script>
     <script src="data.js"></script>
     <script src="app.js"></script>
 </body>

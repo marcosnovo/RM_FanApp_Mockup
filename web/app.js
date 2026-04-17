@@ -2240,9 +2240,430 @@ function setupTouchSimulation() {
     window.addEventListener('mouseup',   onUp);
 }
 
+// ================================================================
+// AUTH UI — login / forgot / reset / setup password
+// ================================================================
+
+// Screen state for the overlay. null = closed (authenticated).
+// 'login' | 'forgot' | 'forgot-sent' | 'reset' | 'setup' | 'invite-link'
+let authScreen = null;
+let authCtx = {};       // { token, email, link, error, message }
+
+function openAuthOverlay(screen, ctx = {}) {
+    authScreen = screen;
+    authCtx = ctx;
+    renderAuthOverlay();
+}
+
+function closeAuthOverlay() {
+    authScreen = null;
+    authCtx = {};
+    const ov = $('#authOverlay');
+    if (ov) { ov.hidden = true; ov.innerHTML = ''; }
+}
+
+function renderAuthOverlay() {
+    const ov = $('#authOverlay');
+    if (!ov) return;
+    ov.hidden = false;
+
+    const logo = `
+        <div class="auth-logo">
+            <div class="auth-logo-mark">
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2 L14 7 L19 7 L15 11 L17 17 L12 13 L7 17 L9 11 L5 7 L10 7 Z"/></svg>
+            </div>
+            <div>
+                <div class="auth-brand">Real Madrid</div>
+                <div class="auth-brand-sub">Web Mockup Console</div>
+            </div>
+        </div>
+    `;
+
+    let body = '';
+    if (authScreen === 'login')        body = renderLoginScreen();
+    else if (authScreen === 'forgot')        body = renderForgotScreen();
+    else if (authScreen === 'forgot-sent')   body = renderForgotSentScreen();
+    else if (authScreen === 'reset')         body = renderResetScreen();
+    else if (authScreen === 'setup')         body = renderSetupScreen();
+    else if (authScreen === 'invite-link')   body = renderInviteLinkScreen();
+
+    ov.innerHTML = `
+        <div class="auth-shell">
+            <div class="auth-bg"></div>
+            <div class="auth-card">
+                ${logo}
+                ${body}
+            </div>
+            <div class="auth-foot">Mockup · sin backend real · datos en localStorage</div>
+        </div>
+    `;
+
+    attachAuthListeners();
+}
+
+function renderLoginScreen() {
+    const err = authCtx.error ? `<div class="auth-error">${authCtx.error}</div>` : '';
+    const msg = authCtx.message ? `<div class="auth-ok">${authCtx.message}</div>` : '';
+    return `
+        <h1 class="auth-title">Iniciar sesión</h1>
+        <p class="auth-subtitle">Accede al panel de mockups de la app</p>
+        ${err}${msg}
+        <form class="auth-form" data-auth-form="login">
+            <label class="auth-field">
+                <span>Email</span>
+                <input type="email" name="email" placeholder="tu@email.com" value="${authCtx.email || ''}" required autofocus>
+            </label>
+            <label class="auth-field">
+                <span>Contraseña</span>
+                <input type="password" name="password" placeholder="••••••••" required>
+            </label>
+            <button type="submit" class="auth-primary-btn">Entrar</button>
+            <button type="button" class="auth-link-btn" data-auth-go="forgot">¿Has olvidado tu contraseña?</button>
+        </form>
+        <div class="auth-hint">
+            <strong>Credenciales de demo (admin):</strong><br>
+            <code>marcos@realmadrid.com</code> / <code>RealMadrid2026</code>
+        </div>
+    `;
+}
+
+function renderForgotScreen() {
+    const err = authCtx.error ? `<div class="auth-error">${authCtx.error}</div>` : '';
+    return `
+        <h1 class="auth-title">Recuperar contraseña</h1>
+        <p class="auth-subtitle">Introduce tu email y te enviaremos un enlace para establecer una nueva contraseña.</p>
+        ${err}
+        <form class="auth-form" data-auth-form="forgot">
+            <label class="auth-field">
+                <span>Email</span>
+                <input type="email" name="email" placeholder="tu@email.com" required autofocus>
+            </label>
+            <button type="submit" class="auth-primary-btn">Enviar enlace</button>
+            <button type="button" class="auth-link-btn" data-auth-go="login">← Volver al login</button>
+        </form>
+    `;
+}
+
+function renderForgotSentScreen() {
+    const linkBlock = authCtx.link
+        ? `<div class="auth-mock-link-box">
+             <div class="auth-mock-link-label">📧 Simulación del email enviado (en una app real, este enlace llegaría por correo):</div>
+             <a class="auth-mock-link" href="${authCtx.link}">${authCtx.link}</a>
+             <button class="auth-mock-link-btn" data-auth-open-link="${authCtx.link}">Abrir ahora</button>
+           </div>`
+        : `<p class="auth-subtitle">Si el email está dado de alta, recibirás un enlace para restablecer la contraseña.</p>`;
+    return `
+        <h1 class="auth-title">Enlace enviado</h1>
+        ${linkBlock}
+        <button type="button" class="auth-primary-btn" data-auth-go="login">Volver al login</button>
+    `;
+}
+
+function renderResetScreen() {
+    const err = authCtx.error ? `<div class="auth-error">${authCtx.error}</div>` : '';
+    return `
+        <h1 class="auth-title">Nueva contraseña</h1>
+        <p class="auth-subtitle">Elige una contraseña nueva para tu cuenta.</p>
+        ${err}
+        <form class="auth-form" data-auth-form="reset">
+            <label class="auth-field">
+                <span>Nueva contraseña</span>
+                <input type="password" name="password" placeholder="mínimo 6 caracteres" required autofocus>
+            </label>
+            <label class="auth-field">
+                <span>Repite la contraseña</span>
+                <input type="password" name="password2" required>
+            </label>
+            <button type="submit" class="auth-primary-btn">Guardar y entrar</button>
+        </form>
+    `;
+}
+
+function renderSetupScreen() {
+    const err = authCtx.error ? `<div class="auth-error">${authCtx.error}</div>` : '';
+    return `
+        <h1 class="auth-title">Configura tu cuenta</h1>
+        <p class="auth-subtitle">Has sido invitado a acceder al panel. Elige una contraseña para continuar.</p>
+        ${err}
+        <form class="auth-form" data-auth-form="setup">
+            <label class="auth-field">
+                <span>Nombre</span>
+                <input type="text" name="name" placeholder="Tu nombre" value="${authCtx.name || ''}">
+            </label>
+            <label class="auth-field">
+                <span>Contraseña</span>
+                <input type="password" name="password" placeholder="mínimo 6 caracteres" required>
+            </label>
+            <label class="auth-field">
+                <span>Repite la contraseña</span>
+                <input type="password" name="password2" required>
+            </label>
+            <button type="submit" class="auth-primary-btn">Crear cuenta</button>
+        </form>
+    `;
+}
+
+function renderInviteLinkScreen() {
+    return `
+        <h1 class="auth-title">Usuario invitado</h1>
+        <p class="auth-subtitle">En una app real recibiría este enlace por email. Cópialo para compartir:</p>
+        <div class="auth-mock-link-box">
+            <a class="auth-mock-link" href="${authCtx.link}">${authCtx.link}</a>
+            <button class="auth-mock-link-btn" data-auth-copy="${authCtx.link}">Copiar enlace</button>
+        </div>
+        <button type="button" class="auth-primary-btn" data-auth-close>Hecho</button>
+    `;
+}
+
+function attachAuthListeners() {
+    $$('[data-auth-go]').forEach(btn => btn.addEventListener('click', () => {
+        openAuthOverlay(btn.dataset.authGo, { email: authCtx.email });
+    }));
+
+    $$('[data-auth-open-link]').forEach(btn => btn.addEventListener('click', () => {
+        location.hash = btn.dataset.authOpenLink.split('#')[1] || '';
+        bootFromHash();
+    }));
+
+    $$('[data-auth-copy]').forEach(btn => btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(btn.dataset.authCopy).catch(() => {});
+        btn.textContent = '¡Copiado!';
+        setTimeout(() => { btn.textContent = 'Copiar enlace'; }, 1500);
+    }));
+
+    $$('[data-auth-close]').forEach(btn => btn.addEventListener('click', () => {
+        closeAuthOverlay();
+        renderSettings();  // if admin added user then closed, refresh list
+        bootApp();
+    }));
+
+    const form = $('[data-auth-form]');
+    if (!form) return;
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+        const fd = new FormData(form);
+        const kind = form.dataset.authForm;
+
+        if (kind === 'login') {
+            const r = Auth.login(fd.get('email'), fd.get('password'));
+            if (!r.ok) return openAuthOverlay('login', { error: r.error, email: fd.get('email') });
+            closeAuthOverlay();
+            bootApp();
+            return;
+        }
+
+        if (kind === 'forgot') {
+            const r = Auth.requestPasswordReset(fd.get('email'));
+            openAuthOverlay('forgot-sent', { link: r.link });
+            return;
+        }
+
+        if (kind === 'reset') {
+            const p = fd.get('password');
+            const p2 = fd.get('password2');
+            if (p !== p2) return openAuthOverlay('reset', { error: 'Las contraseñas no coinciden', token: authCtx.token });
+            const r = Auth.completeReset(authCtx.token, p);
+            if (!r.ok) return openAuthOverlay('reset', { error: r.error, token: authCtx.token });
+            Auth.clearHash();
+            openAuthOverlay('login', { email: r.email, message: 'Contraseña actualizada. Inicia sesión.' });
+            return;
+        }
+
+        if (kind === 'setup') {
+            const p = fd.get('password');
+            const p2 = fd.get('password2');
+            if (p !== p2) return openAuthOverlay('setup', { error: 'Las contraseñas no coinciden', token: authCtx.token, name: fd.get('name') });
+            const r = Auth.completeSetup(authCtx.token, p, fd.get('name'));
+            if (!r.ok) return openAuthOverlay('setup', { error: r.error, token: authCtx.token, name: fd.get('name') });
+            Auth.clearHash();
+            openAuthOverlay('login', { email: r.email, message: 'Cuenta creada. Inicia sesión.' });
+            return;
+        }
+    });
+}
+
+// ================================================================
+// USER / SETTINGS (bottom of left sidebar)
+// ================================================================
+
+function renderUserBox() {
+    const session = Auth.current();
+    const box = $('#sideUser');
+    if (!box) return;
+    if (!session) { box.innerHTML = ''; return; }
+
+    const initials = (session.name || session.email).split(/[\s@.]+/).map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+    const isAdmin = session.role === 'admin';
+
+    box.innerHTML = `
+        <button class="side-user-row" id="sideUserRow">
+            <div class="side-user-avatar">${initials}</div>
+            <div class="side-user-info">
+                <div class="side-user-name">${session.name || session.email}</div>
+                <div class="side-user-role">${isAdmin ? 'Admin' : 'Viewer'}</div>
+            </div>
+            <svg class="side-user-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+        </button>
+    `;
+
+    $('#sideUserRow').addEventListener('click', () => {
+        if (isSettingsOpen()) closeSettings();
+        else openSettings();
+    });
+}
+
+function isSettingsOpen() {
+    return !$('#settingsDrawer').hidden;
+}
+
+function openSettings() {
+    const dr = $('#settingsDrawer');
+    dr.hidden = false;
+    renderSettings();
+}
+
+function closeSettings() {
+    const dr = $('#settingsDrawer');
+    dr.hidden = true;
+    dr.innerHTML = '';
+}
+
+function renderSettings() {
+    const dr = $('#settingsDrawer');
+    if (!dr || dr.hidden) return;
+    const session = Auth.current();
+    if (!session) { closeSettings(); return; }
+
+    const isAdmin = session.role === 'admin';
+    const users = Auth.listUsers().sort((a, b) => a.createdAt - b.createdAt);
+
+    const usersBlock = isAdmin ? `
+        <div class="settings-section-title">Usuarios</div>
+        <div class="settings-add-user">
+            <form id="addUserForm" class="settings-add-form">
+                <input type="email" name="email" placeholder="email@dominio.com" required>
+                <select name="role">
+                    <option value="viewer">Viewer</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <button type="submit">Añadir</button>
+            </form>
+        </div>
+        <div class="settings-users">
+            ${users.map(u => `
+                <div class="settings-user-row ${u.id === session.userId ? 'is-self' : ''}">
+                    <div class="settings-user-avatar">${(u.name || u.email).slice(0,2).toUpperCase()}</div>
+                    <div class="settings-user-meta">
+                        <div class="settings-user-email">${u.email}${u.id === session.userId ? ' <span class="settings-user-self">(tú)</span>' : ''}</div>
+                        <div class="settings-user-status ${u.status}">${u.status === 'pending' ? 'Pendiente · contraseña no establecida' : 'Activo'}</div>
+                    </div>
+                    <select class="settings-user-role" data-user-id="${u.id}" ${u.id === session.userId ? 'disabled' : ''}>
+                        <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>Viewer</option>
+                        <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                    </select>
+                    <button class="settings-user-del" data-del-user-id="${u.id}" ${u.id === session.userId ? 'disabled title="No puedes eliminarte a ti mismo"' : ''}>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="4,7 20,7"/><path d="M6 7 v12 a2 2 0 0 0 2 2 h8 a2 2 0 0 0 2-2 V7"/><path d="M9 7 V4 a1 1 0 0 1 1-1 h4 a1 1 0 0 1 1 1 v3"/></svg>
+                    </button>
+                </div>
+            `).join('')}
+        </div>
+    ` : `
+        <div class="settings-section-title">Tu rol</div>
+        <div class="settings-viewer-info">
+            Eres <strong>Viewer</strong>. Solo los administradores pueden gestionar usuarios.
+        </div>
+    `;
+
+    dr.innerHTML = `
+        <div class="settings-header">
+            <h2>Ajustes</h2>
+            <button class="settings-close" id="settingsCloseBtn">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="settings-section-title">Tu cuenta</div>
+        <div class="settings-self">
+            <div class="settings-self-avatar">${(session.name || session.email).slice(0,2).toUpperCase()}</div>
+            <div>
+                <div class="settings-self-name">${session.name || session.email}</div>
+                <div class="settings-self-email">${session.email}</div>
+                <div class="settings-self-role ${isAdmin ? 'admin' : 'viewer'}">${isAdmin ? 'Admin' : 'Viewer'}</div>
+            </div>
+        </div>
+        <button class="settings-logout" id="settingsLogoutBtn">Cerrar sesión</button>
+
+        ${usersBlock}
+    `;
+
+    $('#settingsCloseBtn').addEventListener('click', closeSettings);
+    $('#settingsLogoutBtn').addEventListener('click', () => {
+        Auth.logout();
+        closeSettings();
+        openAuthOverlay('login');
+    });
+
+    const form = $('#addUserForm');
+    if (form) form.addEventListener('submit', e => {
+        e.preventDefault();
+        const fd = new FormData(form);
+        const r = Auth.inviteUser(fd.get('email'), fd.get('role'));
+        if (!r.ok) {
+            alert(r.error);
+            return;
+        }
+        form.reset();
+        renderSettings();
+        openAuthOverlay('invite-link', { link: r.link });
+    });
+
+    $$('.settings-user-role').forEach(sel => sel.addEventListener('change', () => {
+        Auth.setRole(sel.dataset.userId, sel.value);
+        renderSettings();
+    }));
+
+    $$('[data-del-user-id]').forEach(btn => btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        if (!confirm('¿Eliminar este usuario?')) return;
+        const r = Auth.deleteUser(btn.dataset.delUserId);
+        if (!r.ok) alert(r.error);
+        renderSettings();
+    }));
+}
+
+// ================================================================
+// BOOT
+// ================================================================
+
+function bootFromHash() {
+    const t = Auth.consumeHashToken();
+    if (t?.type === 'setup')  { openAuthOverlay('setup',  { token: t.token }); return true; }
+    if (t?.type === 'reset')  { openAuthOverlay('reset',  { token: t.token }); return true; }
+    return false;
+}
+
+function bootApp() {
+    // Main content render + sidebar user + optional auth gate
+    const session = Auth.current();
+    if (!session) {
+        openAuthOverlay('login');
+        // Hide app body so login is the only thing visible
+        document.body.classList.add('auth-mode');
+        return;
+    }
+    document.body.classList.remove('auth-mode');
+    render();
+    renderUserBox();
+}
+
 // ── Boot ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     attachAppSwitcher();
-    render();
     setupTouchSimulation();
+
+    // Hash tokens (invite / reset) always take priority — even if logged in,
+    // the user may be a different person using the device.
+    if (bootFromHash()) return;
+
+    bootApp();
 });
