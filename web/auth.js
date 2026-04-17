@@ -97,23 +97,30 @@ const Auth = {
 
     // ── Auth operations ────────────────────────────────────────
     async login(email, password) {
-        const { error } = await sb.auth.signInWithPassword({
+        const { data, error } = await sb.auth.signInWithPassword({
             email: (email || '').trim(),
             password
         });
-        if (error) return { ok: false, error: translateError(error.message) };
+        if (error) {
+            console.warn('[auth] login error:', error);
+            return { ok: false, error: translateError(error.message) };
+        }
+        if (!data?.session || !data?.user) {
+            return { ok: false, error: 'No se pudo crear la sesión.' };
+        }
 
-        // Wait until we have both session + profile cached before returning,
-        // otherwise bootApp() may run before the onAuthStateChange listener
-        // finishes fetching the profile and we bounce back to login.
-        await syncCache();
+        // Use session from the response directly (getSession() can have a
+        // brief delay before it reflects the new login on some environments)
+        _cachedSession = data.session;
+        _cachedProfile = await fetchProfile(data.user.id);
 
         if (!_cachedProfile) {
+            console.warn('[auth] No profile row for user', data.user.id);
             await sb.auth.signOut();
             _cachedSession = null;
             return {
                 ok: false,
-                error: 'Tu cuenta no tiene un perfil asignado. Pide al administrador que te dé acceso.'
+                error: 'Tu cuenta no tiene perfil asignado. Contacta al administrador.'
             };
         }
         return { ok: true };
