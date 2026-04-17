@@ -11,10 +11,13 @@ const SUPABASE_URL = 'https://guidpagkdopgestrbxke.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_bQtzqtvTegErZucUd_v6KQ_xpdrMlGW';
 
 // Create the Supabase client (SDK loaded from CDN in index.html)
+// NOTE: we use implicit flow (not PKCE) so magic-link / recovery emails
+// work when opened in a different browser or device than the one that
+// triggered them.
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
         detectSessionInUrl: true,
-        flowType: 'pkce',
+        flowType: 'implicit',
         persistSession: true,
         autoRefreshToken: true
     }
@@ -43,17 +46,26 @@ async function fetchProfile(userId) {
         .select('id, email, role, created_at')
         .eq('id', userId)
         .single();
-    if (error) return null;
+    if (error) {
+        console.warn('[auth] fetchProfile error:', error.message);
+        return null;
+    }
     return data;
+}
+
+// Refresh cache from Supabase (session + profile). Call after any auth
+// operation to make sure Auth.current() is up-to-date immediately.
+async function syncCache() {
+    const { data: { session } } = await sb.auth.getSession();
+    _cachedSession = session;
+    _cachedProfile = session ? await fetchProfile(session.user.id) : null;
 }
 
 // ── Public API ───────────────────────────────────────────────────
 const Auth = {
     // Init: load existing session (if any) on page load
     async init() {
-        const { data: { session } } = await sb.auth.getSession();
-        _cachedSession = session;
-        if (session) _cachedProfile = await fetchProfile(session.user.id);
+        await syncCache();
     },
 
     current() {
@@ -90,6 +102,20 @@ const Auth = {
             password
         });
         if (error) return { ok: false, error: translateError(error.message) };
+
+        // Wait until we have both session + profile cached before returning,
+        // otherwise bootApp() may run before the onAuthStateChange listener
+        // finishes fetching the profile and we bounce back to login.
+        await syncCache();
+
+        if (!_cachedProfile) {
+            await sb.auth.signOut();
+            _cachedSession = null;
+            return {
+                ok: false,
+                error: 'Tu cuenta no tiene un perfil asignado. Pide al administrador que te dé acceso.'
+            };
+        }
         return { ok: true };
     },
 
@@ -122,6 +148,7 @@ const Auth = {
         const { error } = await sb.auth.updateUser({ password: newPassword });
         if (error) return { ok: false, error: translateError(error.message) };
         _recoveryTriggered = false;
+        await syncCache();
         return { ok: true };
     },
 
@@ -134,9 +161,7 @@ const Auth = {
         const updates = { password: newPassword, data: { name, password_set: true } };
         const { error } = await sb.auth.updateUser(updates);
         if (error) return { ok: false, error: translateError(error.message) };
-        // Refresh profile cache
-        const { data: { user } } = await sb.auth.getUser();
-        if (user) _cachedProfile = await fetchProfile(user.id);
+        await syncCache();
         return { ok: true };
     },
 
