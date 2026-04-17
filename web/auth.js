@@ -1,219 +1,238 @@
 /* ================================================================
-   AUTH — Mockup auth using localStorage
+   AUTH — Supabase-backed (real emails, shared user store)
    ================================================================
-   Users, roles, session, invite + password reset flows.
-   This is a FRONTEND-ONLY mockup (no backend, no real emails).
-   To upgrade: swap these functions to call Supabase/Firebase.
+   - Login, forgot password, reset password, invite (magic link)
+   - Roles admin/viewer via public.profiles table
+   - Invited roles respected via public.pending_invitations (+ trigger)
+   - Emails sent by Supabase's SMTP
    ================================================================ */
 
-const AUTH_KEYS = {
-    USERS: 'rm_users_v1',
-    SESSION: 'rm_session_v1'
-};
+const SUPABASE_URL = 'https://guidpagkdopgestrbxke.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_bQtzqtvTegErZucUd_v6KQ_xpdrMlGW';
 
-// Default admin seed
-const DEFAULT_ADMIN = {
-    id: 'admin-marcos',
-    email: 'marcos@realmadrid.com',
-    name: 'Marcos Novo',
-    role: 'admin',
-    password: 'RealMadrid2026',
-    status: 'active',
-    createdAt: Date.now()
-};
-
-// Simple uuid (enough for mockup)
-function uuid() {
-    return 'u-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-}
-
-// ── Storage helpers ─────────────────────────────────────────────
-function loadUsers() {
-    try {
-        const raw = localStorage.getItem(AUTH_KEYS.USERS);
-        if (!raw) {
-            const seeded = [DEFAULT_ADMIN];
-            localStorage.setItem(AUTH_KEYS.USERS, JSON.stringify(seeded));
-            return seeded;
-        }
-        return JSON.parse(raw);
-    } catch {
-        return [DEFAULT_ADMIN];
+// Create the Supabase client (SDK loaded from CDN in index.html)
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+        persistSession: true,
+        autoRefreshToken: true
     }
-}
+});
 
-function saveUsers(users) {
-    localStorage.setItem(AUTH_KEYS.USERS, JSON.stringify(users));
-}
+// Cache for the current user + role
+let _cachedSession = null;
+let _cachedProfile = null;
+let _authStateListeners = [];
+let _recoveryTriggered = false;
 
-function loadSession() {
-    try {
-        const raw = localStorage.getItem(AUTH_KEYS.SESSION);
-        return raw ? JSON.parse(raw) : null;
-    } catch {
-        return null;
+// ── Events ───────────────────────────────────────────────────────
+sb.auth.onAuthStateChange(async (event, session) => {
+    _cachedSession = session;
+    _cachedProfile = session ? await fetchProfile(session.user.id) : null;
+
+    if (event === 'PASSWORD_RECOVERY') {
+        _recoveryTriggered = true;
     }
+    _authStateListeners.forEach(cb => cb(event, session));
+});
+
+async function fetchProfile(userId) {
+    const { data, error } = await sb
+        .from('profiles')
+        .select('id, email, role, created_at')
+        .eq('id', userId)
+        .single();
+    if (error) return null;
+    return data;
 }
 
-function saveSession(session) {
-    if (session) localStorage.setItem(AUTH_KEYS.SESSION, JSON.stringify(session));
-    else         localStorage.removeItem(AUTH_KEYS.SESSION);
-}
-
-// ── Public API ──────────────────────────────────────────────────
+// ── Public API ───────────────────────────────────────────────────
 const Auth = {
-    // Current session or null
+    // Init: load existing session (if any) on page load
+    async init() {
+        const { data: { session } } = await sb.auth.getSession();
+        _cachedSession = session;
+        if (session) _cachedProfile = await fetchProfile(session.user.id);
+    },
+
     current() {
-        const s = loadSession();
-        if (!s) return null;
-        const user = loadUsers().find(u => u.id === s.userId);
-        if (!user || user.status !== 'active') {
-            saveSession(null);
-            return null;
-        }
-        return { userId: user.id, email: user.email, name: user.name, role: user.role };
+        if (!_cachedSession || !_cachedProfile) return null;
+        return {
+            userId: _cachedSession.user.id,
+            email: _cachedProfile.email,
+            name: _cachedSession.user.user_metadata?.name || _cachedProfile.email,
+            role: _cachedProfile.role
+        };
     },
 
     isAdmin() {
-        const s = this.current();
-        return !!s && s.role === 'admin';
+        return !!_cachedProfile && _cachedProfile.role === 'admin';
     },
 
-    // Login
-    login(email, password) {
-        const users = loadUsers();
-        const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
-        if (!user)                    return { ok: false, error: 'Usuario no encontrado' };
-        if (user.status === 'pending') return { ok: false, error: 'Debes establecer tu contraseña primero. Revisa el email de invitación.' };
-        if (user.password !== password) return { ok: false, error: 'Contraseña incorrecta' };
-        saveSession({ userId: user.id });
-        return { ok: true, user: { userId: user.id, email: user.email, name: user.name, role: user.role } };
+    // True when user came from a password-reset email and must set a new password
+    isRecovery() {
+        return _recoveryTriggered;
     },
 
-    logout() {
-        saveSession(null);
+    clearRecovery() {
+        _recoveryTriggered = false;
     },
 
-    // List users (admin view)
-    listUsers() {
-        return loadUsers().map(u => ({
-            id: u.id,
-            email: u.email,
-            name: u.name || '',
-            role: u.role,
-            status: u.status,
-            createdAt: u.createdAt
-        }));
+    onAuthChange(cb) {
+        _authStateListeners.push(cb);
     },
 
-    // Invite a new user by email; returns the "magic link" path to open
-    inviteUser(email, role = 'viewer', name = '') {
-        const users = loadUsers();
-        email = email.trim().toLowerCase();
-        if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-            return { ok: false, error: 'Email inválido' };
-        }
-        if (users.some(u => u.email.toLowerCase() === email)) {
-            return { ok: false, error: 'Ese email ya está dado de alta' };
-        }
-        if (role !== 'admin' && role !== 'viewer') role = 'viewer';
-
-        const user = {
-            id: uuid(),
-            email,
-            name: name || email.split('@')[0],
-            role,
-            password: null,
-            status: 'pending',
-            setupToken: uuid(),
-            createdAt: Date.now()
-        };
-        users.push(user);
-        saveUsers(users);
-        const link = `${location.origin}${location.pathname}#setup=${user.setupToken}`;
-        return { ok: true, user, link };
-    },
-
-    // Change role (admin only)
-    setRole(userId, role) {
-        if (role !== 'admin' && role !== 'viewer') return { ok: false, error: 'Rol inválido' };
-        const users = loadUsers();
-        const i = users.findIndex(u => u.id === userId);
-        if (i < 0) return { ok: false, error: 'No existe' };
-        users[i].role = role;
-        saveUsers(users);
+    // ── Auth operations ────────────────────────────────────────
+    async login(email, password) {
+        const { error } = await sb.auth.signInWithPassword({
+            email: (email || '').trim(),
+            password
+        });
+        if (error) return { ok: false, error: translateError(error.message) };
         return { ok: true };
     },
 
-    // Delete user (admin only, can't delete self)
-    deleteUser(userId) {
+    async logout() {
+        await sb.auth.signOut();
+        _cachedSession = null;
+        _cachedProfile = null;
+    },
+
+    // Password reset (forgot password) — sends REAL email
+    async requestPasswordReset(email) {
+        const redirectTo = `${location.origin}${location.pathname}`;
+        const { error } = await sb.auth.resetPasswordForEmail(
+            (email || '').trim(),
+            { redirectTo }
+        );
+        if (error) {
+            // For security, still behave as if success
+            return { ok: true, notFound: true };
+        }
+        return { ok: true };
+    },
+
+    // After user clicks reset email → they land here with a recovery session
+    // → ask them for new password
+    async completeReset(newPassword) {
+        if (!newPassword || newPassword.length < 6) {
+            return { ok: false, error: 'La contraseña debe tener al menos 6 caracteres' };
+        }
+        const { error } = await sb.auth.updateUser({ password: newPassword });
+        if (error) return { ok: false, error: translateError(error.message) };
+        _recoveryTriggered = false;
+        return { ok: true };
+    },
+
+    // Set password + name after accepting an invite (user is auto-logged-in
+    // via the magic link that arrived by email)
+    async completeSetup(newPassword, name) {
+        if (!newPassword || newPassword.length < 6) {
+            return { ok: false, error: 'La contraseña debe tener al menos 6 caracteres' };
+        }
+        const updates = { password: newPassword, data: { name, password_set: true } };
+        const { error } = await sb.auth.updateUser(updates);
+        if (error) return { ok: false, error: translateError(error.message) };
+        // Refresh profile cache
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) _cachedProfile = await fetchProfile(user.id);
+        return { ok: true };
+    },
+
+    // True if authenticated user still needs to set a password (first login
+    // via magic-link invite)
+    needsPasswordSetup() {
+        if (!_cachedSession) return false;
+        return !_cachedSession.user.user_metadata?.password_set;
+    },
+
+    // ── Admin operations ───────────────────────────────────────
+    async listUsers() {
+        const { data, error } = await sb
+            .from('profiles')
+            .select('id, email, role, created_at')
+            .order('created_at', { ascending: true });
+        if (error) return [];
+        return data.map(p => ({
+            id: p.id,
+            email: p.email,
+            name: '',
+            role: p.role,
+            status: 'active',
+            createdAt: new Date(p.created_at).getTime()
+        }));
+    },
+
+    async inviteUser(email, role = 'viewer') {
+        email = (email || '').trim().toLowerCase();
+        if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+            return { ok: false, error: 'Email inválido' };
+        }
+        if (role !== 'admin' && role !== 'viewer') role = 'viewer';
+
+        // 1) Store pending invitation so the trigger assigns the right role
+        //    when the user signs up via the magic link
+        const session = this.current();
+        const { error: invErr } = await sb
+            .from('pending_invitations')
+            .upsert({
+                email,
+                role,
+                invited_by: session ? session.userId : null
+            });
+        if (invErr) return { ok: false, error: translateError(invErr.message) };
+
+        // 2) Send the magic link — Supabase creates the user if missing
+        const redirectTo = `${location.origin}${location.pathname}`;
+        const { error } = await sb.auth.signInWithOtp({
+            email,
+            options: { emailRedirectTo: redirectTo, shouldCreateUser: true }
+        });
+        if (error) {
+            // Roll back the invitation if the email failed
+            await sb.from('pending_invitations').delete().eq('email', email);
+            return { ok: false, error: translateError(error.message) };
+        }
+        return { ok: true };
+    },
+
+    async setRole(userId, role) {
+        if (role !== 'admin' && role !== 'viewer') {
+            return { ok: false, error: 'Rol inválido' };
+        }
+        const { error } = await sb
+            .from('profiles')
+            .update({ role })
+            .eq('id', userId);
+        if (error) return { ok: false, error: translateError(error.message) };
+        return { ok: true };
+    },
+
+    async deleteUser(userId) {
         const session = this.current();
         if (session && session.userId === userId) {
             return { ok: false, error: 'No puedes eliminarte a ti mismo' };
         }
-        const users = loadUsers().filter(u => u.id !== userId);
-        saveUsers(users);
+        // RLS allows admins to delete profile rows. We can't delete the
+        // auth.users row from the client (requires service_role). The user
+        // will still be able to log in, but without a profile they'll be
+        // treated as "no access" and auto-logged-out.
+        const { error } = await sb.from('profiles').delete().eq('id', userId);
+        if (error) return { ok: false, error: translateError(error.message) };
         return { ok: true };
-    },
-
-    // Forgot password → creates reset token; returns the reset link
-    requestPasswordReset(email) {
-        const users = loadUsers();
-        email = (email || '').trim().toLowerCase();
-        const i = users.findIndex(u => u.email.toLowerCase() === email);
-        if (i < 0) {
-            // Mimic real behavior: don't reveal user existence for security
-            return { ok: true, link: null, notFound: true };
-        }
-        users[i].resetToken = uuid();
-        saveUsers(users);
-        const link = `${location.origin}${location.pathname}#reset=${users[i].resetToken}`;
-        return { ok: true, link, user: users[i] };
-    },
-
-    // Complete password reset via token
-    completeReset(token, newPassword) {
-        if (!newPassword || newPassword.length < 6) {
-            return { ok: false, error: 'La contraseña debe tener al menos 6 caracteres' };
-        }
-        const users = loadUsers();
-        const i = users.findIndex(u => u.resetToken === token);
-        if (i < 0) return { ok: false, error: 'Enlace inválido o caducado' };
-        users[i].password = newPassword;
-        users[i].resetToken = null;
-        saveUsers(users);
-        return { ok: true, email: users[i].email };
-    },
-
-    // Complete initial password setup via invite token
-    completeSetup(token, newPassword, name) {
-        if (!newPassword || newPassword.length < 6) {
-            return { ok: false, error: 'La contraseña debe tener al menos 6 caracteres' };
-        }
-        const users = loadUsers();
-        const i = users.findIndex(u => u.setupToken === token);
-        if (i < 0) return { ok: false, error: 'Enlace inválido o caducado' };
-        users[i].password = newPassword;
-        if (name) users[i].name = name;
-        users[i].status = 'active';
-        users[i].setupToken = null;
-        saveUsers(users);
-        return { ok: true, email: users[i].email };
-    },
-
-    // Find tokens in hash (for setup/reset links)
-    consumeHashToken() {
-        const h = location.hash;
-        if (h.startsWith('#setup=')) {
-            return { type: 'setup', token: h.slice('#setup='.length) };
-        }
-        if (h.startsWith('#reset=')) {
-            return { type: 'reset', token: h.slice('#reset='.length) };
-        }
-        return null;
-    },
-
-    clearHash() {
-        history.replaceState(null, '', location.pathname + location.search);
     }
 };
+
+// ── Friendly error messages ──────────────────────────────────────
+function translateError(msg) {
+    if (!msg) return 'Error desconocido';
+    const m = msg.toLowerCase();
+    if (m.includes('invalid login')) return 'Email o contraseña incorrectos';
+    if (m.includes('email not confirmed')) return 'Debes confirmar tu email antes de entrar';
+    if (m.includes('user already registered')) return 'Ese email ya está dado de alta';
+    if (m.includes('weak password')) return 'La contraseña es demasiado débil';
+    if (m.includes('rate limit')) return 'Demasiados intentos. Espera un momento.';
+    if (m.includes('network')) return 'Error de red';
+    return msg;
+}
