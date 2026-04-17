@@ -63,9 +63,22 @@ async function syncCache() {
 
 // ── Public API ───────────────────────────────────────────────────
 const Auth = {
-    // Init: load existing session (if any) on page load
+    // Init: load existing session (if any) on page load.
+    // Guarded with a timeout so a stale/invalid cached session (e.g.,
+    // from a deleted user) can't block app startup forever.
     async init() {
-        await syncCache();
+        try {
+            await Promise.race([
+                syncCache(),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('init timeout')), 6000))
+            ]);
+        } catch (err) {
+            console.warn('[auth] init timed out or errored, clearing session:', err.message);
+            // Clear any stale Supabase session from localStorage and start fresh
+            try { await sb.auth.signOut(); } catch {}
+            _cachedSession = null;
+            _cachedProfile = null;
+        }
     },
 
     current() {
