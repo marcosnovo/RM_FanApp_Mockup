@@ -2627,6 +2627,68 @@ async function renderSettings() {
         if (!r.ok) alert(r.error);
         await renderSettings();
     }));
+
+    // Feature flags panel (visible to all authenticated users)
+    renderFlagsPanel();
+}
+
+// ================================================================
+// FEATURE FLAGS PANEL (inside Settings drawer)
+// ================================================================
+
+function renderFlagsPanel() {
+    const dr = $('#settingsDrawer');
+    if (!dr || dr.hidden) return;
+
+    const groups = Flags.grouped();
+    const total = Flags.count();
+    const active = Flags.activeCount();
+
+    // Remove any existing panel first (when re-rendering)
+    dr.querySelector('.settings-flags-wrap')?.remove();
+
+    const cats = Object.keys(groups).sort();
+    const panel = document.createElement('div');
+    panel.className = 'settings-flags-wrap';
+    panel.innerHTML = `
+        <div class="settings-flags-head">
+            <div class="settings-section-title" style="margin:0">Funcionalidades experimentales</div>
+            <div class="settings-flags-counter">${active}/${total}</div>
+        </div>
+        ${total === 0 ? `
+            <div class="settings-flags-empty">
+                Aún no hay funcionalidades experimentales. Pídeme una y la registro aquí para que puedas activarla y desactivarla.
+            </div>
+        ` : cats.map(cat => `
+            <div class="settings-flag-group-label">${cat}</div>
+            ${groups[cat].map(f => `
+                <label class="settings-flag-row">
+                    <div class="settings-flag-info">
+                        <div class="settings-flag-label">${f.label}</div>
+                        <div class="settings-flag-desc">${f.description}</div>
+                    </div>
+                    <input type="checkbox" class="settings-flag-toggle" data-flag-key="${f.key}" ${f.enabled ? 'checked' : ''}>
+                </label>
+            `).join('')}
+        `).join('')}
+        ${total > 0 && active > 0 ? `
+            <button class="settings-flags-reset" id="flagsResetAllBtn">Desactivar todas</button>
+        ` : ''}
+    `;
+    dr.appendChild(panel);
+
+    // Wire up toggle listeners
+    panel.querySelectorAll('.settings-flag-toggle').forEach(inp => {
+        inp.addEventListener('change', () => {
+            Flags.set(inp.dataset.flagKey, inp.checked);
+        });
+    });
+
+    const resetBtn = panel.querySelector('#flagsResetAllBtn');
+    if (resetBtn) resetBtn.addEventListener('click', () => {
+        Flags.resetAll();
+        renderFlagsPanel();
+    });
 }
 
 // ================================================================
@@ -2666,10 +2728,23 @@ async function bootApp() {
     renderUserBox();
 }
 
+// App version shown by the "ui.show-build-badge" feature flag.
+// Updated automatically if you add a build step; for now, manual.
+const APP_BUILD = 'cibeles-1.0';
+
 // ── Boot ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     attachAppSwitcher();
     setupTouchSimulation();
+
+    // Re-render the entire app when a feature flag changes so new UI
+    // gated behind the flag appears / disappears instantly.
+    Flags.onChange(() => {
+        updateBuildBadge();
+        if (Auth.current()) render();
+        // Also refresh the flags panel itself (counters update)
+        renderFlagsPanel();
+    });
 
     // Show a brief loading state while Supabase initializes
     $('#authOverlay').hidden = false;
@@ -2684,5 +2759,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(bootApp, 0);
     });
 
+    updateBuildBadge();
     await bootApp();
 });
+
+// ────────────────────────────────────────────────────────────────
+// Feature: build badge  (flag: 'ui.show-build-badge')
+// ────────────────────────────────────────────────────────────────
+function updateBuildBadge() {
+    let badge = document.getElementById('buildBadge');
+    const wantVisible = Flags.isEnabled('ui.show-build-badge');
+    if (wantVisible && !badge) {
+        badge = document.createElement('div');
+        badge.id = 'buildBadge';
+        badge.className = 'build-badge';
+        badge.innerHTML = `<span class="build-badge-dot"></span> ${APP_BUILD}`;
+        document.body.appendChild(badge);
+    } else if (!wantVisible && badge) {
+        badge.remove();
+    }
+}
