@@ -142,19 +142,21 @@ function el(html) {
 
 // ── Tab bar (bottom) ─────────────────────────────────────────────
 function renderTabBar() {
+    // Icons come from Cibeles Design System navbar/ folder.
+    // For "Noticias" there's no dedicated navbar icon — we reuse ui/file-05.
     const tabs = [
-        { key: 'hoy',        label: 'Hoy',        icon: I.tshirt },
-        { key: 'noticias',   label: 'Noticias',   icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4z"/><path d="M18 8h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2"/><line x1="7" y1="9" x2="15" y2="9"/><line x1="7" y1="13" x2="15" y2="13"/><line x1="7" y1="17" x2="11" y2="17"/></svg>` },
-        { key: 'calendario', label: 'Calendario', icon: I.calendar },
-        { key: 'rmtv',       label: 'RMTV',       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="13" rx="2"/><polygon points="10,9 16,12 10,15" fill="currentColor" stroke="none"/></svg>` },
-        { key: 'tienda',     label: 'Tienda',     icon: I.bag }
+        { key: 'hoy',        label: 'Hoy',        inactive: 'icons/navbar/today.svg',    active: 'icons/navbar/fill-today.svg' },
+        { key: 'noticias',   label: 'Noticias',   inactive: 'icons/ui/file-05.svg',      active: 'icons/ui/file-05.svg' },
+        { key: 'calendario', label: 'Calendario', inactive: 'icons/navbar/calendar.svg', active: 'icons/navbar/fill-calendar.svg' },
+        { key: 'rmtv',       label: 'RMTV',       inactive: 'icons/navbar/rmtv.svg',     active: 'icons/navbar/fill-rmtv.svg' },
+        { key: 'tienda',     label: 'Tienda',     inactive: 'icons/navbar/shop.svg',     active: 'icons/navbar/fill-shop.svg' }
     ];
 
     return `
         <div class="tab-bar">
             ${tabs.map(t => `
                 <button class="tab-bar-item ${state.tab === t.key ? 'active' : ''}" data-tab="${t.key}">
-                    ${t.icon}
+                    <img class="tab-bar-icon" src="${state.tab === t.key ? t.active : t.inactive}" alt="" width="28" height="28">
                     <span>${t.label}</span>
                 </button>
             `).join('')}
