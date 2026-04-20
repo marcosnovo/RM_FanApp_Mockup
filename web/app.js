@@ -3914,32 +3914,34 @@ async function bootApp() {
         return;
     }
 
+    // Authenticated + ready — swap login for app
+    closeAuthOverlay();
     document.body.classList.remove('auth-mode');
     render();
     renderUserBox();
 }
 
 // ── Boot ─────────────────────────────────────────────────────────
+//
+// Strategy: never show a "Cargando…" screen. The login is always usable
+// from the first paint — if Auth.init() finds a valid session in the
+// background, bootApp() swaps the login for the app. Otherwise the user
+// can just log in normally without waiting for anything.
+//
+// This avoids the classic "stuck on loading" scenario on cold boots
+// (slow CDN, incognito, flaky networks).
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[boot] DOMContentLoaded');
 
-    // Safety net: if after 12s we're still stuck on "Cargando…", fall back
-    // to the login screen with a reload button, so the user is never
-    // locked out of the page.
-    const safetyTimer = setTimeout(() => {
-        const overlay = $('#authOverlay');
-        if (overlay && !overlay.hidden && overlay.textContent.includes('Cargando')) {
-            console.error('[boot] Safety timer fired — boot never completed');
-            overlay.innerHTML = `
-                <div class="auth-shell"><div class="auth-card">
-                    <h1 class="auth-title">No hemos podido cargar</h1>
-                    <p class="auth-subtitle">Algo falló al arrancar. Prueba a recargar o ábrela en una ventana de incógnito.</p>
-                    <button class="auth-primary-btn" onclick="(() => { try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-') || k === 'rm-auth' || k === 'rm_profile_v1') localStorage.removeItem(k); }); } catch(e) {} location.reload(); })()">Reintentar (limpiar caché)</button>
-                </div></div>
-            `;
-        }
-    }, 12000);
+    // ── 1) Render the login IMMEDIATELY, as the very first thing ─────
+    try {
+        openAuthOverlay('login');
+        document.body.classList.add('auth-mode');
+    } catch (err) {
+        console.error('[boot] could not render initial login:', err);
+    }
 
+    // ── 2) Rest of the boot, guarded so nothing blocks the login ────
     try {
         attachAppSwitcher();
         setupTouchSimulation();
@@ -3958,40 +3960,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('[boot] Flags module not loaded');
         }
 
-        // Show a brief loading state while Supabase initializes
-        $('#authOverlay').hidden = false;
-        $('#authOverlay').innerHTML = `<div class="auth-shell"><div class="auth-card" style="text-align:center; color:#ffffff80">Cargando…</div></div>`;
-        document.body.classList.add('auth-mode');
-
-        console.log('[boot] Auth.init() starting');
-        await Auth.init();
-        console.log('[boot] Auth.init() done. session =', Auth.current());
-
-        // Re-render based on auth state when Supabase fires events (e.g.
-        // PASSWORD_RECOVERY or SIGNED_IN from magic link).
-        Auth.onAuthChange((event) => {
-            console.log('[auth] state change:', event);
-            setTimeout(bootApp, 0);
-        });
-
-        await bootApp();
-        console.log('[boot] done');
-    } catch (err) {
-        console.error('[boot] fatal error:', err);
-        const overlay = $('#authOverlay');
-        if (overlay) {
-            overlay.hidden = false;
-            overlay.innerHTML = `
-                <div class="auth-shell"><div class="auth-card">
-                    <h1 class="auth-title">Error al cargar</h1>
-                    <div class="auth-error">${(err && err.message) || 'Error desconocido'}</div>
-                    <button class="auth-primary-btn" onclick="location.reload()">Recargar</button>
-                </div></div>
-            `;
-            document.body.classList.add('auth-mode');
+        // Subscribe to Supabase auth events so we react to magic-link /
+        // password-recovery landings, and to the initial session restore.
+        if (typeof Auth !== 'undefined') {
+            Auth.onAuthChange((event) => {
+                console.log('[auth] state change:', event);
+                setTimeout(bootApp, 0);
+            });
         }
-    } finally {
-        clearTimeout(safetyTimer);
+
+        // Init Supabase session in the background. If it finds a valid
+        // session, bootApp() will close the login and show the app.
+        // If it fails or takes long, the login remains visible and
+        // interactive — the user is never locked out.
+        console.log('[boot] Auth.init() starting in background');
+        Auth.init()
+            .then(() => {
+                console.log('[boot] Auth.init() done. session =', Auth.current());
+                return bootApp();
+            })
+            .catch(err => {
+                console.warn('[boot] Auth.init() failed (login still usable):', err);
+            });
+    } catch (err) {
+        console.error('[boot] non-fatal error during boot (login is still usable):', err);
     }
 });
 
