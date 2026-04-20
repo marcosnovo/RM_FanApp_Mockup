@@ -5745,25 +5745,72 @@ body.auth-mode .app-layout { visibility: hidden; }
 .hoy2-nm-card {
     flex: 0 0 calc(100% - 40px);
     scroll-snap-align: start;
-    padding: 16px 16px 14px;
+    padding: 0;
     background:
         linear-gradient(150deg, #0F2145 0%, #162a5e 55%, #0F2145 100%);
-    border: 0;
     border-radius: var(--radius-xx-large, 24px);
     color: white;
     font-family: inherit;
     text-align: left;
-    cursor: pointer;
     box-shadow: var(--shadow-light-small);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    overflow: hidden;
+    position: relative;
     transition: transform 0.15s ease, box-shadow 0.18s ease;
 }
 
 .hoy2-nm-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-light-medium);
+}
+
+/* Adaptable card width for larger viewports — cap at 360px. */
+@media (min-width: 420px) {
+    .hoy2-nm-card { flex: 0 0 min(calc(100% - 40px), 360px); }
+}
+
+/* Radio button anchored top-right inside each card */
+.hoy2-nm-radio {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 11px 6px 8px;
+    background: rgba(255, 255, 255, 0.10);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.hoy2-nm-radio:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+.hoy2-nm-radio > svg { width: 13px !important; height: 13px !important; }
+.hoy2-nm-radio-label { line-height: 1; }
+
+/* Inner clickable body — everything above the inline "último resultado" row */
+.hoy2-nm-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 16px 14px;
+    background: transparent;
+    border: 0;
+    width: 100%;
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
 }
 
 .hoy2-nm-head {
@@ -6195,4 +6242,191 @@ body.auth-mode .app-layout { visibility: hidden; }
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
+}
+
+
+/* ================================================================
+   HOY v2 REFINED v3 — Radio + last-result inline en card
+   ================================================================ */
+
+/* Inline last-result row (within each next-match card) */
+.hoy2-nm-last {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hoy2-nm-last-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.hoy2-nm-last-kicker {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.hoy2-nm-last-result {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.3;
+    background: rgba(255, 255, 255, 0.10);
+    color: white;
+}
+.hoy2-nm-last-result.victoria {
+    background: rgba(61, 146, 61, 0.30);
+    color: #b7f0b7;
+}
+.hoy2-nm-last-result.derrota {
+    background: rgba(202, 2, 79, 0.28);
+    color: #fbc4d7;
+}
+.hoy2-nm-last-result.empate {
+    background: rgba(234, 172, 48, 0.28);
+    color: #ffe2a6;
+}
+
+.hoy2-nm-last-rival {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.82);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hoy2-nm-last-cta {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: transparent;
+    border: 0;
+    padding: 4px 2px;
+    color: var(--color-primary-medium, #8FA0F5);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.hoy2-nm-last-cta > svg { width: 11px !important; height: 11px !important; }
+.hoy2-nm-last-cta:hover { text-decoration: underline; }
+
+/* Top bar spacer (now that Radio is gone, keep layout balanced) */
+.hoy2-top-spacer {
+    width: 36px;
+    height: 36px;
+}
+
+/* ── Radio mock toast (bottom of phone, above tab bar) ─────── */
+.radio-toast {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 92px;              /* above the tab bar (83px) + margin */
+    z-index: 26;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #2115AB 0%, #3E31FA 60%, #8760F6 100%);
+    color: white;
+    border-radius: var(--radius-large, 16px);
+    box-shadow:
+        0 12px 32px rgba(33, 21, 171, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    animation: radio-toast-in 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.radio-toast.leaving {
+    animation: radio-toast-out 0.26s ease forwards;
+}
+
+@keyframes radio-toast-in {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes radio-toast-out {
+    from { transform: translateY(0); opacity: 1; }
+    to   { transform: translateY(20px); opacity: 0; }
+}
+
+.radio-toast-anim {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.radio-toast-anim span {
+    width: 3px;
+    border-radius: 2px;
+    background: white;
+    animation: radio-bar 0.9s ease-in-out infinite;
+}
+.radio-toast-anim span:nth-child(1) { animation-delay: 0s;    height: 40%; }
+.radio-toast-anim span:nth-child(2) { animation-delay: 0.15s; height: 80%; }
+.radio-toast-anim span:nth-child(3) { animation-delay: 0.3s;  height: 60%; }
+.radio-toast-anim span:nth-child(4) { animation-delay: 0.45s; height: 90%; }
+
+@keyframes radio-bar {
+    0%, 100% { transform: scaleY(0.5); }
+    50%      { transform: scaleY(1);   }
+}
+
+.radio-toast-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.radio-toast-title {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.radio-toast-sub {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.82);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.radio-toast-close {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+}
+.radio-toast-close:hover { background: rgba(255, 255, 255, 0.26); }
+.radio-toast-close > svg { width: 13px !important; height: 13px !important; }
+
+/* Add a bit more breathing room between next-match cards */
+.hoy2-nm-scroll {
+    gap: 14px !important;
 }

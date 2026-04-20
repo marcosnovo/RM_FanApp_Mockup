@@ -187,24 +187,23 @@ function renderHoyV2() {
     return `
         <div class="hoy2-wrap">
 
-            <!-- Simple top bar with title + profile -->
+            <!-- Simple top bar with title + profile (Radio moved into each match card) -->
             <div class="hoy2-topbar">
                 <button class="hoy2-top-icon" id="btnSideMenu" aria-label="Tu área">
                     ${I.personCircle}
                 </button>
                 <div class="hoy2-top-title">Hoy</div>
-                <button class="hoy2-top-icon" aria-label="Radio">${I.radio}</button>
+                <div class="hoy2-top-spacer"></div>
             </div>
 
             <div class="hoy2-scroll">
 
-                <!-- ── 1. Próximos partidos (hasta 3 equipos) ───────── -->
+                <!-- ── 1. Próximos partidos (hasta 3 equipos) ─────────
+                     Cada card integra Radio y un resumen del último
+                     partido con enlace "Ver resumen". -->
                 ${renderHoyV2NextMatches()}
 
-                <!-- ── 2. Último partido (resúmenes por equipo) ─────── -->
-                ${renderHoyV2LastMatches()}
-
-                <!-- ── 3. Noticias ─────────────────────────────────── -->
+                <!-- ── 2. Noticias ─────────────────────────────────── -->
                 <section class="hoy2-section">
                     <div class="hoy2-section-head">
                         <h2 class="hoy2-section-title">Noticias</h2>
@@ -267,26 +266,49 @@ function renderHoyV2NextMatches() {
                     if (!m) return '';
                     const homeCrest = bigCrestFor(m.home);
                     const awayCrest = bigCrestFor(m.away);
+                    const last = m.lastResult;
                     return `
-                        <button class="hoy2-nm-card" data-next-match="${team.id}">
-                            <div class="hoy2-nm-head">
-                                <span class="hoy2-nm-comp">${m.competition}</span>
-                                <span class="hoy2-nm-sport">${team.sport}</span>
-                            </div>
-                            <div class="hoy2-nm-teams">
-                                <div class="hoy2-nm-crest">${homeCrest}</div>
-                                <span class="hoy2-nm-vs">vs</span>
-                                <div class="hoy2-nm-crest">${awayCrest}</div>
-                            </div>
-                            <div class="hoy2-nm-names">
-                                <span class="hoy2-nm-name">${m.home}</span>
-                                <span class="hoy2-nm-name">${m.away}</span>
-                            </div>
-                            <div class="hoy2-nm-foot">
-                                <span class="hoy2-nm-date">${m.dateString}</span>
-                                <span class="hoy2-nm-venue">${m.venue}</span>
-                            </div>
-                        </button>
+                        <div class="hoy2-nm-card">
+                            <!-- Radio button: top-right, stopPropagation so it doesn't navigate -->
+                            <button class="hoy2-nm-radio" data-radio-match="${team.id}" aria-label="Escuchar por radio">
+                                ${I.radio}
+                                <span class="hoy2-nm-radio-label">Radio</span>
+                            </button>
+
+                            <button class="hoy2-nm-body" data-next-match="${team.id}">
+                                <div class="hoy2-nm-head">
+                                    <span class="hoy2-nm-comp">${m.competition}</span>
+                                    <span class="hoy2-nm-sport">${team.sport}</span>
+                                </div>
+                                <div class="hoy2-nm-teams">
+                                    <div class="hoy2-nm-crest">${homeCrest}</div>
+                                    <span class="hoy2-nm-vs">vs</span>
+                                    <div class="hoy2-nm-crest">${awayCrest}</div>
+                                </div>
+                                <div class="hoy2-nm-names">
+                                    <span class="hoy2-nm-name">${m.home}</span>
+                                    <span class="hoy2-nm-name">${m.away}</span>
+                                </div>
+                                <div class="hoy2-nm-foot">
+                                    <span class="hoy2-nm-date">${m.dateString}</span>
+                                    <span class="hoy2-nm-venue">${m.venue}</span>
+                                </div>
+                            </button>
+
+                            <!-- Inline last-result row: "Último: RM 1-1 Girona · Ver resumen →" -->
+                            ${last ? `
+                                <div class="hoy2-nm-last">
+                                    <div class="hoy2-nm-last-info">
+                                        <span class="hoy2-nm-last-kicker">Último</span>
+                                        <span class="hoy2-nm-last-result ${last.result}">${last.score}</span>
+                                        <span class="hoy2-nm-last-rival">${last.rival}</span>
+                                    </div>
+                                    <button class="hoy2-nm-last-cta" data-summary-open="${last.summaryTeamId}">
+                                        Ver resumen ${I.chevronRight}
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
                     `;
                 }).join('')}
             </div>
@@ -372,6 +394,45 @@ function labelForCategory(id) {
     const cats = (typeof HIGHLIGHT_CATEGORIES !== 'undefined' ? HIGHLIGHT_CATEGORIES : []);
     const c = cats.find(c => c.id === id);
     return c ? c.label.toUpperCase() : (id || '').toUpperCase();
+}
+
+// ── Mock radio mini-player: appears as a toast pinned to the bottom
+// of the phone screen above the tab bar. Auto-closes in 5s or via X.
+function showRadioToast(teamId) {
+    const teams = (typeof TEAMS !== 'undefined' ? TEAMS : []);
+    const team = teams.find(t => t.id === teamId);
+    const next = (typeof NEXT_MATCHES_BY_TEAM !== 'undefined' ? NEXT_MATCHES_BY_TEAM : {})[teamId];
+
+    // Remove any existing toast first
+    document.getElementById('radioToast')?.remove();
+
+    const host = $('#phoneScreen');
+    if (!host) return;
+
+    const toast = document.createElement('div');
+    toast.id = 'radioToast';
+    toast.className = 'radio-toast';
+    toast.innerHTML = `
+        <div class="radio-toast-anim">
+            <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="radio-toast-body">
+            <div class="radio-toast-title">Escuchando por radio</div>
+            <div class="radio-toast-sub">${next ? `${next.home} vs ${next.away}` : (team?.sport || '')}</div>
+        </div>
+        <button class="radio-toast-close" aria-label="Cerrar">
+            ${I.xmark}
+        </button>
+    `;
+    host.appendChild(toast);
+
+    toast.querySelector('.radio-toast-close').addEventListener('click', () => toast.remove());
+
+    // Auto-dismiss after 5s
+    setTimeout(() => {
+        toast.classList.add('leaving');
+        setTimeout(() => toast.remove(), 260);
+    }, 5000);
 }
 
 function renderHoyV2MatchCard(match) {
@@ -2328,13 +2389,18 @@ function attachListeners() {
     // Next match card → Match Centre (drop flag to show classic Hoy with tabs)
     $$('[data-next-match]').forEach(btn => btn.addEventListener('click', () => {
         const teamId = btn.dataset.nextMatch;
-        // For now: only "masc" has the full Match Centre in the legacy Hoy view.
-        // Others open an informational toast-like summary (future work).
         if (teamId === 'masc') {
             Flags.set('fan.hoy.v2-structure', false);
         } else {
             alert(`Match Centre de ${TEAMS.find(t => t.id === teamId)?.sport || teamId} — próximamente`);
         }
+    }));
+
+    // Radio button inside match card — mock player, doesn't propagate
+    $$('[data-radio-match]').forEach(btn => btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const teamId = btn.dataset.radioMatch;
+        showRadioToast(teamId);
     }));
 
     // Match summary "Ver resumen" CTA

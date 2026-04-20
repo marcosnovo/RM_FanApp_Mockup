@@ -283,6 +283,8 @@ const TEAMS = [
 ];
 
 // Next match per team (key = team id).
+// lastResult encapsula el marcador + rival del último partido,
+// para mostrarlo inline dentro de la card del próximo partido.
 const NEXT_MATCHES_BY_TEAM = {
     masc: {
         teamId: 'masc',
@@ -290,7 +292,13 @@ const NEXT_MATCHES_BY_TEAM = {
         home: 'Bayern Múnich',
         away: 'Real Madrid',
         dateString: 'Mié 15 abr · 21:00',
-        venue: 'Allianz Arena'
+        venue: 'Allianz Arena',
+        lastResult: {
+            rival: 'Mallorca',
+            score: '2 - 1',
+            result: 'derrota',   // 'victoria' | 'derrota' | 'empate'
+            summaryTeamId: 'masc'
+        }
     },
     fem: {
         teamId: 'fem',
@@ -298,7 +306,13 @@ const NEXT_MATCHES_BY_TEAM = {
         home: 'Real Madrid Femenino',
         away: 'FC Barcelona Femení',
         dateString: 'Dom 19 abr · 12:00',
-        venue: 'Estadio Alfredo Di Stéfano'
+        venue: 'Estadio Alfredo Di Stéfano',
+        lastResult: {
+            rival: 'Atlético Fem.',
+            score: '3 - 0',
+            result: 'victoria',
+            summaryTeamId: 'fem'
+        }
     },
     basket: {
         teamId: 'basket',
@@ -306,7 +320,13 @@ const NEXT_MATCHES_BY_TEAM = {
         home: 'Real Madrid',
         away: 'Panathinaikos',
         dateString: 'Vie 17 abr · 20:30',
-        venue: 'WiZink Center'
+        venue: 'WiZink Center',
+        lastResult: {
+            rival: 'Barcelona',
+            score: '88 - 83',
+            result: 'victoria',
+            summaryTeamId: 'basket'
+        }
     }
 };
 
