@@ -29,6 +29,15 @@ let _cachedProfile = null;
 let _authStateListeners = [];
 let _recoveryTriggered = false;
 
+// Wraps any promise with a timeout. Rejects with the given message if it takes
+// longer than `ms`. Prevents hung network calls from freezing the UI.
+function withTimeout(promise, ms, label = 'timeout') {
+    return Promise.race([
+        promise,
+        new Promise((_, rej) => setTimeout(() => rej(new Error(label)), ms))
+    ]);
+}
+
 // ── Events ───────────────────────────────────────────────────────
 sb.auth.onAuthStateChange(async (event, session) => {
     _cachedSession = session;
@@ -41,16 +50,24 @@ sb.auth.onAuthStateChange(async (event, session) => {
 });
 
 async function fetchProfile(userId) {
-    const { data, error } = await sb
-        .from('profiles')
-        .select('id, email, role, created_at')
-        .eq('id', userId)
-        .single();
-    if (error) {
-        console.warn('[auth] fetchProfile error:', error.message);
+    try {
+        const { data, error } = await withTimeout(
+            sb.from('profiles')
+                .select('id, email, role, created_at')
+                .eq('id', userId)
+                .single(),
+            5000,
+            'fetchProfile timeout'
+        );
+        if (error) {
+            console.warn('[auth] fetchProfile error:', error.message);
+            return null;
+        }
+        return data;
+    } catch (err) {
+        console.warn('[auth] fetchProfile exception:', err.message);
         return null;
     }
-    return data;
 }
 
 // Refresh cache from Supabase (session + profile). Call after any auth
@@ -116,10 +133,18 @@ const Auth = {
 
     // ── Auth operations ────────────────────────────────────────
     async login(email, password) {
-        const { data, error } = await sb.auth.signInWithPassword({
-            email: (email || '').trim(),
-            password
-        });
+        let result;
+        try {
+            result = await withTimeout(
+                sb.auth.signInWithPassword({ email: (email || '').trim(), password }),
+                8000,
+                'login timeout'
+            );
+        } catch (err) {
+            console.warn('[auth] login timeout/error:', err);
+            return { ok: false, error: 'La petición tardó demasiado. Revisa tu conexión.' };
+        }
+        const { data, error } = result;
         if (error) {
             console.warn('[auth] login error:', error);
             return { ok: false, error: translateError(error.message) };
@@ -135,7 +160,8 @@ const Auth = {
 
         if (!_cachedProfile) {
             console.warn('[auth] No profile row for user', data.user.id);
-            await sb.auth.signOut();
+            // Fire-and-forget signOut — don't block returning the error to UI
+            sb.auth.signOut().catch(() => {});
             _cachedSession = null;
             return {
                 ok: false,
@@ -146,22 +172,25 @@ const Auth = {
     },
 
     async logout() {
-        await sb.auth.signOut();
         _cachedSession = null;
         _cachedProfile = null;
+        // Fire-and-forget so UI updates even if the network is slow
+        try { sb.auth.signOut().catch(() => {}); } catch {}
     },
 
     // Password reset (forgot password) — sends REAL email
     async requestPasswordReset(email) {
         const redirectTo = `${location.origin}${location.pathname}`;
-        const { error } = await sb.auth.resetPasswordForEmail(
-            (email || '').trim(),
-            { redirectTo }
-        );
-        if (error) {
-            // For security, still behave as if success
-            return { ok: true, notFound: true };
+        try {
+            await withTimeout(
+                sb.auth.resetPasswordForEmail((email || '').trim(), { redirectTo }),
+                8000,
+                'reset request timeout'
+            );
+        } catch (err) {
+            console.warn('[auth] reset request timeout/error:', err);
         }
+        // Always respond as success to not leak whether the email exists
         return { ok: true };
     },
 
