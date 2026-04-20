@@ -70,12 +70,18 @@ const Auth = {
         try {
             await Promise.race([
                 syncCache(),
-                new Promise((_, rej) => setTimeout(() => rej(new Error('init timeout')), 6000))
+                new Promise((_, rej) => setTimeout(() => rej(new Error('init timeout')), 5000))
             ]);
         } catch (err) {
             console.warn('[auth] init timed out or errored, clearing session:', err.message);
-            // Clear any stale Supabase session from localStorage and start fresh
-            try { await sb.auth.signOut(); } catch {}
+            // Fire-and-forget signOut (don't await — it may hang)
+            try { sb.auth.signOut().catch(() => {}); } catch {}
+            // Belt-and-suspenders: also purge Supabase keys from localStorage
+            try {
+                Object.keys(localStorage)
+                    .filter(k => k.startsWith('sb-'))
+                    .forEach(k => localStorage.removeItem(k));
+            } catch {}
             _cachedSession = null;
             _cachedProfile = null;
         }

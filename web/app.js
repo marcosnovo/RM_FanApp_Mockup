@@ -2745,33 +2745,77 @@ const APP_BUILD = 'cibeles-1.0';
 
 // ── Boot ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-    attachAppSwitcher();
-    setupTouchSimulation();
+    console.log('[boot] DOMContentLoaded');
 
-    // Re-render the entire app when a feature flag changes so new UI
-    // gated behind the flag appears / disappears instantly.
-    Flags.onChange(() => {
+    // Safety net: if after 12s we're still stuck on "Cargando…", fall back
+    // to the login screen with a reload button, so the user is never
+    // locked out of the page.
+    const safetyTimer = setTimeout(() => {
+        const overlay = $('#authOverlay');
+        if (overlay && !overlay.hidden && overlay.textContent.includes('Cargando')) {
+            console.error('[boot] Safety timer fired — boot never completed');
+            overlay.innerHTML = `
+                <div class="auth-shell"><div class="auth-card">
+                    <h1 class="auth-title">No hemos podido cargar</h1>
+                    <p class="auth-subtitle">Algo falló al arrancar. Prueba a recargar o ábrela en una ventana de incógnito.</p>
+                    <button class="auth-primary-btn" onclick="(() => { try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-') || k.startsWith('rm_')) localStorage.removeItem(k); }); } catch(e) {} location.reload(); })()">Reintentar (limpiar caché)</button>
+                </div></div>
+            `;
+        }
+    }, 12000);
+
+    try {
+        attachAppSwitcher();
+        setupTouchSimulation();
+
+        // Re-render the entire app when a feature flag changes so new UI
+        // gated behind the flag appears / disappears instantly.
+        if (typeof Flags !== 'undefined') {
+            Flags.onChange(() => {
+                updateBuildBadge();
+                if (Auth.current()) render();
+                renderSidebarFlags();
+            });
+        } else {
+            console.warn('[boot] Flags module not loaded');
+        }
+
+        // Show a brief loading state while Supabase initializes
+        $('#authOverlay').hidden = false;
+        $('#authOverlay').innerHTML = `<div class="auth-shell"><div class="auth-card" style="text-align:center; color:#ffffff80">Cargando…</div></div>`;
+        document.body.classList.add('auth-mode');
+
+        console.log('[boot] Auth.init() starting');
+        await Auth.init();
+        console.log('[boot] Auth.init() done. session =', Auth.current());
+
+        // Re-render based on auth state when Supabase fires events (e.g.
+        // PASSWORD_RECOVERY or SIGNED_IN from magic link).
+        Auth.onAuthChange((event) => {
+            console.log('[auth] state change:', event);
+            setTimeout(bootApp, 0);
+        });
+
         updateBuildBadge();
-        if (Auth.current()) render();
-        // Also refresh the sidebar flags section (counters update)
-        renderSidebarFlags();
-    });
-
-    // Show a brief loading state while Supabase initializes
-    $('#authOverlay').hidden = false;
-    $('#authOverlay').innerHTML = `<div class="auth-shell"><div class="auth-card" style="text-align:center; color:#ffffff80">Cargando…</div></div>`;
-    document.body.classList.add('auth-mode');
-
-    await Auth.init();
-
-    // Re-render based on auth state when Supabase fires events (e.g.
-    // PASSWORD_RECOVERY or SIGNED_IN from magic link).
-    Auth.onAuthChange(() => {
-        setTimeout(bootApp, 0);
-    });
-
-    updateBuildBadge();
-    await bootApp();
+        await bootApp();
+        console.log('[boot] done');
+    } catch (err) {
+        console.error('[boot] fatal error:', err);
+        const overlay = $('#authOverlay');
+        if (overlay) {
+            overlay.hidden = false;
+            overlay.innerHTML = `
+                <div class="auth-shell"><div class="auth-card">
+                    <h1 class="auth-title">Error al cargar</h1>
+                    <div class="auth-error">${(err && err.message) || 'Error desconocido'}</div>
+                    <button class="auth-primary-btn" onclick="location.reload()">Recargar</button>
+                </div></div>
+            `;
+            document.body.classList.add('auth-mode');
+        }
+    } finally {
+        clearTimeout(safetyTimer);
+    }
 });
 
 // ────────────────────────────────────────────────────────────────
