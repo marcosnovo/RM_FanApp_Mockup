@@ -3887,34 +3887,36 @@ function renderSidebarFlags() {
 // ================================================================
 
 async function bootApp() {
-    // Recovery takes priority — user came from a password-reset email link
+    // 1) Recovery (forgot-password email) takes priority.
+    //    `isRecovery()` is seeded synchronously from the URL hash so this works
+    //    even if Supabase hasn't fired PASSWORD_RECOVERY yet.
     if (Auth.isRecovery()) {
         openAuthOverlay('reset');
         document.body.classList.add('auth-mode');
         return;
     }
 
-    const session = Auth.current();
+    // 2) Setup (invite / signup / magic-link email). Checked BEFORE the
+    //    Auth.current() null-bail because brand-new users may have a valid
+    //    Supabase session but no `profiles` row loaded yet — in that case
+    //    Auth.current() returns null and we used to fall back to login,
+    //    which is exactly the bug we're fixing.
+    if (Auth.needsPasswordSetup()) {
+        const session = Auth.current(); // may be null; that's fine
+        openAuthOverlay('setup', { name: session ? session.name : '' });
+        document.body.classList.add('auth-mode');
+        return;
+    }
 
-    // Auto-logout if Supabase session exists but profile is missing
-    // (admin deleted the user's profile row)
-    const supaSession = Auth._rawSession?.();
-    // (we don't expose that — simpler: if supabase has a session but Auth.current()
-    //  returns null, it means profile was deleted)
+    // 3) No session → normal login.
+    const session = Auth.current();
     if (!session) {
         openAuthOverlay('login');
         document.body.classList.add('auth-mode');
         return;
     }
 
-    // Logged-in user who hasn't set a password yet (arrived via magic link invite)
-    if (Auth.needsPasswordSetup()) {
-        openAuthOverlay('setup', { name: session.name });
-        document.body.classList.add('auth-mode');
-        return;
-    }
-
-    // Authenticated + ready — swap login for app
+    // 4) Authenticated + ready — swap login for app
     closeAuthOverlay();
     document.body.classList.remove('auth-mode');
     render();
@@ -3933,12 +3935,24 @@ async function bootApp() {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[boot] DOMContentLoaded');
 
-    // ── 1) Render the login IMMEDIATELY, as the very first thing ─────
+    // ── 1) Render the right auth screen IMMEDIATELY, as the first thing ───
+    //    If the user arrived from a Supabase email (recovery / invite), the
+    //    URL hash tells us which screen to show — no need to wait for the
+    //    SDK to fire PASSWORD_RECOVERY / SIGNED_IN. This avoids the login
+    //    briefly flashing before bootApp swaps it.
     try {
-        openAuthOverlay('login');
+        let initialScreen = 'login';
+        if (typeof Auth !== 'undefined') {
+            if (Auth.urlIndicatesRecovery && Auth.urlIndicatesRecovery()) {
+                initialScreen = 'reset';
+            } else if (Auth.urlIndicatesInvite && Auth.urlIndicatesInvite()) {
+                initialScreen = 'setup';
+            }
+        }
+        openAuthOverlay(initialScreen);
         document.body.classList.add('auth-mode');
     } catch (err) {
-        console.error('[boot] could not render initial login:', err);
+        console.error('[boot] could not render initial auth screen:', err);
     }
 
     // ── 2) Rest of the boot, guarded so nothing blocks the login ────

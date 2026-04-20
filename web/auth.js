@@ -10,6 +10,21 @@
 const SUPABASE_URL = 'https://guidpagkdopgestrbxke.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_bQtzqtvTegErZucUd_v6KQ_xpdrMlGW';
 
+// ── URL hash sniff ─────────────────────────────────────────────
+// Supabase email links land on our app with the tokens in the URL hash, e.g.
+//   #access_token=...&refresh_token=...&type=recovery
+//   #access_token=...&refresh_token=...&type=signup    (for invites / magic link)
+// The SDK processes and CLEANS this hash asynchronously after createClient().
+// We capture it BEFORE createClient so the boot logic can route to the right
+// screen (reset / setup) from the first paint, instead of flashing the login
+// while waiting for the PASSWORD_RECOVERY / SIGNED_IN event to fire.
+const _initialHashRaw = (typeof window !== 'undefined' && window.location.hash) || '';
+const _initialHashParams = new URLSearchParams(
+    _initialHashRaw.startsWith('#') ? _initialHashRaw.slice(1) : _initialHashRaw
+);
+const _initialUrlType = _initialHashParams.get('type') || '';  // '' | 'recovery' | 'signup' | 'invite' | 'magiclink'
+const _initialUrlHasTokens = !!_initialHashParams.get('access_token');
+
 // Create the Supabase client (SDK loaded from CDN in index.html)
 // NOTE: we use implicit flow (not PKCE) so magic-link / recovery emails
 // work when opened in a different browser or device than the one that
@@ -36,7 +51,9 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 let _cachedSession = null;
 let _cachedProfile = null;
 let _authStateListeners = [];
-let _recoveryTriggered = false;
+// Seed from URL so Auth.isRecovery() is correct BEFORE Supabase fires the
+// PASSWORD_RECOVERY event (that event is async; bootApp() may run first).
+let _recoveryTriggered = (_initialUrlType === 'recovery');
 
 // Profile cache in localStorage — so a slow network never makes the user
 // re-login: we have their role/name available instantly from last time.
@@ -206,13 +223,31 @@ const Auth = {
         return !!_cachedProfile && _cachedProfile.role === 'admin';
     },
 
-    // True when user came from a password-reset email and must set a new password
+    // True when user came from a password-reset email and must set a new password.
+    // Seeded from the URL hash (type=recovery) so it's correct synchronously,
+    // and reinforced later when Supabase fires the PASSWORD_RECOVERY event.
     isRecovery() {
         return _recoveryTriggered;
     },
 
     clearRecovery() {
         _recoveryTriggered = false;
+    },
+
+    // True when the URL hash indicates the user just arrived from an invite /
+    // signup / magic-link email (tokens present AND type != 'recovery').
+    // Used at boot to pick the right initial screen without waiting for events.
+    urlIndicatesInvite() {
+        if (!_initialUrlHasTokens) return false;
+        if (_initialUrlType === 'recovery') return false;
+        return _initialUrlType === 'signup'
+            || _initialUrlType === 'invite'
+            || _initialUrlType === 'magiclink'
+            || _initialUrlType === '';
+    },
+
+    urlIndicatesRecovery() {
+        return _initialUrlType === 'recovery';
     },
 
     onAuthChange(cb) {
@@ -292,7 +327,12 @@ const Auth = {
         if (!newPassword || newPassword.length < 6) {
             return { ok: false, error: 'La contraseña debe tener al menos 6 caracteres' };
         }
-        const { error } = await sb.auth.updateUser({ password: newPassword });
+        // Also mark password_set so a future reload doesn't accidentally
+        // route through the invite/setup branch.
+        const { error } = await sb.auth.updateUser({
+            password: newPassword,
+            data: { password_set: true }
+        });
         if (error) return { ok: false, error: translateError(error.message) };
         _recoveryTriggered = false;
         await syncCache();
@@ -313,8 +353,12 @@ const Auth = {
     },
 
     // True if authenticated user still needs to set a password (first login
-    // via magic-link invite)
+    // via magic-link invite). Two signals:
+    //   a) The URL hash indicates an invite/signup landing (synchronous) →
+    //      treat as needing setup even if the session hasn't hydrated yet.
+    //   b) We have a session and the user has no `password_set` metadata flag.
     needsPasswordSetup() {
+        if (this.urlIndicatesInvite()) return true;
         if (!_cachedSession) return false;
         return !_cachedSession.user.user_metadata?.password_set;
     },
