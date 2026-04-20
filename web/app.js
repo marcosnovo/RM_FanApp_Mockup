@@ -22,7 +22,13 @@ const state = {
 
     // Hoy v2 state (feature flag)
     playingVideoId: null,
-    surveyAnswered: {},   // { [surveyId]: optionKey }
+    surveyAnswered: {},          // { [surveyId]: optionKey }
+
+    // Hoy v2 REFINED
+    followedTeams: { masc: true, fem: true, basket: true },   // all 3 by default
+    highlightsFilter: 'all',                                   // segmented
+    openHighlightsAll: false,                                  // full-screen all-highlights
+    openMatchSummary: null,                                    // teamId | null
 
     // VIP App state
     vipTab: 'inicio',             // 'inicio' | 'eventos' | 'gestor' | 'perfil'
@@ -174,9 +180,7 @@ function renderTabBar() {
 // Todo sobre un scroll vertical.
 // ================================================================
 function renderHoyV2() {
-    const match = HEADER_MATCHES[state.matchIndex];
     const news = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []).slice(0, 5);
-    const videos = (typeof VIDEO_ITEMS !== 'undefined' ? VIDEO_ITEMS : []);
     const surveys = (typeof SURVEY_ITEMS !== 'undefined' ? SURVEY_ITEMS : []);
     const survey = surveys[0];
 
@@ -194,10 +198,13 @@ function renderHoyV2() {
 
             <div class="hoy2-scroll">
 
-                <!-- ── 1. Compact match card ────────────────────────── -->
-                ${renderHoyV2MatchCard(match)}
+                <!-- ── 1. Próximos partidos (hasta 3 equipos) ───────── -->
+                ${renderHoyV2NextMatches()}
 
-                <!-- ── 2. News list ─────────────────────────────────── -->
+                <!-- ── 2. Último partido (resúmenes por equipo) ─────── -->
+                ${renderHoyV2LastMatches()}
+
+                <!-- ── 3. Noticias ─────────────────────────────────── -->
                 <section class="hoy2-section">
                     <div class="hoy2-section-head">
                         <h2 class="hoy2-section-title">Noticias</h2>
@@ -220,43 +227,151 @@ function renderHoyV2() {
                     </div>
                 </section>
 
-                <!-- ── 3. Highlights carousel ───────────────────────── -->
-                <section class="hoy2-section">
-                    <div class="hoy2-section-head">
-                        <h2 class="hoy2-section-title">Highlights</h2>
-                        <button class="hoy2-section-cta" data-go-tab="rmtv">
-                            RMTV
-                        </button>
-                    </div>
-                    <div class="hoy2-video-scroll" id="hoy2VideoScroll">
-                        ${videos.map(v => `
-                            <button class="hoy2-video-card" data-video-id="${v.id}"
-                                style="background: linear-gradient(145deg, ${v.color1} 0%, ${v.color2} 100%)">
-                                <span class="hoy2-video-cat">${v.category}</span>
-                                <span class="hoy2-video-play">${I.playSolid}</span>
-                                <div class="hoy2-video-meta">
-                                    <div class="hoy2-video-title">${v.title}</div>
-                                    <div class="hoy2-video-duration">${v.duration}</div>
-                                </div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </section>
+                <!-- ── 4. Highlights (mixto) ────────────────────────── -->
+                ${renderHoyV2Highlights()}
 
-                <!-- ── 4. Survey / trivia placeholder ───────────────── -->
+                <!-- ── 5. Trivia del día ────────────────────────────── -->
                 <section class="hoy2-section">
                     <div class="hoy2-section-head">
-                        <h2 class="hoy2-section-title">Participa</h2>
+                        <h2 class="hoy2-section-title">Trivia del día</h2>
                     </div>
                     ${renderHoyV2Survey(survey)}
                 </section>
 
-                <div style="height: 24px"></div>
+                <div style="height: 28px"></div>
             </div>
         </div>
 
         ${renderSideMenu()}
     `;
+}
+
+// ── Próximos partidos (hasta 3, scroll horizontal) ─────────────
+function renderHoyV2NextMatches() {
+    const teams = (typeof TEAMS !== 'undefined' ? TEAMS : []);
+    const nextByTeam = (typeof NEXT_MATCHES_BY_TEAM !== 'undefined' ? NEXT_MATCHES_BY_TEAM : {});
+    const followed = teams.filter(t => state.followedTeams[t.id]);
+    if (followed.length === 0) return '';
+
+    return `
+        <section class="hoy2-section">
+            <div class="hoy2-section-head">
+                <h2 class="hoy2-section-title">Próximos partidos</h2>
+                <button class="hoy2-section-cta" data-go-tab="calendario">
+                    Calendario
+                </button>
+            </div>
+            <div class="hoy2-nm-scroll">
+                ${followed.map(team => {
+                    const m = nextByTeam[team.id];
+                    if (!m) return '';
+                    const homeCrest = bigCrestFor(m.home);
+                    const awayCrest = bigCrestFor(m.away);
+                    return `
+                        <button class="hoy2-nm-card" data-next-match="${team.id}">
+                            <div class="hoy2-nm-head">
+                                <span class="hoy2-nm-comp">${m.competition}</span>
+                                <span class="hoy2-nm-sport">${team.sport}</span>
+                            </div>
+                            <div class="hoy2-nm-teams">
+                                <div class="hoy2-nm-crest">${homeCrest}</div>
+                                <span class="hoy2-nm-vs">vs</span>
+                                <div class="hoy2-nm-crest">${awayCrest}</div>
+                            </div>
+                            <div class="hoy2-nm-names">
+                                <span class="hoy2-nm-name">${m.home}</span>
+                                <span class="hoy2-nm-name">${m.away}</span>
+                            </div>
+                            <div class="hoy2-nm-foot">
+                                <span class="hoy2-nm-date">${m.dateString}</span>
+                                <span class="hoy2-nm-venue">${m.venue}</span>
+                            </div>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        </section>
+    `;
+}
+
+// ── Último partido (resúmenes por equipo seguido) ─────────────
+function renderHoyV2LastMatches() {
+    const teams = (typeof TEAMS !== 'undefined' ? TEAMS : []);
+    const lastByTeam = (typeof LAST_MATCH_BY_TEAM !== 'undefined' ? LAST_MATCH_BY_TEAM : {});
+    const followed = teams.filter(t => state.followedTeams[t.id]);
+    if (followed.length === 0) return '';
+
+    return `
+        <section class="hoy2-section">
+            <div class="hoy2-section-head">
+                <h2 class="hoy2-section-title">Último partido</h2>
+            </div>
+            <div class="hoy2-lm-stack">
+                ${followed.map(team => {
+                    const s = lastByTeam[team.id];
+                    if (!s) return '';
+                    return `
+                        <div class="hoy2-lm-card" data-summary-team="${team.id}">
+                            <div class="hoy2-lm-thumb"
+                                style="background: linear-gradient(135deg, ${s.thumbColor1}, ${s.thumbColor2})">
+                                <span class="hoy2-lm-play">${I.play}</span>
+                                <span class="hoy2-lm-dur">${s.duration}</span>
+                            </div>
+                            <div class="hoy2-lm-body">
+                                <div class="hoy2-lm-comp">${s.competition}</div>
+                                <div class="hoy2-lm-title">${s.home} ${s.score} ${s.away}</div>
+                                <div class="hoy2-lm-date">${s.date} · ${team.sport}</div>
+                                <button class="hoy2-lm-cta" data-summary-open="${team.id}">
+                                    Ver resumen ${I.chevronRight}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </section>
+    `;
+}
+
+// ── Highlights (mixto: categorías) ────────────────────────────
+function renderHoyV2Highlights() {
+    const highlights = (typeof HIGHLIGHT_ITEMS !== 'undefined' ? HIGHLIGHT_ITEMS : []);
+    // On the Hoy screen we show ONE item per category as a mixed carousel
+    const byCat = {};
+    for (const h of highlights) {
+        if (!byCat[h.category]) byCat[h.category] = h;
+    }
+    const mixed = Object.values(byCat);
+
+    return `
+        <section class="hoy2-section">
+            <div class="hoy2-section-head">
+                <h2 class="hoy2-section-title">Highlights</h2>
+                <button class="hoy2-section-cta" data-highlights-all>
+                    Ver todos
+                </button>
+            </div>
+            <div class="hoy2-video-scroll" id="hoy2VideoScroll">
+                ${mixed.map(v => `
+                    <button class="hoy2-video-card" data-highlight-id="${v.id}"
+                        style="background: linear-gradient(145deg, ${v.color1} 0%, ${v.color2} 100%)">
+                        <span class="hoy2-video-cat">${labelForCategory(v.category)}</span>
+                        <span class="hoy2-video-play">${I.playSolid}</span>
+                        <div class="hoy2-video-meta">
+                            <div class="hoy2-video-title">${v.title}</div>
+                            <div class="hoy2-video-duration">${v.duration}</div>
+                        </div>
+                    </button>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+function labelForCategory(id) {
+    const cats = (typeof HIGHLIGHT_CATEGORIES !== 'undefined' ? HIGHLIGHT_CATEGORIES : []);
+    const c = cats.find(c => c.id === id);
+    return c ? c.label.toUpperCase() : (id || '').toUpperCase();
 }
 
 function renderHoyV2MatchCard(match) {
@@ -1906,11 +2021,15 @@ function render() {
     body.innerHTML = content;
     $('#tabBarSlot').innerHTML = tabBarHTML;
 
-    // Sheets (fan news + vip restaurant/perfil + hoy-v2 video player)
+    // Sheets (fan news + vip restaurant/perfil + hoy v2 sheets)
     if (state.app === 'fan' && state.newsId) {
         $('#newsSheetSlot').innerHTML = renderNewsDetail();
     } else if (state.app === 'fan' && state.playingVideoId) {
         renderHoyV2VideoSheet();
+    } else if (state.app === 'fan' && state.openMatchSummary) {
+        renderHoyV2MatchSummarySheet();
+    } else if (state.app === 'fan' && state.openHighlightsAll) {
+        renderHoyV2HighlightsAll();
     } else {
         $('#newsSheetSlot').innerHTML = '';
     }
@@ -2198,19 +2317,7 @@ function attachListeners() {
     if (dim)   dim.addEventListener('click', closeMenu);
 
     // ── Hoy v2 listeners ────────────────────────────────────────
-    // Compact match card → open the existing match detail (Resumen subtab)
-    const hoy2Match = $('[data-hoy2-match]');
-    if (hoy2Match) hoy2Match.addEventListener('click', () => {
-        // Switch to the legacy sticky tabs layout focused on match detail.
-        // The match info is the same — we reuse Resumen / Estadísticas.
-        const current = HEADER_MATCHES[state.matchIndex];
-        state.sub = current.status === 'upcoming' ? 'jornada' : 'resumen';
-        // Temporarily disable the v2 flag so the user lands in Match Centre
-        // (the sticky-tabs layout). They can toggle v2 back on from the sidebar.
-        Flags.set('fan.hoy.v2-structure', false);
-    });
-
-    // "Ver todas" / RMTV section CTAs
+    // "Ver todas" / RMTV / Calendario section CTAs
     $$('[data-go-tab]').forEach(btn => btn.addEventListener('click', () => {
         const tab = btn.dataset.goTab;
         state.tab = tab;
@@ -2218,7 +2325,37 @@ function attachListeners() {
         render();
     }));
 
-    // Video thumbnail click → simulated player
+    // Next match card → Match Centre (drop flag to show classic Hoy with tabs)
+    $$('[data-next-match]').forEach(btn => btn.addEventListener('click', () => {
+        const teamId = btn.dataset.nextMatch;
+        // For now: only "masc" has the full Match Centre in the legacy Hoy view.
+        // Others open an informational toast-like summary (future work).
+        if (teamId === 'masc') {
+            Flags.set('fan.hoy.v2-structure', false);
+        } else {
+            alert(`Match Centre de ${TEAMS.find(t => t.id === teamId)?.sport || teamId} — próximamente`);
+        }
+    }));
+
+    // Match summary "Ver resumen" CTA
+    $$('[data-summary-open]').forEach(btn => btn.addEventListener('click', e => {
+        e.stopPropagation();
+        state.openMatchSummary = btn.dataset.summaryOpen;
+        renderHoyV2MatchSummarySheet();
+    }));
+
+    // Highlights all CTA
+    const hlAll = $('[data-highlights-all]');
+    if (hlAll) hlAll.addEventListener('click', () => {
+        state.openHighlightsAll = true;
+        renderHoyV2HighlightsAll();
+    });
+
+    // Highlight card / video click → simulated player
+    $$('[data-highlight-id]').forEach(btn => btn.addEventListener('click', () => {
+        state.playingVideoId = btn.dataset.highlightId;
+        renderHoyV2VideoSheet();
+    }));
     $$('[data-video-id]').forEach(btn => btn.addEventListener('click', () => {
         state.playingVideoId = btn.dataset.videoId;
         renderHoyV2VideoSheet();
@@ -2238,6 +2375,109 @@ function attachListeners() {
         delete next[sid];
         state.surveyAnswered = next;
         render();
+    }));
+}
+
+// ── Hoy v2: "Ver todos" full-screen highlights view ──────────────
+function renderHoyV2HighlightsAll() {
+    const slot = $('#newsSheetSlot');
+    if (!slot) return;
+    if (!state.openHighlightsAll) { slot.innerHTML = ''; return; }
+
+    const items = (typeof HIGHLIGHT_ITEMS !== 'undefined' ? HIGHLIGHT_ITEMS : []);
+    const filter = state.highlightsFilter;
+    const filtered = filter === 'all' ? items : items.filter(h => h.category === filter);
+
+    slot.innerHTML = `
+        <div class="news-sheet-backdrop" data-highlights-close></div>
+        <div class="news-sheet hoy2-highlights-sheet">
+            <div class="hoy2-hl-head">
+                <button class="hoy2-hl-close" data-highlights-close aria-label="Cerrar">${I.chevronLeft}</button>
+                <div class="hoy2-hl-title">Highlights</div>
+                <div style="width: 36px"></div>
+            </div>
+
+            <div class="hoy2-hl-segmented">
+                ${HIGHLIGHT_CATEGORIES.map(c => `
+                    <button class="hoy2-hl-seg ${filter === c.id ? 'active' : ''}" data-hl-filter="${c.id}">
+                        ${c.label}
+                    </button>
+                `).join('')}
+            </div>
+
+            <div class="hoy2-hl-list">
+                ${filtered.length === 0 ? `
+                    <div class="hoy2-hl-empty">Sin vídeos en esta categoría</div>
+                ` : filtered.map(v => `
+                    <button class="hoy2-hl-row" data-highlight-id="${v.id}"
+                        style="background: linear-gradient(135deg, ${v.color1} 0%, ${v.color2} 100%)">
+                        <div class="hoy2-hl-row-info">
+                            <span class="hoy2-hl-row-cat">${labelForCategory(v.category)}</span>
+                            <div class="hoy2-hl-row-title">${v.title}</div>
+                            <div class="hoy2-hl-row-duration">${v.duration}</div>
+                        </div>
+                        <div class="hoy2-hl-row-play">${I.play}</div>
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    $$('[data-highlights-close]').forEach(b => b.addEventListener('click', () => {
+        state.openHighlightsAll = false;
+        slot.innerHTML = '';
+    }));
+    $$('[data-hl-filter]').forEach(b => b.addEventListener('click', () => {
+        state.highlightsFilter = b.dataset.hlFilter;
+        renderHoyV2HighlightsAll();
+    }));
+    $$('.hoy2-hl-row[data-highlight-id]').forEach(b => b.addEventListener('click', () => {
+        const id = b.dataset.highlightId;
+        state.openHighlightsAll = false;
+        state.playingVideoId = id;
+        renderHoyV2VideoSheet();
+    }));
+}
+
+// ── Hoy v2: match summary sheet ──────────────────────────────────
+function renderHoyV2MatchSummarySheet() {
+    const slot = $('#newsSheetSlot');
+    if (!slot) return;
+    const teamId = state.openMatchSummary;
+    if (!teamId) { slot.innerHTML = ''; return; }
+
+    const lastByTeam = (typeof LAST_MATCH_BY_TEAM !== 'undefined' ? LAST_MATCH_BY_TEAM : {});
+    const teams = (typeof TEAMS !== 'undefined' ? TEAMS : []);
+    const s = lastByTeam[teamId];
+    const team = teams.find(t => t.id === teamId);
+    if (!s || !team) { slot.innerHTML = ''; return; }
+
+    slot.innerHTML = `
+        <div class="news-sheet-backdrop" data-summary-close></div>
+        <div class="news-sheet hoy2-summary-sheet">
+            <div class="news-sheet-grabber"></div>
+            <div class="news-sheet-scroll">
+                <div class="hoy2-sum-head">
+                    <div class="hoy2-sum-kicker">${s.competition} · ${team.sport}</div>
+                    <h1 class="hoy2-sum-title">${s.home} ${s.score} ${s.away}</h1>
+                    <div class="hoy2-sum-date">${s.date}</div>
+                </div>
+                <div class="hoy2-sum-player"
+                    style="background: linear-gradient(135deg, ${s.thumbColor1}, ${s.thumbColor2})">
+                    ${I.play}
+                    <span class="hoy2-sum-duration">${s.duration}</span>
+                </div>
+                <div class="hoy2-sum-body">
+                    ${s.summary}
+                </div>
+                <button class="hoy2-sum-close-btn" data-summary-close>Cerrar</button>
+            </div>
+        </div>
+    `;
+
+    $$('[data-summary-close]').forEach(b => b.addEventListener('click', () => {
+        state.openMatchSummary = null;
+        slot.innerHTML = '';
     }));
 }
 
@@ -2380,22 +2620,37 @@ function setupTouchSimulation() {
     let dragState = null;
     const DRAG_THRESHOLD = 5;
 
-    function findHorizontalScroller(origin) {
+    /**
+     * Walk up the DOM from `origin` looking for the nearest scrollable
+     * ancestor on the given axis. Falls back to #screenBody for vertical
+     * if nothing more specific is found.
+     */
+    function findScroller(origin, axis) {
         let el = origin;
         while (el && el !== phoneScreen) {
             const cs = getComputedStyle(el);
-            if ((cs.overflowX === 'auto' || cs.overflowX === 'scroll') && el.scrollWidth > el.clientWidth + 1) {
-                return el;
+            if (axis === 'y') {
+                const oy = cs.overflowY;
+                if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 1) {
+                    return el;
+                }
+            } else {
+                const ox = cs.overflowX;
+                if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 1) {
+                    return el;
+                }
             }
             el = el.parentElement;
         }
+        // Fallback to the main screen body for vertical scrolling
+        if (axis === 'y') return $('#screenBody');
         return null;
     }
 
     phoneScreen.addEventListener('mousedown', e => {
         if (e.button !== 0) return;
-        const vScroller = $('#screenBody');
-        const hScroller = findHorizontalScroller(e.target);
+        const vScroller = findScroller(e.target, 'y');
+        const hScroller = findScroller(e.target, 'x');
         if (!vScroller && !hScroller) return;
 
         dragState = {

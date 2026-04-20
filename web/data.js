@@ -271,6 +271,134 @@ const HEADER_MATCHES = [
     }
 ];
 
+// ================================================================
+// Hoy v2 REFINED — equipos seguidos, próximos partidos, resúmenes
+// Categoría de highlights ampliada
+// ================================================================
+
+const TEAMS = [
+    { id: 'masc',   name: 'Primer equipo',            sport: 'Fútbol masculino',   short: 'RM' },
+    { id: 'fem',    name: 'Real Madrid Femenino',     sport: 'Fútbol femenino',    short: 'RMF' },
+    { id: 'basket', name: 'Real Madrid Baloncesto',   sport: 'Baloncesto',         short: 'RMB' }
+];
+
+// Next match per team (key = team id).
+const NEXT_MATCHES_BY_TEAM = {
+    masc: {
+        teamId: 'masc',
+        competition: 'CHAMPIONS LEAGUE',
+        home: 'Bayern Múnich',
+        away: 'Real Madrid',
+        dateString: 'Mié 15 abr · 21:00',
+        venue: 'Allianz Arena'
+    },
+    fem: {
+        teamId: 'fem',
+        competition: 'LIGA F',
+        home: 'Real Madrid Femenino',
+        away: 'FC Barcelona Femení',
+        dateString: 'Dom 19 abr · 12:00',
+        venue: 'Estadio Alfredo Di Stéfano'
+    },
+    basket: {
+        teamId: 'basket',
+        competition: 'EUROLEAGUE',
+        home: 'Real Madrid',
+        away: 'Panathinaikos',
+        dateString: 'Vie 17 abr · 20:30',
+        venue: 'WiZink Center'
+    }
+};
+
+// Last match summary per team.
+const LAST_MATCH_BY_TEAM = {
+    masc: {
+        teamId: 'masc',
+        rival: 'Mallorca',
+        home: 'Mallorca', away: 'Real Madrid',
+        score: '2 - 1',
+        result: 'derrota',
+        date: 'Sáb 5 abr',
+        competition: 'LaLiga · J30',
+        summary: 'Remontada del Mallorca en los últimos minutos pese al gol inicial de Vinicius.',
+        duration: '4:18',
+        thumbColor1: '#8b1010',
+        thumbColor2: '#3a0808'
+    },
+    fem: {
+        teamId: 'fem',
+        rival: 'Atlético Fem.',
+        home: 'Real Madrid Fem.', away: 'Atlético Fem.',
+        score: '3 - 0',
+        result: 'victoria',
+        date: 'Dom 6 abr',
+        competition: 'Liga F · J26',
+        summary: 'Gran actuación colectiva con dobletes de Weir y Caicedo y portería a cero.',
+        duration: '3:52',
+        thumbColor1: '#3a2978',
+        thumbColor2: '#1b1244'
+    },
+    basket: {
+        teamId: 'basket',
+        rival: 'Barcelona',
+        home: 'Real Madrid', away: 'Barcelona',
+        score: '88 - 83',
+        result: 'victoria',
+        date: 'Mar 8 abr',
+        competition: 'ACB · J29',
+        summary: 'Triunfo en El Clásico con un cuarto final brillante liderado por Campazzo.',
+        duration: '5:10',
+        thumbColor1: '#1b3a72',
+        thumbColor2: '#0a1a38'
+    }
+};
+
+// Highlight categories (UI segmented control uses this).
+const HIGHLIGHT_CATEGORIES = [
+    { id: 'all',           label: 'Todos' },
+    { id: 'partidos',      label: 'Partidos' },
+    { id: 'entrenamientos',label: 'Entrenos' },
+    { id: 'entrevistas',   label: 'Entrevistas' },
+    { id: 'ruedas',        label: 'Prensa' }
+];
+
+// Extended HIGHLIGHTS_ITEMS (replaces / augments VIDEO_ITEMS for Hoy v2-refined)
+const HIGHLIGHT_ITEMS = [
+    // Partidos
+    { id: 'h1', category: 'partidos', title: 'Gol de Bellingham vs Man City', duration: '1:42', teamId: 'masc',
+      color1: '#3a2978', color2: '#1b1244' },
+    { id: 'h2', category: 'partidos', title: 'Resumen · Mallorca 2-1 Real Madrid', duration: '4:18', teamId: 'masc',
+      color1: '#8b1010', color2: '#3a0808' },
+    { id: 'h3', category: 'partidos', title: 'Triple decisivo de Campazzo', duration: '0:48', teamId: 'basket',
+      color1: '#1b3a72', color2: '#0a1a38' },
+
+    // Entrenamientos
+    { id: 'h4', category: 'entrenamientos', title: 'Entreno previo al Bayern', duration: '3:10', teamId: 'masc',
+      color1: '#1b3a72', color2: '#0a1a38' },
+    { id: 'h5', category: 'entrenamientos', title: 'Sesión táctica · Femenino', duration: '2:44', teamId: 'fem',
+      color1: '#4a3380', color2: '#22184a' },
+    { id: 'h6', category: 'entrenamientos', title: 'Tiro libre · baloncesto', duration: '1:05', teamId: 'basket',
+      color1: '#163a72', color2: '#081a38' },
+
+    // Entrevistas
+    { id: 'h7', category: 'entrevistas', title: 'Bellingham: "Queremos ganarlo todo"', duration: '6:22', teamId: 'masc',
+      color1: '#2c2978', color2: '#151244' },
+    { id: 'h8', category: 'entrevistas', title: 'Vinicius habla sobre el Bernabéu', duration: '4:14', teamId: 'masc',
+      color1: '#5a4380', color2: '#28184a' },
+    { id: 'h9', category: 'entrevistas', title: 'Weir: liderazgo y gol', duration: '5:01', teamId: 'fem',
+      color1: '#3a2978', color2: '#1b1244' },
+
+    // Ruedas de prensa
+    { id: 'h10', category: 'ruedas', title: 'Ancelotti en sala de prensa', duration: '7:53', teamId: 'masc',
+      color1: '#0f2145', color2: '#06101f' },
+    { id: 'h11', category: 'ruedas', title: 'Alberto Toril: previa vs Barça', duration: '6:40', teamId: 'fem',
+      color1: '#0f2145', color2: '#06101f' },
+    { id: 'h12', category: 'ruedas', title: 'Chus Mateo antes de Panathinaikos', duration: '8:12', teamId: 'basket',
+      color1: '#1a3050', color2: '#0a1624' }
+];
+
+// Keep legacy VIDEO_ITEMS used by the initial Hoy v2 player (compat shim).
+// It now maps to HIGHLIGHT_ITEMS without the "category" noise for a subset.
 // ── Hoy v2: highlight videos (feature flag 'fan.hoy.v2-structure') ─
 const VIDEO_ITEMS = [
     {

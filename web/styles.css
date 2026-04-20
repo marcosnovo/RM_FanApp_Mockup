@@ -5723,3 +5723,476 @@ body.auth-mode .app-layout { visibility: hidden; }
     font-size: 12.5px;
     color: rgba(255, 255, 255, 0.75);
 }
+
+
+/* ================================================================
+   HOY v2 REFINED — Próximos partidos, Último partido, Highlights all
+   ================================================================ */
+
+/* ── Próximos partidos (hasta 3 team cards horizontal scroll) ──── */
+.hoy2-nm-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 16px 10px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.hoy2-nm-scroll::-webkit-scrollbar { display: none; }
+
+.hoy2-nm-card {
+    flex: 0 0 calc(100% - 40px);
+    scroll-snap-align: start;
+    padding: 16px 16px 14px;
+    background:
+        linear-gradient(150deg, #0F2145 0%, #162a5e 55%, #0F2145 100%);
+    border: 0;
+    border-radius: var(--radius-xx-large, 24px);
+    color: white;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: var(--shadow-light-small);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: transform 0.15s ease, box-shadow 0.18s ease;
+}
+
+.hoy2-nm-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-light-medium);
+}
+
+.hoy2-nm-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.hoy2-nm-comp {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--color-primary-medium, #8FA0F5);
+    padding: 4px 10px;
+    background: rgba(62, 49, 250, 0.22);
+    border-radius: 999px;
+}
+
+.hoy2-nm-sport {
+    font-size: 11px;
+    color: #ffffff90;
+    letter-spacing: 0.2px;
+}
+
+.hoy2-nm-teams {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 6px 0;
+}
+
+.hoy2-nm-crest {
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 3px 6px #00000050);
+}
+.hoy2-nm-crest > svg { width: 54px !important; height: 54px !important; }
+
+.hoy2-nm-vs {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff70;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.hoy2-nm-names {
+    display: flex;
+    justify-content: space-around;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffffd0;
+    gap: 10px;
+}
+
+.hoy2-nm-name {
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hoy2-nm-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid #ffffff14;
+    font-size: 11.5px;
+}
+
+.hoy2-nm-date { color: white; font-weight: 600; }
+.hoy2-nm-venue { color: #ffffff90; }
+
+/* ── Último partido — card horizontal con thumb + info ──────── */
+.hoy2-lm-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 16px;
+}
+
+.hoy2-lm-card {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background: var(--color-grayscale-off-white);
+    border-radius: var(--radius-large, 16px);
+    box-shadow: var(--shadow-light-small);
+    align-items: stretch;
+}
+
+.hoy2-lm-thumb {
+    flex: 0 0 110px;
+    height: 90px;
+    border-radius: var(--radius-medium, 12px);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    overflow: hidden;
+}
+
+.hoy2-lm-thumb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.5));
+    pointer-events: none;
+}
+
+.hoy2-lm-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    opacity: 0.92;
+}
+.hoy2-lm-play > svg { width: 32px !important; height: 32px !important; }
+
+.hoy2-lm-dur {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    z-index: 1;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 4px;
+    color: white;
+    backdrop-filter: blur(4px);
+}
+
+.hoy2-lm-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2px 0;
+}
+
+.hoy2-lm-comp {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--color-primary-default);
+}
+
+.hoy2-lm-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-grayscale-title);
+    line-height: 1.25;
+    margin-top: 3px;
+}
+
+.hoy2-lm-date {
+    font-size: 11.5px;
+    color: var(--color-grayscale-label);
+    margin-top: 2px;
+}
+
+.hoy2-lm-cta {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 6px;
+    background: transparent;
+    border: 0;
+    padding: 4px 0;
+    color: var(--color-primary-default);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.hoy2-lm-cta > svg { width: 12px !important; height: 12px !important; }
+.hoy2-lm-cta:hover { text-decoration: underline; }
+
+/* ── Highlights "Ver todos" full-screen sheet ────────────────── */
+.hoy2-highlights-sheet {
+    background: var(--color-grayscale-off-white) !important;
+    border-radius: 0 !important;
+    top: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+.hoy2-hl-head {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 54px 14px 10px;
+    border-bottom: 0.5px solid var(--color-grayscale-line);
+}
+
+.hoy2-hl-close {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    background: transparent;
+    color: var(--color-grayscale-body);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+.hoy2-hl-close:hover { background: var(--color-grayscale-bg); }
+.hoy2-hl-close > svg { width: 18px !important; height: 18px !important; }
+
+.hoy2-hl-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-grayscale-title);
+}
+
+.hoy2-hl-segmented {
+    flex-shrink: 0;
+    display: flex;
+    gap: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    background: var(--color-grayscale-bg);
+}
+.hoy2-hl-segmented::-webkit-scrollbar { display: none; }
+
+.hoy2-hl-seg {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border: 0;
+    background: transparent;
+    color: var(--color-grayscale-label);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+.hoy2-hl-seg:hover { background: var(--color-grayscale-input); }
+.hoy2-hl-seg.active {
+    background: var(--color-primary-default);
+    color: white;
+}
+
+.hoy2-hl-list {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 14px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.hoy2-hl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+    border: 0;
+    border-radius: var(--radius-large, 16px);
+    color: white;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    min-height: 90px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.12s ease;
+    box-shadow: var(--shadow-light-small);
+}
+
+.hoy2-hl-row:hover { transform: translateY(-2px); }
+
+.hoy2-hl-row::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 60%, rgba(0,0,0,0.2) 100%);
+    pointer-events: none;
+}
+
+.hoy2-hl-row-info {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.hoy2-hl-row-cat {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    margin-bottom: 6px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.hoy2-hl-row-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.hoy2-hl-row-duration {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.82);
+    margin-top: 4px;
+}
+
+.hoy2-hl-row-play {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    opacity: 0.9;
+}
+
+.hoy2-hl-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--color-grayscale-label);
+    font-size: 13px;
+}
+
+/* ── Match Summary sheet ─────────────────────────────────────── */
+.hoy2-summary-sheet {
+    background: var(--color-grayscale-off-white) !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.hoy2-sum-head {
+    padding: 20px 20px 6px;
+}
+
+.hoy2-sum-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--color-primary-default);
+    margin-bottom: 8px;
+}
+
+.hoy2-sum-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-grayscale-title);
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
+}
+
+.hoy2-sum-date {
+    font-size: 13px;
+    color: var(--color-grayscale-label);
+    margin-bottom: 16px;
+}
+
+.hoy2-sum-player {
+    height: 200px;
+    margin: 0 20px;
+    border-radius: var(--radius-large, 16px);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+.hoy2-sum-player > svg { width: 60px !important; height: 60px !important; opacity: 0.9; }
+
+.hoy2-sum-duration {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+}
+
+.hoy2-sum-body {
+    padding: 20px 20px 0;
+    font-size: 14px;
+    color: var(--color-grayscale-body);
+    line-height: 1.55;
+}
+
+.hoy2-sum-close-btn {
+    margin: 20px 20px 30px;
+    width: calc(100% - 40px);
+    height: 48px;
+    border: 1.5px solid var(--color-primary-default);
+    background: transparent;
+    color: var(--color-primary-default);
+    border-radius: var(--radius-medium, 12px);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
