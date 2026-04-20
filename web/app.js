@@ -1771,6 +1771,9 @@ function renderSidebar() {
     $$('#sideNav .nav-sub').forEach(btn => btn.addEventListener('click', () => {
         handleSideNavSub(btn.dataset.tab, btn.dataset.sub);
     }));
+
+    // Feature flags panel (per app) below the nav
+    renderSidebarFlags();
 }
 
 // ── Home scroll morph (expanded ↔ collapsed top row) ────────────
@@ -2627,67 +2630,75 @@ async function renderSettings() {
         if (!r.ok) alert(r.error);
         await renderSettings();
     }));
-
-    // Feature flags panel (visible to all authenticated users)
-    renderFlagsPanel();
 }
 
 // ================================================================
-// FEATURE FLAGS PANEL (inside Settings drawer)
+// FEATURE FLAGS PANEL (inside the left sidebar, per app)
 // ================================================================
 
-function renderFlagsPanel() {
-    const dr = $('#settingsDrawer');
-    if (!dr || dr.hidden) return;
+function renderSidebarFlags() {
+    const host = $('#sideFlags');
+    if (!host) return;
 
-    const groups = Flags.grouped();
-    const total = Flags.count();
-    const active = Flags.activeCount();
-
-    // Remove any existing panel first (when re-rendering)
-    dr.querySelector('.settings-flags-wrap')?.remove();
-
+    const app = state.app;                 // 'fan' | 'vip'
+    const groups = Flags.groupedForApp(app);
+    const total = Flags.count(app);
+    const active = Flags.activeCount(app);
     const cats = Object.keys(groups).sort();
-    const panel = document.createElement('div');
-    panel.className = 'settings-flags-wrap';
-    panel.innerHTML = `
-        <div class="settings-flags-head">
-            <div class="settings-section-title" style="margin:0">Funcionalidades experimentales</div>
-            <div class="settings-flags-counter">${active}/${total}</div>
-        </div>
-        ${total === 0 ? `
-            <div class="settings-flags-empty">
-                Aún no hay funcionalidades experimentales. Pídeme una y la registro aquí para que puedas activarla y desactivarla.
-            </div>
-        ` : cats.map(cat => `
-            <div class="settings-flag-group-label">${cat}</div>
-            ${groups[cat].map(f => `
-                <label class="settings-flag-row">
-                    <div class="settings-flag-info">
-                        <div class="settings-flag-label">${f.label}</div>
-                        <div class="settings-flag-desc">${f.description}</div>
-                    </div>
-                    <input type="checkbox" class="settings-flag-toggle" data-flag-key="${f.key}" ${f.enabled ? 'checked' : ''}>
-                </label>
-            `).join('')}
-        `).join('')}
-        ${total > 0 && active > 0 ? `
-            <button class="settings-flags-reset" id="flagsResetAllBtn">Desactivar todas</button>
-        ` : ''}
-    `;
-    dr.appendChild(panel);
 
-    // Wire up toggle listeners
-    panel.querySelectorAll('.settings-flag-toggle').forEach(inp => {
+    const appLabel = app === 'vip' ? 'VIP App' : 'Fan App';
+
+    host.innerHTML = `
+        <button class="side-flags-head" id="sideFlagsHead" aria-expanded="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="side-flags-chev"><polyline points="6,9 12,15 18,9"/></svg>
+            <span class="side-flags-title">Funcionalidades</span>
+            <span class="side-flags-app">${appLabel}</span>
+            <span class="side-flags-count">${active}/${total}</span>
+        </button>
+        <div class="side-flags-body" id="sideFlagsBody">
+            ${total === 0 ? `
+                <div class="side-flags-empty">
+                    Aún no hay funcionalidades en la ${appLabel}. Pídeme una y se activa aquí.
+                </div>
+            ` : cats.map(cat => `
+                <div class="side-flags-cat">${cat}</div>
+                ${groups[cat].map(f => `
+                    <label class="side-flag-row" title="${f.description.replace(/"/g, '&quot;')}">
+                        <div class="side-flag-text">
+                            <div class="side-flag-label">${f.label}${f.app === 'shared' ? ' <span class="side-flag-shared">compartida</span>' : ''}</div>
+                            <div class="side-flag-desc">${f.description}</div>
+                        </div>
+                        <input type="checkbox" class="side-flag-toggle" data-flag-key="${f.key}" ${f.enabled ? 'checked' : ''}>
+                    </label>
+                `).join('')}
+            `).join('')}
+            ${active > 0 ? `
+                <button class="side-flags-reset" id="sideFlagsResetBtn">Desactivar todas</button>
+            ` : ''}
+        </div>
+    `;
+
+    // Toggle open/close
+    const head = $('#sideFlagsHead');
+    const body = $('#sideFlagsBody');
+    head.addEventListener('click', () => {
+        const expanded = head.getAttribute('aria-expanded') === 'true';
+        head.setAttribute('aria-expanded', String(!expanded));
+        body.style.display = expanded ? 'none' : '';
+    });
+
+    // Wire up toggles (stopPropagation so we don't collapse panel)
+    host.querySelectorAll('.side-flag-toggle').forEach(inp => {
+        inp.addEventListener('click', e => e.stopPropagation());
         inp.addEventListener('change', () => {
             Flags.set(inp.dataset.flagKey, inp.checked);
         });
     });
 
-    const resetBtn = panel.querySelector('#flagsResetAllBtn');
-    if (resetBtn) resetBtn.addEventListener('click', () => {
+    const resetBtn = $('#sideFlagsResetBtn');
+    if (resetBtn) resetBtn.addEventListener('click', e => {
+        e.stopPropagation();
         Flags.resetAll();
-        renderFlagsPanel();
     });
 }
 
@@ -2742,8 +2753,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     Flags.onChange(() => {
         updateBuildBadge();
         if (Auth.current()) render();
-        // Also refresh the flags panel itself (counters update)
-        renderFlagsPanel();
+        // Also refresh the sidebar flags section (counters update)
+        renderSidebarFlags();
     });
 
     // Show a brief loading state while Supabase initializes

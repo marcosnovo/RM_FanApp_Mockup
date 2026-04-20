@@ -4894,3 +4894,210 @@ body.auth-mode .app-layout { visibility: hidden; }
     0%, 100% { opacity: 1; }
     50%      { opacity: 0.45; }
 }
+
+
+/* ================================================================
+   SIDEBAR FEATURE FLAGS PANEL (per app)
+   ================================================================ */
+.side-flags {
+    padding: 4px 12px 14px;
+    border-top: 1px solid #ffffff0a;
+    flex-shrink: 0;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.side-flags::-webkit-scrollbar { width: 6px; }
+.side-flags::-webkit-scrollbar-thumb { background: #ffffff15; border-radius: 3px; }
+
+.side-flags-head {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    color: #ffffffbf;
+    padding: 10px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 8px;
+    transition: background 0.12s ease;
+}
+
+.side-flags-head:hover { background: #ffffff06; }
+
+.side-flags-chev {
+    color: #ffffff70;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.side-flags-head[aria-expanded="false"] .side-flags-chev {
+    transform: rotate(-90deg);
+}
+
+.side-flags-title {
+    flex: 1;
+    text-align: left;
+}
+
+.side-flags-app {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(62, 49, 250, 0.22);
+    color: #cfcbff;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: none;
+}
+
+.side-flags-count {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #ffffff12;
+    color: #ffffffc0;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    text-transform: none;
+}
+
+.side-flags-body {
+    padding: 2px 2px 0;
+}
+
+.side-flags-cat {
+    font-size: 10px;
+    font-weight: 700;
+    color: #ffffff55;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 6px 6px;
+}
+
+.side-flag-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 10px;
+    background: #ffffff06;
+    border: 1px solid #ffffff0e;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-bottom: 6px;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.side-flag-row:hover {
+    background: #ffffff0c;
+    border-color: #ffffff1a;
+}
+
+.side-flag-row:has(.side-flag-toggle:checked) {
+    border-color: rgba(62, 49, 250, 0.55);
+    background: rgba(62, 49, 250, 0.1);
+}
+
+.side-flag-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.side-flag-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 2px;
+}
+
+.side-flag-shared {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #cfcbff;
+    background: rgba(62, 49, 250, 0.2);
+    border-radius: 4px;
+    vertical-align: middle;
+}
+
+.side-flag-desc {
+    font-size: 10.5px;
+    color: #ffffff80;
+    line-height: 1.35;
+}
+
+.side-flag-toggle {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 36px;
+    height: 22px;
+    border-radius: 999px;
+    background: #ffffff22;
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.18s ease;
+    outline: none;
+    border: 0;
+    margin: 0;
+}
+
+.side-flag-toggle::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.18s ease;
+    box-shadow: 0 2px 4px #00000055;
+}
+
+.side-flag-toggle:checked {
+    background: var(--color-primary-default, #3E31FA);
+}
+
+.side-flag-toggle:checked::before {
+    transform: translateX(14px);
+}
+
+.side-flags-empty {
+    font-size: 11px;
+    color: #ffffff75;
+    padding: 10px 12px;
+    background: #ffffff05;
+    border: 1px dashed #ffffff18;
+    border-radius: 9px;
+    line-height: 1.45;
+}
+
+.side-flags-reset {
+    margin-top: 8px;
+    width: 100%;
+    padding: 7px;
+    border: 1px solid #ffffff12;
+    background: transparent;
+    color: #ffffffbb;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.side-flags-reset:hover { background: #ffffff08; }

@@ -3,7 +3,10 @@
    ================================================================
    How to add a new flag:
 
-   1. Add an entry to FLAGS[] below (key, label, description, default, category)
+   1. Add an entry to FLAGS[] below with:
+         - app: 'fan' | 'vip' | 'shared'   (which app owns the flag)
+         - key, label, description, default, category
+
    2. Anywhere in the app code, gate the new UI behind:
 
         if (Flags.isEnabled('my-feature-key')) { renderNewThing(); }
@@ -12,8 +15,8 @@
 
         ${Flags.isEnabled('my-feature-key') ? renderNewThing() : ''}
 
-   3. The panel in Settings ("Funcionalidades experimentales")
-      picks it up automatically — no extra wiring needed.
+   3. The panel in the left sidebar ("Funcionalidades") picks it up
+      automatically for the app it belongs to — no extra wiring.
 
    Flags are stored per-browser in localStorage, so each user sees
    their own experiment state. To promote a feature permanently,
@@ -22,31 +25,25 @@
 
 const FLAG_STORAGE_KEY = 'rm_flags_v1';
 
-// ⚠️ Registry of all flags. Keep this sorted by category for readability.
+// ⚠️ Registry of all flags. Keep this sorted by `app` and `category` for readability.
+// Each flag MUST declare `app` so it appears in the right panel.
 const FLAGS = [
+    // ── Shared (applies regardless of which app is selected) ──────
     {
+        app: 'shared',
         key: 'ui.show-build-badge',
         label: 'Badge de build',
-        description: 'Muestra un pequeño badge con la versión de la app en la esquina del stage (arriba a la derecha).',
-        category: 'Chrome / Demo',
+        description: 'Muestra un pequeño badge con la versión de la app arriba a la derecha.',
+        category: 'Demo',
         default: false
     }
 
-    // ── Ejemplos de futuros flags (dejados como placeholders) ─────
-    // {
-    //   key: 'hoy.predictions',
-    //   label: 'Widget de predicciones',
-    //   description: 'Permite predecir el resultado antes del partido.',
-    //   category: 'Hoy',
-    //   default: false
-    // },
-    // {
-    //   key: 'ui.dark-mode',
-    //   label: 'Dark mode',
-    //   description: 'Modo oscuro para la Fan App.',
-    //   category: 'Chrome / Demo',
-    //   default: false
-    // }
+    // ── Fan App flags ─────────────────────────────────────────────
+    // { app: 'fan', key: 'hoy.predictions', label: 'Predicciones', ... },
+    // { app: 'fan', key: 'hoy.confetti',    label: 'Confetti al gol', ... },
+
+    // ── VIP App flags ─────────────────────────────────────────────
+    // { app: 'vip', key: 'eventos.upgrade', label: 'Upgrade de palco', ... },
 ];
 
 // ── Internal state ──────────────────────────────────────────────
@@ -111,13 +108,23 @@ const Flags = {
         return FLAGS.map(f => ({ ...f, enabled: this.isEnabled(f.key) }));
     },
 
-    /** Returns flags grouped by category, for the UI panel. */
-    grouped() {
+    /**
+     * Flags visible in a specific app's panel.
+     * Includes flags with app === <app>  AND  app === 'shared'.
+     */
+    forApp(app) {
+        return FLAGS
+            .filter(f => f.app === app || f.app === 'shared')
+            .map(f => ({ ...f, enabled: this.isEnabled(f.key) }));
+    },
+
+    /** forApp() grouped by category for the UI panel. */
+    groupedForApp(app) {
         const groups = {};
-        for (const f of FLAGS) {
+        for (const f of this.forApp(app)) {
             const cat = f.category || 'General';
             if (!groups[cat]) groups[cat] = [];
-            groups[cat].push({ ...f, enabled: this.isEnabled(f.key) });
+            groups[cat].push(f);
         }
         return groups;
     },
@@ -127,13 +134,14 @@ const Flags = {
         _listeners.push(cb);
     },
 
-    /** Total number of registered flags (for the panel header counter). */
-    count() {
-        return FLAGS.length;
+    /** Total flags (optional app filter). */
+    count(app) {
+        return app ? this.forApp(app).length : FLAGS.length;
     },
 
-    /** How many flags are currently enabled (active). */
-    activeCount() {
-        return FLAGS.reduce((n, f) => n + (this.isEnabled(f.key) ? 1 : 0), 0);
+    /** How many flags are currently enabled (optional app filter). */
+    activeCount(app) {
+        const list = app ? this.forApp(app) : FLAGS;
+        return list.reduce((n, f) => n + (this.isEnabled(f.key) ? 1 : 0), 0);
     }
 };
