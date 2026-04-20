@@ -469,6 +469,22 @@ const BEHIND_SCENES_ITEMS = [
     }
 ];
 
+// ── Hoy v2 GAMIFICATION (flag 'fan.hoy.gamification') ──────────
+// Base ranking mock — 10 fake users. "Tú" is added/updated at runtime
+// based on the user's predictions stored in localStorage.
+const RANKING_MOCK = [
+    { id: 'u1',  name: 'Ana M.',      points: 47, avatarColor: '#3E31FA' },
+    { id: 'u2',  name: 'Pablo C.',    points: 41, avatarColor: '#8760F6' },
+    { id: 'u3',  name: 'Lucía G.',    points: 38, avatarColor: '#0F2145' },
+    { id: 'u4',  name: 'Miguel R.',   points: 36, avatarColor: '#3a2978' },
+    { id: 'u5',  name: 'Clara P.',    points: 29, avatarColor: '#1b3a72' },
+    { id: 'u6',  name: 'David L.',    points: 27, avatarColor: '#5a4380' },
+    { id: 'u7',  name: 'Sofía T.',    points: 24, avatarColor: '#cc1a26' },
+    { id: 'u8',  name: 'Javier B.',   points: 21, avatarColor: '#2c4e82' },
+    { id: 'u9',  name: 'Marta S.',    points: 18, avatarColor: '#bf0d0d' },
+    { id: 'u10', name: 'Tomás V.',    points: 14, avatarColor: '#0d8c40' }
+];
+
 // Highlight categories (UI segmented control uses this).
 const HIGHLIGHT_CATEGORIES = [
     { id: 'all',           label: 'Todos' },

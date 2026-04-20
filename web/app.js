@@ -34,6 +34,11 @@ const state = {
     openStory: null,            // { storyId, pageIdx } | null
     openBehindScenes: null,     // behind-scenes item id | null
 
+    // Hoy v2 Gamification (flag 'fan.hoy.gamification')
+    predictions: {},            // { [matchId]: { home, away, submittedAt, isCorrect } }
+    predictionDraft: {},        // { [matchId]: { home, away } } working values
+    openRanking: false,
+
     // VIP App state
     vipTab: 'inicio',             // 'inicio' | 'eventos' | 'gestor' | 'perfil'
     vipEventId: null,             // null = list; id = detail
@@ -209,6 +214,9 @@ function renderHoyV2() {
                      Cada card integra Radio y un resumen del último
                      partido con enlace "Ver resumen". -->
                 ${renderHoyV2NextMatches()}
+
+                <!-- ── 1.5 Gamificación: predicciones (flag) ───────── -->
+                ${Flags.isEnabled('fan.hoy.gamification') ? renderHoyV2Prediction() : ''}
 
                 <!-- ── 2. Noticias ─────────────────────────────────── -->
                 <section class="hoy2-section">
@@ -406,6 +414,102 @@ function labelForCategory(id) {
     return c ? c.label.toUpperCase() : (id || '').toUpperCase();
 }
 
+// ================================================================
+// Hoy v2 — Gamification (flag 'fan.hoy.gamification')
+//
+// Local-only: predictions and points live in localStorage under
+// 'rm_predictions_v1'. The ranking combines RANKING_MOCK players
+// with the current user's ("Tú") accumulated points.
+// ================================================================
+
+const PREDICTIONS_STORAGE_KEY = 'rm_predictions_v1';
+
+const Gamification = {
+    // Scoring rules
+    POINTS_EXACT:  3,     // exact score match
+    POINTS_WINNER: 1,     // correct winner (not exact)
+
+    load() {
+        try {
+            const raw = localStorage.getItem(PREDICTIONS_STORAGE_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch {
+            return {};
+        }
+    },
+
+    save(preds) {
+        try { localStorage.setItem(PREDICTIONS_STORAGE_KEY, JSON.stringify(preds)); } catch {}
+    },
+
+    hydrate() {
+        state.predictions = this.load();
+    },
+
+    /**
+     * Record a user's prediction for a match and persist. No scoring
+     * until the real result comes in — for the mock we expose a helper
+     * below to compute current score.
+     */
+    submit(matchId, home, away) {
+        const preds = { ...state.predictions };
+        preds[matchId] = {
+            matchId,
+            home: Number(home),
+            away: Number(away),
+            submittedAt: Date.now(),
+            isCorrect: false,
+            points: 0
+        };
+        state.predictions = preds;
+        this.save(preds);
+    },
+
+    clear(matchId) {
+        const preds = { ...state.predictions };
+        delete preds[matchId];
+        state.predictions = preds;
+        this.save(preds);
+    },
+
+    /** Score earned by the user for a prediction vs a real final result. */
+    scoreFor(prediction, finalHome, finalAway) {
+        if (!prediction) return 0;
+        const exact = prediction.home === finalHome && prediction.away === finalAway;
+        if (exact) return this.POINTS_EXACT;
+        const winner = Math.sign(prediction.home - prediction.away);
+        const actualWinner = Math.sign(finalHome - finalAway);
+        if (winner === actualWinner) return this.POINTS_WINNER;
+        return 0;
+    },
+
+    /**
+     * Build the leaderboard, including the current user ("Tú") with
+     * their accumulated points from finished matches (if any).
+     * For the mock, we award a small "participation" bonus per
+     * submitted prediction so the list is never empty.
+     */
+    leaderboard() {
+        const base = (typeof RANKING_MOCK !== 'undefined' ? RANKING_MOCK : []).slice();
+        const total = Object.values(state.predictions).reduce(
+            (sum, p) => sum + (p.points || 0), 0
+        );
+        const participationBonus = Object.keys(state.predictions).length;
+        const userPoints = total + participationBonus;
+
+        const me = {
+            id: 'me',
+            name: 'Tú',
+            points: userPoints,
+            avatarColor: '#3E31FA',
+            isMe: true
+        };
+        return [...base, me]
+            .sort((a, b) => b.points - a.points)
+            .map((u, i) => ({ ...u, position: i + 1 }));
+    }
+};
+
 // ────────────────────────────────────────────────────────────────
 // Hoy v2 — Stories carousel + Tras las cámaras (flag fan.hoy.stories)
 // ────────────────────────────────────────────────────────────────
@@ -575,6 +679,153 @@ function showStoryToast(message) {
     t.textContent = message;
     host.appendChild(t);
     setTimeout(() => { t.classList.add('leaving'); setTimeout(() => t.remove(), 260); }, 1800);
+}
+
+// ────────────────────────────────────────────────────────────────
+// Hoy v2 — Prediction block + Ranking (flag 'fan.hoy.gamification')
+// ────────────────────────────────────────────────────────────────
+
+function renderHoyV2Prediction() {
+    const nextByTeam = (typeof NEXT_MATCHES_BY_TEAM !== 'undefined' ? NEXT_MATCHES_BY_TEAM : {});
+    // Predict the main team's next match for simplicity
+    const match = nextByTeam.masc;
+    if (!match) return '';
+
+    const matchId = 'masc-next';
+    const pred = state.predictions[matchId];
+    const draft = state.predictionDraft[matchId] || { home: 1, away: 1 };
+    const hasSubmitted = !!pred;
+
+    const homeCrest = bigCrestFor(match.home);
+    const awayCrest = bigCrestFor(match.away);
+
+    return `
+        <section class="hoy2-section">
+            <div class="hoy2-section-head">
+                <h2 class="hoy2-section-title">Predice el resultado</h2>
+                <button class="hoy2-section-cta" data-ranking-open>
+                    Mis puntos
+                </button>
+            </div>
+
+            <div class="hoy2-pred-card">
+                <div class="hoy2-pred-kicker">
+                    ⚽ ${match.competition} · ${match.dateString}
+                </div>
+
+                ${hasSubmitted ? `
+                    <!-- Submitted state: show user's prediction + confirmation -->
+                    <div class="hoy2-pred-teams locked">
+                        <div class="hoy2-pred-team">
+                            <div class="hoy2-pred-crest">${homeCrest}</div>
+                            <div class="hoy2-pred-team-name">${match.home}</div>
+                        </div>
+                        <div class="hoy2-pred-score">
+                            <span>${pred.home}</span>
+                            <span class="hoy2-pred-dash">-</span>
+                            <span>${pred.away}</span>
+                        </div>
+                        <div class="hoy2-pred-team">
+                            <div class="hoy2-pred-crest">${awayCrest}</div>
+                            <div class="hoy2-pred-team-name">${match.away}</div>
+                        </div>
+                    </div>
+                    <div class="hoy2-pred-ok">
+                        ✓ Predicción registrada. Consulta tu ranking después del partido.
+                    </div>
+                    <div class="hoy2-pred-actions">
+                        <button class="hoy2-pred-change" data-pred-change="${matchId}">
+                            Cambiar predicción
+                        </button>
+                        <button class="hoy2-pred-view-ranking" data-ranking-open>
+                            Ver ranking →
+                        </button>
+                    </div>
+                ` : `
+                    <!-- Interactive state -->
+                    <div class="hoy2-pred-teams">
+                        <div class="hoy2-pred-team">
+                            <div class="hoy2-pred-crest">${homeCrest}</div>
+                            <div class="hoy2-pred-team-name">${match.home}</div>
+                            <div class="hoy2-pred-stepper">
+                                <button class="hoy2-pred-step" data-pred-step="home-" data-pred-match="${matchId}" aria-label="Menos">−</button>
+                                <span class="hoy2-pred-value">${draft.home}</span>
+                                <button class="hoy2-pred-step" data-pred-step="home+" data-pred-match="${matchId}" aria-label="Más">+</button>
+                            </div>
+                        </div>
+
+                        <div class="hoy2-pred-vs">vs</div>
+
+                        <div class="hoy2-pred-team">
+                            <div class="hoy2-pred-crest">${awayCrest}</div>
+                            <div class="hoy2-pred-team-name">${match.away}</div>
+                            <div class="hoy2-pred-stepper">
+                                <button class="hoy2-pred-step" data-pred-step="away-" data-pred-match="${matchId}" aria-label="Menos">−</button>
+                                <span class="hoy2-pred-value">${draft.away}</span>
+                                <button class="hoy2-pred-step" data-pred-step="away+" data-pred-match="${matchId}" aria-label="Más">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="hoy2-pred-submit" data-pred-submit="${matchId}">
+                        Guardar predicción
+                    </button>
+                    <div class="hoy2-pred-rules">
+                        3 pts si aciertas el resultado exacto · 1 pt si aciertas el ganador
+                    </div>
+                `}
+            </div>
+        </section>
+    `;
+}
+
+// ── Ranking full-screen sheet ─────────────────────────────────
+function renderHoyV2RankingSheet() {
+    const slot = $('#newsSheetSlot');
+    if (!slot) return;
+    if (!state.openRanking) { slot.innerHTML = ''; return; }
+
+    const entries = Gamification.leaderboard();
+    const me = entries.find(u => u.isMe);
+
+    slot.innerHTML = `
+        <div class="news-sheet-backdrop" data-ranking-close></div>
+        <div class="news-sheet hoy2-ranking-sheet">
+            <div class="hoy2-rk-head">
+                <button class="hoy2-rk-back" data-ranking-close aria-label="Cerrar">${I.chevronLeft}</button>
+                <div class="hoy2-rk-title">Ranking</div>
+                <div style="width: 36px"></div>
+            </div>
+
+            <div class="hoy2-rk-hero">
+                <div class="hoy2-rk-hero-kicker">Tu posición</div>
+                <div class="hoy2-rk-hero-pos">#${me.position}</div>
+                <div class="hoy2-rk-hero-points">${me.points} puntos</div>
+            </div>
+
+            <div class="hoy2-rk-list">
+                ${entries.map(u => `
+                    <div class="hoy2-rk-row ${u.isMe ? 'is-me' : ''} ${u.position <= 3 ? 'is-podium' : ''}">
+                        <div class="hoy2-rk-pos">
+                            ${u.position === 1 ? '🥇'
+                              : u.position === 2 ? '🥈'
+                              : u.position === 3 ? '🥉'
+                              : u.position}
+                        </div>
+                        <div class="hoy2-rk-avatar" style="background: ${u.avatarColor}">
+                            ${u.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="hoy2-rk-name">${u.name}${u.isMe ? ' <span class="hoy2-rk-me">(tú)</span>' : ''}</div>
+                        <div class="hoy2-rk-points">${u.points} pts</div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    $$('[data-ranking-close]').forEach(b => b.addEventListener('click', () => {
+        state.openRanking = false;
+        slot.innerHTML = '';
+    }));
 }
 
 // ── Behind-scenes gallery modal ─────────────────────────────────
@@ -2322,6 +2573,8 @@ function render() {
         renderHoyV2StorySheet();
     } else if (state.app === 'fan' && state.openBehindScenes) {
         renderHoyV2BehindScenesSheet();
+    } else if (state.app === 'fan' && state.openRanking) {
+        renderHoyV2RankingSheet();
     } else {
         $('#newsSheetSlot').innerHTML = '';
     }
@@ -2668,6 +2921,43 @@ function attachListeners() {
     $$('[data-bs-id]').forEach(btn => btn.addEventListener('click', () => {
         state.openBehindScenes = btn.dataset.bsId;
         renderHoyV2BehindScenesSheet();
+    }));
+
+    // Prediction steppers (home/away +/-)
+    $$('[data-pred-step]').forEach(btn => btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const matchId = btn.dataset.predMatch;
+        const op = btn.dataset.predStep;  // 'home+', 'home-', 'away+', 'away-'
+        const draft = state.predictionDraft[matchId] || { home: 1, away: 1 };
+        const delta = op.endsWith('+') ? 1 : -1;
+        const field = op.startsWith('home') ? 'home' : 'away';
+        const next = Math.max(0, Math.min(20, (draft[field] || 0) + delta));
+        state.predictionDraft = {
+            ...state.predictionDraft,
+            [matchId]: { ...draft, [field]: next }
+        };
+        render();
+    }));
+
+    // Prediction submit
+    $$('[data-pred-submit]').forEach(btn => btn.addEventListener('click', () => {
+        const matchId = btn.dataset.predSubmit;
+        const draft = state.predictionDraft[matchId] || { home: 1, away: 1 };
+        Gamification.submit(matchId, draft.home, draft.away);
+        render();
+    }));
+
+    // Change prediction (clear + re-edit)
+    $$('[data-pred-change]').forEach(btn => btn.addEventListener('click', () => {
+        const matchId = btn.dataset.predChange;
+        Gamification.clear(matchId);
+        render();
+    }));
+
+    // Open ranking
+    $$('[data-ranking-open]').forEach(btn => btn.addEventListener('click', () => {
+        state.openRanking = true;
+        renderHoyV2RankingSheet();
     }));
 
     // Survey option click
@@ -3479,6 +3769,28 @@ async function renderSettings() {
 // FEATURE FLAGS PANEL (inside the left sidebar, per app)
 // ================================================================
 
+/**
+ * Sort flags so that parents come before their children, and children
+ * appear immediately below their parent. Keeps un-related flags in their
+ * original order.
+ */
+function sortFlagsByDependency(flags) {
+    const byKey = new Map(flags.map(f => [f.key, f]));
+    const result = [];
+    const visited = new Set();
+    const visit = (f) => {
+        if (visited.has(f.key)) return;
+        visited.add(f.key);
+        result.push(f);
+        // Find children and visit them right after
+        flags.filter(c => c.parent && c.parent.key === f.key).forEach(visit);
+    };
+    flags.filter(f => !f.parent).forEach(visit);
+    // Append any orphaned children (parent not in this app) at the end
+    flags.filter(f => !visited.has(f.key)).forEach(visit);
+    return result;
+}
+
 function renderSidebarFlags() {
     const host = $('#sideFlags');
     if (!host) return;
@@ -3503,18 +3815,43 @@ function renderSidebarFlags() {
                 <div class="side-flags-empty">
                     Aún no hay funcionalidades en la ${appLabel}. Pídeme una y se activa aquí.
                 </div>
-            ` : cats.map(cat => `
-                <div class="side-flags-cat">${cat}</div>
-                ${groups[cat].map(f => `
-                    <label class="side-flag-row" title="${f.description.replace(/"/g, '&quot;')}">
-                        <div class="side-flag-text">
-                            <div class="side-flag-label">${f.label}${f.app === 'shared' ? ' <span class="side-flag-shared">compartida</span>' : ''}</div>
-                            <div class="side-flag-desc">${f.description}</div>
-                        </div>
-                        <input type="checkbox" class="side-flag-toggle" data-flag-key="${f.key}" ${f.enabled ? 'checked' : ''}>
-                    </label>
-                `).join('')}
-            `).join('')}
+            ` : cats.map(cat => {
+                // Sort so parents render before their children, and
+                // children appear indented right below their parent.
+                const items = sortFlagsByDependency(groups[cat]);
+                return `
+                    <div class="side-flags-cat">${cat}</div>
+                    ${items.map(f => {
+                        const hasParent = !!f.parent;
+                        const parentEnabled = !hasParent || f.parent.enabled;
+                        // "Effectively enabled" means the toggle should render ON
+                        // only if the user turned it on AND parent is on.
+                        const effectiveOn = f.rawEnabled && parentEnabled;
+                        return `
+                            <label class="side-flag-row ${hasParent ? 'is-child' : ''} ${hasParent && !parentEnabled ? 'is-locked' : ''}"
+                                   title="${f.description.replace(/"/g, '&quot;')}">
+                                <div class="side-flag-text">
+                                    <div class="side-flag-label">
+                                        ${hasParent ? '<span class="side-flag-arrow">↳</span>' : ''}
+                                        ${f.label}
+                                        ${f.app === 'shared' ? ' <span class="side-flag-shared">compartida</span>' : ''}
+                                    </div>
+                                    <div class="side-flag-desc">${f.description}</div>
+                                    ${hasParent ? `
+                                        <div class="side-flag-requires ${parentEnabled ? 'ok' : 'off'}">
+                                            ${parentEnabled ? '✓' : '⚠'} Requiere: ${f.parent.label}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <input type="checkbox"
+                                    class="side-flag-toggle"
+                                    data-flag-key="${f.key}"
+                                    ${effectiveOn ? 'checked' : ''}>
+                            </label>
+                        `;
+                    }).join('')}
+                `;
+            }).join('')}
             ${active > 0 ? `
                 <button class="side-flags-reset" id="sideFlagsResetBtn">Desactivar todas</button>
             ` : ''}
@@ -3606,6 +3943,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         attachAppSwitcher();
         setupTouchSimulation();
+
+        // Rehydrate feature-flag state that lives in localStorage
+        if (typeof Gamification !== 'undefined') Gamification.hydrate();
 
         // Re-render the entire app when a feature flag changes so new UI
         // gated behind the flag appears / disappears instantly.
