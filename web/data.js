@@ -373,6 +373,102 @@ const LAST_MATCH_BY_TEAM = {
     }
 };
 
+// ── Hoy v2 STORIES (flag 'fan.hoy.stories') ────────────────────
+// Cada story tiene una colección de "pages" (imagen/vídeo mock)
+// con título, subtítulo y CTA opcional.
+const STORY_ITEMS = [
+    {
+        id: 'st1',
+        title: 'Champions',
+        cover: { c1: '#3a2978', c2: '#1b1244' },
+        pages: [
+            { c1: '#3a2978', c2: '#1b1244', title: 'Previa vs Bayern', subtitle: 'El equipo llega a Múnich con el 2-1 de la ida.', cta: { label: 'Responder encuesta', kind: 'survey' } },
+            { c1: '#1b3a72', c2: '#0a1a38', title: 'Entrenamiento', subtitle: 'Última sesión antes del vuelo.', cta: null },
+            { c1: '#0f2145', c2: '#06101f', title: 'Ancelotti', subtitle: '"Estamos preparados para una gran noche."', cta: { label: 'Ver más', kind: 'more' } }
+        ]
+    },
+    {
+        id: 'st2',
+        title: 'Entreno',
+        cover: { c1: '#1b3a72', c2: '#0a1a38' },
+        pages: [
+            { c1: '#1b3a72', c2: '#0a1a38', title: 'Circuito físico', subtitle: 'Valverde lidera la sesión.', cta: null },
+            { c1: '#2c4a82', c2: '#142a48', title: 'Tiros a puerta', subtitle: 'Rondo y automatismos ofensivos.', cta: null }
+        ]
+    },
+    {
+        id: 'st3',
+        title: 'Mbappé',
+        cover: { c1: '#291447', c2: '#130a22' },
+        pages: [
+            { c1: '#291447', c2: '#130a22', title: 'Entrevista exclusiva', subtitle: '"Jugar la Champions con el Madrid es único."', cta: { label: 'Ver más', kind: 'more' } },
+            { c1: '#4a1a6d', c2: '#221036', title: 'Su día a día', subtitle: 'Madrugones en Valdebebas.', cta: null }
+        ]
+    },
+    {
+        id: 'st4',
+        title: 'Vini Jr.',
+        cover: { c1: '#341147', c2: '#18081f' },
+        pages: [
+            { c1: '#341147', c2: '#18081f', title: 'Top regates', subtitle: 'Los 5 mejores de la temporada.', cta: null }
+        ]
+    },
+    {
+        id: 'st5',
+        title: 'Sorteo',
+        cover: { c1: '#5a4380', c2: '#28184a' },
+        pages: [
+            { c1: '#5a4380', c2: '#28184a', title: 'Sorteo de camiseta', subtitle: 'Participa y llévate la equipación firmada.', cta: { label: 'Responder encuesta', kind: 'survey' } }
+        ]
+    },
+    {
+        id: 'st6',
+        title: 'Afición',
+        cover: { c1: '#1a3a2a', c2: '#081810' },
+        pages: [
+            { c1: '#1a3a2a', c2: '#081810', title: 'Desde el Bernabéu', subtitle: 'Así vive la afición la previa.', cta: null }
+        ]
+    }
+];
+
+// ── Hoy v2 BEHIND SCENES (flag 'fan.hoy.stories') ──────────────
+const BEHIND_SCENES_ITEMS = [
+    {
+        id: 'bs1',
+        title: 'Llegada al Allianz Arena',
+        subtitle: 'El equipo aterriza en Múnich',
+        cardColor1: '#2c4e82', cardColor2: '#0a1a38',
+        photos: [
+            { c1: '#2c4e82', c2: '#0a1a38', caption: 'El bus llega al hotel' },
+            { c1: '#1b3a72', c2: '#081530', caption: 'Cena en el hotel' },
+            { c1: '#0f2145', c2: '#04101f', caption: 'Rueda de prensa previa' },
+            { c1: '#2a4068', c2: '#0a1a38', caption: 'El estadio iluminado' }
+        ]
+    },
+    {
+        id: 'bs2',
+        title: 'Sesión de entrenamiento',
+        subtitle: 'Último entreno antes del partido',
+        cardColor1: '#3a2978', cardColor2: '#1b1244',
+        photos: [
+            { c1: '#3a2978', c2: '#1b1244', caption: 'Calentamiento' },
+            { c1: '#4a3988', c2: '#221452', caption: 'Rondo del equipo' },
+            { c1: '#2c1f6a', c2: '#140a30', caption: 'Conversación con Ancelotti' }
+        ]
+    },
+    {
+        id: 'bs3',
+        title: 'Día de prensa',
+        subtitle: 'Entrevistas con la plantilla',
+        cardColor1: '#1a3a2a', cardColor2: '#081810',
+        photos: [
+            { c1: '#1a3a2a', c2: '#081810', caption: 'Bellingham responde a los medios' },
+            { c1: '#244a36', c2: '#0f2218', caption: 'Vinicius habla con TVE' },
+            { c1: '#2c5a42', c2: '#14301e', caption: 'Ancelotti en rueda de prensa' }
+        ]
+    }
+];
+
 // Highlight categories (UI segmented control uses this).
 const HIGHLIGHT_CATEGORIES = [
     { id: 'all',           label: 'Todos' },

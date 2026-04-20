@@ -28,22 +28,20 @@ const FLAG_STORAGE_KEY = 'rm_flags_v1';
 // ⚠️ Registry of all flags. Keep this sorted by `app` and `category` for readability.
 // Each flag MUST declare `app` so it appears in the right panel.
 const FLAGS = [
-    // ── Shared (applies regardless of which app is selected) ──────
-    {
-        app: 'shared',
-        key: 'ui.show-build-badge',
-        label: 'Badge de build',
-        description: 'Muestra un pequeño badge con la versión de la app arriba a la derecha.',
-        category: 'Demo',
-        default: false
-    },
-
     // ── Fan App flags ─────────────────────────────────────────────
     {
         app: 'fan',
         key: 'fan.hoy.v2-structure',
         label: 'Hoy v2 — estructura modular',
         description: 'Rediseña Hoy con scroll vertical: card compacta del próximo partido, listado de noticias, carrusel de highlights y encuesta placeholder.',
+        category: 'Hoy',
+        default: false
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.stories',
+        label: 'Stories + Tras las cámaras',
+        description: 'Carrusel de stories tipo Instagram en la parte superior y sección "Tras las cámaras" con galería de fotos tras las noticias. Requiere Hoy v2 activo.',
         category: 'Hoy',
         default: false
     }

@@ -30,6 +30,10 @@ const state = {
     openHighlightsAll: false,                                  // full-screen all-highlights
     openMatchSummary: null,                                    // teamId | null
 
+    // Hoy v2 Stories (flag 'fan.hoy.stories')
+    openStory: null,            // { storyId, pageIdx } | null
+    openBehindScenes: null,     // behind-scenes item id | null
+
     // VIP App state
     vipTab: 'inicio',             // 'inicio' | 'eventos' | 'gestor' | 'perfil'
     vipEventId: null,             // null = list; id = detail
@@ -198,6 +202,9 @@ function renderHoyV2() {
 
             <div class="hoy2-scroll">
 
+                <!-- ── 0. Stories carousel (flag 'fan.hoy.stories') ── -->
+                ${Flags.isEnabled('fan.hoy.stories') ? renderHoyV2Stories() : ''}
+
                 <!-- ── 1. Próximos partidos (hasta 3 equipos) ─────────
                      Cada card integra Radio y un resumen del último
                      partido con enlace "Ver resumen". -->
@@ -225,6 +232,9 @@ function renderHoyV2() {
                         `).join('')}
                     </div>
                 </section>
+
+                <!-- ── 3.5 Tras las cámaras (flag 'fan.hoy.stories') ── -->
+                ${Flags.isEnabled('fan.hoy.stories') ? renderHoyV2BehindScenes() : ''}
 
                 <!-- ── 4. Highlights (mixto) ────────────────────────── -->
                 ${renderHoyV2Highlights()}
@@ -394,6 +404,219 @@ function labelForCategory(id) {
     const cats = (typeof HIGHLIGHT_CATEGORIES !== 'undefined' ? HIGHLIGHT_CATEGORIES : []);
     const c = cats.find(c => c.id === id);
     return c ? c.label.toUpperCase() : (id || '').toUpperCase();
+}
+
+// ────────────────────────────────────────────────────────────────
+// Hoy v2 — Stories carousel + Tras las cámaras (flag fan.hoy.stories)
+// ────────────────────────────────────────────────────────────────
+
+function renderHoyV2Stories() {
+    const stories = (typeof STORY_ITEMS !== 'undefined' ? STORY_ITEMS : []);
+    if (stories.length === 0) return '';
+    return `
+        <section class="hoy2-section hoy2-stories-section">
+            <div class="hoy2-stories-scroll">
+                ${stories.map(s => `
+                    <button class="hoy2-story" data-story-id="${s.id}" aria-label="Story ${s.title}">
+                        <span class="hoy2-story-ring">
+                            <span class="hoy2-story-thumb"
+                                style="background: linear-gradient(145deg, ${s.cover.c1} 0%, ${s.cover.c2} 100%)">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="opacity: 0.6; color: white"><polygon points="8,5 19,12 8,19" /></svg>
+                            </span>
+                        </span>
+                        <span class="hoy2-story-label">${s.title}</span>
+                    </button>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+function renderHoyV2BehindScenes() {
+    const items = (typeof BEHIND_SCENES_ITEMS !== 'undefined' ? BEHIND_SCENES_ITEMS : []);
+    if (items.length === 0) return '';
+    return `
+        <section class="hoy2-section">
+            <div class="hoy2-section-head">
+                <h2 class="hoy2-section-title">Tras las cámaras</h2>
+            </div>
+            <div class="hoy2-bs-stack">
+                ${items.map(bs => `
+                    <button class="hoy2-bs-card" data-bs-id="${bs.id}"
+                        style="background: linear-gradient(180deg, ${bs.cardColor1} 0%, ${bs.cardColor2} 100%)">
+                        <div class="hoy2-bs-img">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.2"
+                                width="44" height="44" style="opacity: 0.35">
+                                <rect x="3" y="5" width="18" height="14" rx="2"/>
+                                <circle cx="8.5" cy="10" r="1.5" fill="white"/>
+                                <polygon points="21,17 14,11 3,19 21,19" fill="white" opacity="0.4"/>
+                            </svg>
+                            <span class="hoy2-bs-count">${bs.photos.length} fotos</span>
+                        </div>
+                        <div class="hoy2-bs-body">
+                            <div class="hoy2-bs-title">${bs.title}</div>
+                            <div class="hoy2-bs-sub">${bs.subtitle}</div>
+                        </div>
+                    </button>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+// ── Full-screen story viewer ─────────────────────────────────────
+function renderHoyV2StorySheet() {
+    const slot = $('#newsSheetSlot');
+    if (!slot) return;
+    const open = state.openStory;
+    if (!open) { slot.innerHTML = ''; return; }
+
+    const stories = (typeof STORY_ITEMS !== 'undefined' ? STORY_ITEMS : []);
+    const story = stories.find(s => s.id === open.storyId);
+    if (!story) { slot.innerHTML = ''; return; }
+
+    const idx = Math.max(0, Math.min(open.pageIdx || 0, story.pages.length - 1));
+    const page = story.pages[idx];
+
+    slot.innerHTML = `
+        <div class="story-viewer"
+            style="background: linear-gradient(150deg, ${page.c1} 0%, ${page.c2} 100%)">
+
+            <!-- Progress bars (one per page) -->
+            <div class="story-bars">
+                ${story.pages.map((_, i) => `
+                    <span class="story-bar ${i < idx ? 'done' : (i === idx ? 'active' : '')}">
+                        <span class="story-bar-fill"></span>
+                    </span>
+                `).join('')}
+            </div>
+
+            <!-- Header with story title + close -->
+            <div class="story-head">
+                <div class="story-avatar"
+                    style="background: linear-gradient(145deg, ${story.cover.c1} 0%, ${story.cover.c2} 100%)"></div>
+                <div class="story-title">${story.title}</div>
+                <button class="story-close" data-story-close aria-label="Cerrar">${I.xmark}</button>
+            </div>
+
+            <!-- Tap zones (prev / next) -->
+            <button class="story-zone story-zone-prev" data-story-prev aria-label="Anterior"></button>
+            <button class="story-zone story-zone-next" data-story-next aria-label="Siguiente"></button>
+
+            <!-- Content -->
+            <div class="story-content">
+                <div class="story-play-icon">${I.playSolid}</div>
+            </div>
+
+            <!-- Footer with page title / subtitle / CTA -->
+            <div class="story-foot">
+                <div class="story-page-title">${page.title}</div>
+                <div class="story-page-sub">${page.subtitle}</div>
+                ${page.cta ? `
+                    <button class="story-cta" data-story-cta="${page.cta.kind}">
+                        ${page.cta.label}
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+
+    $$('[data-story-close]').forEach(b => b.addEventListener('click', () => {
+        state.openStory = null;
+        slot.innerHTML = '';
+    }));
+    $$('[data-story-prev]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        if (idx > 0) {
+            state.openStory = { storyId: story.id, pageIdx: idx - 1 };
+            renderHoyV2StorySheet();
+        } else {
+            // Go to previous story if any
+            const sIdx = stories.findIndex(s => s.id === story.id);
+            if (sIdx > 0) {
+                const prev = stories[sIdx - 1];
+                state.openStory = { storyId: prev.id, pageIdx: prev.pages.length - 1 };
+                renderHoyV2StorySheet();
+            }
+        }
+    }));
+    $$('[data-story-next]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        if (idx < story.pages.length - 1) {
+            state.openStory = { storyId: story.id, pageIdx: idx + 1 };
+            renderHoyV2StorySheet();
+        } else {
+            // Next story if any
+            const sIdx = stories.findIndex(s => s.id === story.id);
+            if (sIdx < stories.length - 1) {
+                state.openStory = { storyId: stories[sIdx + 1].id, pageIdx: 0 };
+                renderHoyV2StorySheet();
+            } else {
+                // Was the last page of last story → close
+                state.openStory = null;
+                slot.innerHTML = '';
+            }
+        }
+    }));
+    $$('[data-story-cta]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        const kind = b.dataset.storyCta;
+        showStoryToast(kind === 'survey' ? '¡Gracias por participar!' : 'Contenido próximamente');
+    }));
+}
+
+function showStoryToast(message) {
+    const host = $('#phoneScreen');
+    if (!host) return;
+    document.getElementById('storyToast')?.remove();
+    const t = document.createElement('div');
+    t.id = 'storyToast';
+    t.className = 'story-toast';
+    t.textContent = message;
+    host.appendChild(t);
+    setTimeout(() => { t.classList.add('leaving'); setTimeout(() => t.remove(), 260); }, 1800);
+}
+
+// ── Behind-scenes gallery modal ─────────────────────────────────
+function renderHoyV2BehindScenesSheet() {
+    const slot = $('#newsSheetSlot');
+    if (!slot) return;
+    const id = state.openBehindScenes;
+    if (!id) { slot.innerHTML = ''; return; }
+
+    const items = (typeof BEHIND_SCENES_ITEMS !== 'undefined' ? BEHIND_SCENES_ITEMS : []);
+    const bs = items.find(x => x.id === id);
+    if (!bs) { slot.innerHTML = ''; return; }
+
+    slot.innerHTML = `
+        <div class="news-sheet-backdrop" data-bs-close></div>
+        <div class="news-sheet hoy2-bs-sheet">
+            <div class="news-sheet-grabber"></div>
+            <div class="news-sheet-scroll">
+                <div class="hoy2-bs-detail-head">
+                    <button class="hoy2-bs-back" data-bs-close aria-label="Cerrar">${I.chevronLeft}</button>
+                    <div>
+                        <div class="hoy2-bs-detail-title">${bs.title}</div>
+                        <div class="hoy2-bs-detail-sub">${bs.subtitle}</div>
+                    </div>
+                </div>
+                <div class="hoy2-bs-gallery">
+                    ${bs.photos.map((p, i) => `
+                        <div class="hoy2-bs-photo"
+                            style="background: linear-gradient(135deg, ${p.c1} 0%, ${p.c2} 100%)">
+                            <div class="hoy2-bs-photo-count">${i + 1}/${bs.photos.length}</div>
+                            <div class="hoy2-bs-photo-caption">${p.caption}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+
+    $$('[data-bs-close]').forEach(b => b.addEventListener('click', () => {
+        state.openBehindScenes = null;
+        slot.innerHTML = '';
+    }));
 }
 
 // ── Mock radio mini-player: appears as a toast pinned to the bottom
@@ -1735,6 +1958,10 @@ function renderVipGestor() {
 }
 
 function renderVipSheets() {
+    // Only run when the VIP app is selected — otherwise we would clobber
+    // the Fan App's news/video/summary sheet injected by render().
+    if (state.app !== 'vip') return;
+
     const restoSlot = $('#newsSheetSlot'); // reuse? Actually we have dedicated
 
     // Restaurant sheet
@@ -2091,6 +2318,10 @@ function render() {
         renderHoyV2MatchSummarySheet();
     } else if (state.app === 'fan' && state.openHighlightsAll) {
         renderHoyV2HighlightsAll();
+    } else if (state.app === 'fan' && state.openStory) {
+        renderHoyV2StorySheet();
+    } else if (state.app === 'fan' && state.openBehindScenes) {
+        renderHoyV2BehindScenesSheet();
     } else {
         $('#newsSheetSlot').innerHTML = '';
     }
@@ -2425,6 +2656,18 @@ function attachListeners() {
     $$('[data-video-id]').forEach(btn => btn.addEventListener('click', () => {
         state.playingVideoId = btn.dataset.videoId;
         renderHoyV2VideoSheet();
+    }));
+
+    // Story thumbnail → open story viewer at first page
+    $$('[data-story-id]').forEach(btn => btn.addEventListener('click', () => {
+        state.openStory = { storyId: btn.dataset.storyId, pageIdx: 0 };
+        renderHoyV2StorySheet();
+    }));
+
+    // Behind-scenes card → gallery sheet
+    $$('[data-bs-id]').forEach(btn => btn.addEventListener('click', () => {
+        state.openBehindScenes = btn.dataset.bsId;
+        renderHoyV2BehindScenesSheet();
     }));
 
     // Survey option click
@@ -3339,10 +3582,6 @@ async function bootApp() {
     renderUserBox();
 }
 
-// App version shown by the "ui.show-build-badge" feature flag.
-// Updated automatically if you add a build step; for now, manual.
-const APP_BUILD = 'cibeles-1.0';
-
 // ── Boot ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[boot] DOMContentLoaded');
@@ -3372,7 +3611,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // gated behind the flag appears / disappears instantly.
         if (typeof Flags !== 'undefined') {
             Flags.onChange(() => {
-                updateBuildBadge();
                 if (Auth.current()) render();
                 renderSidebarFlags();
             });
@@ -3396,7 +3634,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             setTimeout(bootApp, 0);
         });
 
-        updateBuildBadge();
         await bootApp();
         console.log('[boot] done');
     } catch (err) {
@@ -3418,19 +3655,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// ────────────────────────────────────────────────────────────────
-// Feature: build badge  (flag: 'ui.show-build-badge')
-// ────────────────────────────────────────────────────────────────
-function updateBuildBadge() {
-    let badge = document.getElementById('buildBadge');
-    const wantVisible = Flags.isEnabled('ui.show-build-badge');
-    if (wantVisible && !badge) {
-        badge = document.createElement('div');
-        badge.id = 'buildBadge';
-        badge.className = 'build-badge';
-        badge.innerHTML = `<span class="build-badge-dot"></span> ${APP_BUILD}`;
-        document.body.appendChild(badge);
-    } else if (!wantVisible && badge) {
-        badge.remove();
-    }
-}
