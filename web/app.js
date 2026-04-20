@@ -3425,10 +3425,15 @@ function renderAuthOverlay() {
     else if (authScreen === 'setup')         body = renderSetupScreen();
     else if (authScreen === 'invite-link')   body = renderInviteLinkScreen();
 
+    // The invite-link screen needs more horizontal room for the email
+    // preview + shareable-message panel, so we widen the shell for it.
+    const shellClass = authScreen === 'invite-link' ? 'auth-shell auth-shell--wide' : 'auth-shell';
+    const cardClass = authScreen === 'invite-link' ? 'auth-card auth-card--wide' : 'auth-card';
+
     ov.innerHTML = `
-        <div class="auth-shell">
+        <div class="${shellClass}">
             <div class="auth-bg"></div>
-            <div class="auth-card">
+            <div class="${cardClass}">
                 ${logo}
                 ${body}
             </div>
@@ -3437,6 +3442,7 @@ function renderAuthOverlay() {
     `;
 
     attachAuthListeners();
+    if (authScreen === 'invite-link') attachInviteLinkListeners();
 }
 
 function renderLoginScreen() {
@@ -3534,14 +3540,190 @@ function renderSetupScreen() {
 }
 
 function renderInviteLinkScreen() {
+    const email = authCtx.email || 'el usuario';
+    const role = authCtx.role === 'admin' ? 'Admin' : 'Viewer';
+    const appUrl = `${location.origin}${location.pathname}`.replace(/\/$/, '') + '/';
+    const subject = 'Accede al Real Madrid Fan App Mockup';
+    const senderName = 'Real Madrid · Fan App Mockup';
+    const senderEmail = 'noreply@guidpagkdopgestrbxke.supabase.co';
+
+    // The preview already knew the real message/subject *content* Supabase
+    // sends, but the magic-link token itself only lives inside the actual
+    // email — Supabase never exposes it to the browser (by design). We make
+    // that explicit in the note below the CTA so the admin isn't confused.
+    const emailPreviewHtml = `
+        <div class="invite-email-preview-body">
+            <div class="invite-email-brand">
+                <div class="invite-email-brand-mark">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2 L14 7 L19 7 L15 11 L17 17 L12 13 L7 17 L9 11 L5 7 L10 7 Z"/></svg>
+                </div>
+                <div class="invite-email-brand-text">Real Madrid · Fan App Mockup</div>
+            </div>
+            <h3 class="invite-email-h">Activa tu cuenta</h3>
+            <p class="invite-email-p">
+                Te han invitado al panel de mockups con el rol <strong>${role}</strong>.
+                Pulsa el botón para crear tu contraseña y entrar.
+            </p>
+            <div class="invite-email-cta">Iniciar sesión</div>
+            <p class="invite-email-small">
+                Si el botón no funciona, copia el enlace del email en tu navegador.
+                El enlace es personal y expira en unas horas.
+            </p>
+            <hr class="invite-email-hr">
+            <p class="invite-email-foot">
+                Si no esperabas este email, puedes ignorarlo.
+            </p>
+        </div>
+    `;
+
+    const shareMessage = buildInviteShareMessage({ email, role, appUrl, senderEmail });
+
+    // Escape for rendering inside a <pre>; the real copy goes via clipboard
+    // from a data attribute so newlines survive intact.
+    const shareMessageEscaped = shareMessage
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
     return `
         <h1 class="auth-title">Invitación enviada</h1>
         <p class="auth-subtitle">
-            Hemos enviado un email a <strong>${authCtx.email || 'el usuario'}</strong> con un enlace
-            para que configure su cuenta.
+            Hemos mandado un email a <strong>${email}</strong> con el enlace mágico para que
+            configure su cuenta como <strong>${role}</strong>.
+            Abajo tienes una vista del correo y un mensaje alternativo por si el email no llega.
         </p>
-        <button type="button" class="auth-primary-btn" data-auth-close>Hecho</button>
+
+        <div class="invite-tabs" role="tablist">
+            <button type="button" class="invite-tab active" data-invite-tab="email" role="tab">Vista del email</button>
+            <button type="button" class="invite-tab" data-invite-tab="share" role="tab">Mensaje para compartir</button>
+        </div>
+
+        <div class="invite-panel active" data-invite-panel="email">
+            <div class="invite-email-client">
+                <div class="invite-email-meta">
+                    <div class="invite-email-row">
+                        <span class="invite-email-label">De:</span>
+                        <span>${senderName} &lt;${senderEmail}&gt;</span>
+                    </div>
+                    <div class="invite-email-row">
+                        <span class="invite-email-label">Para:</span>
+                        <span>${email}</span>
+                    </div>
+                    <div class="invite-email-row">
+                        <span class="invite-email-label">Asunto:</span>
+                        <span>${subject}</span>
+                    </div>
+                </div>
+                ${emailPreviewHtml}
+            </div>
+            <div class="invite-note">
+                <strong>Nota:</strong> el token real del enlace sólo viaja en el correo
+                — Supabase no lo expone al navegador. Esta vista muestra el formato, no el link concreto.
+            </div>
+        </div>
+
+        <div class="invite-panel" data-invite-panel="share" hidden>
+            <p class="invite-share-caption">
+                Copia este mensaje y envíalo por WhatsApp, Slack o donde quieras si el email no llega.
+                Le explica paso a paso qué tiene que hacer para entrar.
+            </p>
+            <pre class="invite-share-box" data-share-text="${encodeURIComponent(shareMessage)}">${shareMessageEscaped}</pre>
+            <button type="button" class="invite-action-secondary" data-invite-copy="share">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15 V5 a2 2 0 0 1 2-2 h10"/></svg>
+                Copiar mensaje
+            </button>
+        </div>
+
+        <div class="invite-actions">
+            <button type="button" class="invite-action-secondary" data-invite-resend>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 a9 9 0 1 0 3-6.7"/><polyline points="3,3 3,8 8,8"/></svg>
+                Reenviar email
+            </button>
+            <button type="button" class="auth-primary-btn" data-auth-close>Hecho</button>
+        </div>
     `;
+}
+
+/**
+ * Plain-text invite that the admin can copy and paste into any messenger.
+ * Intentionally verbose: explains where the email comes from, what to click,
+ * and where to look if it ends up in spam.
+ */
+function buildInviteShareMessage({ email, role, appUrl, senderEmail }) {
+    return [
+        `¡Hola! Te invito a probar el mockup del Real Madrid Fan App.`,
+        ``,
+        `Para entrar:`,
+        `1. Abre tu correo (${email}) y busca el email de la invitación`,
+        `   (remitente: ${senderEmail} — puede estar en spam)`,
+        `2. Pulsa "Iniciar sesión" en ese email`,
+        `3. Elige una contraseña y listo`,
+        ``,
+        `App: ${appUrl}`,
+        `Rol asignado: ${role}`
+    ].join('\n');
+}
+
+function attachInviteLinkListeners() {
+    // Tab switching between "Vista del email" and "Mensaje para compartir"
+    $$('[data-invite-tab]').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const key = tab.dataset.inviteTab;
+            $$('[data-invite-tab]').forEach(t => t.classList.toggle('active', t === tab));
+            $$('[data-invite-panel]').forEach(p => {
+                const match = p.dataset.invitePanel === key;
+                p.hidden = !match;
+                p.classList.toggle('active', match);
+            });
+        });
+    });
+
+    // Copy plain-text share message to clipboard
+    $$('[data-invite-copy]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const box = $('[data-share-text]');
+            if (!box) return;
+            const text = decodeURIComponent(box.dataset.shareText || '');
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch {
+                // Fallback for browsers that block clipboard without user gesture
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch {}
+                ta.remove();
+            }
+            const original = btn.innerHTML;
+            btn.innerHTML = '✓ Copiado';
+            btn.classList.add('is-success');
+            setTimeout(() => { btn.innerHTML = original; btn.classList.remove('is-success'); }, 1400);
+        });
+    });
+
+    // Resend the email by calling inviteUser again with the same email+role.
+    // Supabase's signInWithOtp handles this gracefully (re-sends without
+    // creating duplicate users).
+    const resendBtn = $('[data-invite-resend]');
+    if (resendBtn) {
+        resendBtn.addEventListener('click', async () => {
+            if (!authCtx.email) return;
+            const original = resendBtn.innerHTML;
+            resendBtn.disabled = true;
+            resendBtn.innerHTML = 'Enviando…';
+            const r = await Auth.inviteUser(authCtx.email, authCtx.role || 'viewer');
+            resendBtn.disabled = false;
+            if (r.ok) {
+                resendBtn.innerHTML = '✓ Email reenviado';
+                resendBtn.classList.add('is-success');
+                setTimeout(() => { resendBtn.innerHTML = original; resendBtn.classList.remove('is-success'); }, 1600);
+            } else {
+                resendBtn.innerHTML = original;
+                alert(r.error || 'No se pudo reenviar el email.');
+            }
+        });
+    }
 }
 
 function attachAuthListeners() {
@@ -3721,6 +3903,9 @@ async function renderSettings() {
                         <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>Viewer</option>
                         <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>
+                    <button class="settings-user-invite" title="Ver / reenviar invitación" data-invite-email="${u.email}" data-invite-role="${u.role}" ${u.id === session.userId ? 'disabled' : ''}>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4 h16 v16 H4z"/><polyline points="4,4 12,13 20,4"/></svg>
+                    </button>
                     <button class="settings-user-del" data-del-user-id="${u.id}" ${u.id === session.userId ? 'disabled' : ''}>
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="4,7 20,7"/><path d="M6 7 v12 a2 2 0 0 0 2 2 h8 a2 2 0 0 0 2-2 V7"/><path d="M9 7 V4 a1 1 0 0 1 1-1 h4 a1 1 0 0 1 1 1 v3"/></svg>
                     </button>
@@ -3743,9 +3928,10 @@ async function renderSettings() {
             return;
         }
         const invitedEmail = fd.get('email');
+        const invitedRole = fd.get('role') || 'viewer';
         form.reset();
         await renderSettings();
-        openAuthOverlay('invite-link', { email: invitedEmail });
+        openAuthOverlay('invite-link', { email: invitedEmail, role: invitedRole });
     });
 
     $$('.settings-user-role').forEach(sel => sel.addEventListener('change', async () => {
@@ -3753,6 +3939,15 @@ async function renderSettings() {
         const r = await Auth.setRole(sel.dataset.userId, sel.value);
         if (!r.ok) alert(r.error);
         await renderSettings();
+    }));
+
+    // Reopen the invitation preview (doesn't auto-resend; admin chooses)
+    $$('[data-invite-email]').forEach(btn => btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        openAuthOverlay('invite-link', {
+            email: btn.dataset.inviteEmail,
+            role: btn.dataset.inviteRole
+        });
     }));
 
     $$('[data-del-user-id]').forEach(btn => btn.addEventListener('click', async () => {
