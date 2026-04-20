@@ -36,11 +36,17 @@ const FLAGS = [
         description: 'Muestra un pequeño badge con la versión de la app arriba a la derecha.',
         category: 'Demo',
         default: false
-    }
+    },
 
     // ── Fan App flags ─────────────────────────────────────────────
-    // { app: 'fan', key: 'hoy.predictions', label: 'Predicciones', ... },
-    // { app: 'fan', key: 'hoy.confetti',    label: 'Confetti al gol', ... },
+    {
+        app: 'fan',
+        key: 'fan.hoy.v2-structure',
+        label: 'Hoy v2 — estructura modular',
+        description: 'Rediseña Hoy con scroll vertical: card compacta del próximo partido, listado de noticias, carrusel de highlights y encuesta placeholder.',
+        category: 'Hoy',
+        default: false
+    }
 
     // ── VIP App flags ─────────────────────────────────────────────
     // { app: 'vip', key: 'eventos.upgrade', label: 'Upgrade de palco', ... },
@@ -145,3 +151,6 @@ const Flags = {
         return list.reduce((n, f) => n + (this.isEnabled(f.key) ? 1 : 0), 0);
     }
 };
+
+// Make it accessible from both module scope and window (for debugging / eval)
+window.Flags = Flags;

@@ -271,6 +271,65 @@ const HEADER_MATCHES = [
     }
 ];
 
+// ── Hoy v2: highlight videos (feature flag 'fan.hoy.v2-structure') ─
+const VIDEO_ITEMS = [
+    {
+        id: 'v1',
+        title: 'Gol de Bellingham vs Man City',
+        duration: '1:42',
+        category: 'Goles',
+        color1: '#3a2978',
+        color2: '#1b1244'
+    },
+    {
+        id: 'v2',
+        title: 'Resumen · Mallorca 2-1 Real Madrid',
+        duration: '4:18',
+        category: 'Resumen',
+        color1: '#8b1010',
+        color2: '#3a0808'
+    },
+    {
+        id: 'v3',
+        title: 'Ancelotti en sala de prensa',
+        duration: '7:53',
+        category: 'Prensa',
+        color1: '#0f2145',
+        color2: '#06101f'
+    },
+    {
+        id: 'v4',
+        title: 'Entrenamiento previo al Bayern',
+        duration: '3:10',
+        category: 'Entreno',
+        color1: '#1b3a72',
+        color2: '#0a1a38'
+    },
+    {
+        id: 'v5',
+        title: 'Top 5 mejores paradas · Courtois',
+        duration: '2:24',
+        category: 'Top',
+        color1: '#5a4380',
+        color2: '#28184a'
+    }
+];
+
+// ── Hoy v2: trivia / survey (placeholder) ──────────────────────
+const SURVEY_ITEMS = [
+    {
+        id: 's1',
+        kind: 'trivia',
+        question: '¿Quién marcó el gol del empate ante el Girona la temporada pasada?',
+        options: [
+            { key: 'a', label: 'Bellingham', correct: false, votes: 22 },
+            { key: 'b', label: 'F. Valverde', correct: true,  votes: 54 },
+            { key: 'c', label: 'Vinicius Jr.', correct: false, votes: 18 },
+            { key: 'd', label: 'Rodrygo',     correct: false, votes: 6  }
+        ]
+    }
+];
+
 // ── Directo: news hero carousel ─────────────────────────────────
 const HERO_ITEMS = [
     { title: 'Bellingham',    subtitle: '«Es una final, lo daremos todo»', color: '#172241' },

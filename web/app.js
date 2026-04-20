@@ -20,6 +20,10 @@ const state = {
     rmtvDay: 0,
     sideMenuOpen: false,
 
+    // Hoy v2 state (feature flag)
+    playingVideoId: null,
+    surveyAnswered: {},   // { [surveyId]: optionKey }
+
     // VIP App state
     vipTab: 'inicio',             // 'inicio' | 'eventos' | 'gestor' | 'perfil'
     vipEventId: null,             // null = list; id = detail
@@ -160,6 +164,190 @@ function renderTabBar() {
                     <span>${t.label}</span>
                 </button>
             `).join('')}
+        </div>
+    `;
+}
+
+// ================================================================
+// HOY v2 — feature flag 'fan.hoy.v2-structure'
+// Estructura modular: partido compacto + noticias + vídeos + encuesta.
+// Todo sobre un scroll vertical.
+// ================================================================
+function renderHoyV2() {
+    const match = HEADER_MATCHES[state.matchIndex];
+    const news = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []).slice(0, 5);
+    const videos = (typeof VIDEO_ITEMS !== 'undefined' ? VIDEO_ITEMS : []);
+    const surveys = (typeof SURVEY_ITEMS !== 'undefined' ? SURVEY_ITEMS : []);
+    const survey = surveys[0];
+
+    return `
+        <div class="hoy2-wrap">
+
+            <!-- Simple top bar with title + profile -->
+            <div class="hoy2-topbar">
+                <button class="hoy2-top-icon" id="btnSideMenu" aria-label="Tu área">
+                    ${I.personCircle}
+                </button>
+                <div class="hoy2-top-title">Hoy</div>
+                <button class="hoy2-top-icon" aria-label="Radio">${I.radio}</button>
+            </div>
+
+            <div class="hoy2-scroll">
+
+                <!-- ── 1. Compact match card ────────────────────────── -->
+                ${renderHoyV2MatchCard(match)}
+
+                <!-- ── 2. News list ─────────────────────────────────── -->
+                <section class="hoy2-section">
+                    <div class="hoy2-section-head">
+                        <h2 class="hoy2-section-title">Noticias</h2>
+                        <button class="hoy2-section-cta" data-go-tab="noticias">
+                            Ver todas
+                        </button>
+                    </div>
+                    <div class="hoy2-news-list">
+                        ${news.map(item => `
+                            <button class="hoy2-news-row" data-news-id="${item.id}">
+                                <div class="hoy2-news-thumb" style="background: ${item.imageColor}">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5" fill="#fff"/><polygon points="21,17 14,11 3,19 21,19" fill="#fff" opacity="0.85"/></svg>
+                                </div>
+                                <div class="hoy2-news-body">
+                                    <div class="hoy2-news-title">${item.title}</div>
+                                    <div class="hoy2-news-sub">${(item.subtitle || '').slice(0, 80)}${(item.subtitle || '').length > 80 ? '…' : ''}</div>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <!-- ── 3. Highlights carousel ───────────────────────── -->
+                <section class="hoy2-section">
+                    <div class="hoy2-section-head">
+                        <h2 class="hoy2-section-title">Highlights</h2>
+                        <button class="hoy2-section-cta" data-go-tab="rmtv">
+                            RMTV
+                        </button>
+                    </div>
+                    <div class="hoy2-video-scroll" id="hoy2VideoScroll">
+                        ${videos.map(v => `
+                            <button class="hoy2-video-card" data-video-id="${v.id}"
+                                style="background: linear-gradient(145deg, ${v.color1} 0%, ${v.color2} 100%)">
+                                <span class="hoy2-video-cat">${v.category}</span>
+                                <span class="hoy2-video-play">${I.playSolid}</span>
+                                <div class="hoy2-video-meta">
+                                    <div class="hoy2-video-title">${v.title}</div>
+                                    <div class="hoy2-video-duration">${v.duration}</div>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <!-- ── 4. Survey / trivia placeholder ───────────────── -->
+                <section class="hoy2-section">
+                    <div class="hoy2-section-head">
+                        <h2 class="hoy2-section-title">Participa</h2>
+                    </div>
+                    ${renderHoyV2Survey(survey)}
+                </section>
+
+                <div style="height: 24px"></div>
+            </div>
+        </div>
+
+        ${renderSideMenu()}
+    `;
+}
+
+function renderHoyV2MatchCard(match) {
+    const compLabel = match.competition === 'LALIGA EA SPORTS' ? 'LA LIGA' : match.competition;
+    const isUpcoming = match.status === 'upcoming';
+    const homeCrest = bigCrestFor(match.homeTeam);
+    const awayCrest = bigCrestFor(match.awayTeam);
+    const venue = (match.matchInfo || '').split('\n').pop() || '';
+
+    const scoreOrDate = isUpcoming
+        ? `<div class="hoy2-match-date">${match.dateString.replace(' · ', ' · ')}</div>`
+        : `<div class="hoy2-match-score">
+             <span>${match.homeScore ?? 0}</span>
+             <span class="hoy2-match-dash">-</span>
+             <span>${match.awayScore ?? 0}</span>
+           </div>`;
+
+    return `
+        <button class="hoy2-match" data-hoy2-match>
+            <div class="hoy2-match-head">
+                <span class="hoy2-match-comp">${compLabel}</span>
+                <span class="hoy2-match-cta">
+                    Match Centre
+                    ${I.chevronRight}
+                </span>
+            </div>
+            <div class="hoy2-match-body">
+                <div class="hoy2-match-team">
+                    <div class="hoy2-match-crest">${homeCrest}</div>
+                    <div class="hoy2-match-team-name">${match.homeTeam}</div>
+                </div>
+                <div class="hoy2-match-center">
+                    ${scoreOrDate}
+                    ${isUpcoming ? '<div class="hoy2-match-status">Próximo</div>' : '<div class="hoy2-match-status">Finalizado</div>'}
+                </div>
+                <div class="hoy2-match-team">
+                    <div class="hoy2-match-crest">${awayCrest}</div>
+                    <div class="hoy2-match-team-name">${match.awayTeam}</div>
+                </div>
+            </div>
+            <div class="hoy2-match-foot">${venue}</div>
+        </button>
+    `;
+}
+
+function renderHoyV2Survey(survey) {
+    if (!survey) return '';
+    const answered = state.surveyAnswered || {};
+    const chosen = answered[survey.id];      // key of chosen option, or undefined
+    const hasVoted = !!chosen;
+    const totalVotes = survey.options.reduce((n, o) => n + o.votes, 0) + (hasVoted ? 1 : 0);
+
+    return `
+        <div class="hoy2-survey">
+            <div class="hoy2-survey-kicker">
+                ${survey.kind === 'trivia' ? '🎯 Trivia' : '📊 Encuesta'}
+            </div>
+            <div class="hoy2-survey-q">${survey.question}</div>
+            <div class="hoy2-survey-opts">
+                ${survey.options.map(opt => {
+                    const chosenHere = chosen === opt.key;
+                    const votesNow = opt.votes + (chosenHere ? 1 : 0);
+                    const pct = hasVoted ? Math.round((votesNow / totalVotes) * 100) : 0;
+                    let stateCls = '';
+                    if (hasVoted) {
+                        if (survey.kind === 'trivia') {
+                            if (opt.correct) stateCls = 'correct';
+                            else if (chosenHere && !opt.correct) stateCls = 'wrong';
+                        } else if (chosenHere) {
+                            stateCls = 'chosen';
+                        }
+                    }
+                    return `
+                        <button class="hoy2-survey-opt ${stateCls}" data-survey-id="${survey.id}" data-survey-opt="${opt.key}" ${hasVoted ? 'disabled' : ''}>
+                            ${hasVoted ? `<span class="hoy2-survey-bar" style="width: ${pct}%"></span>` : ''}
+                            <span class="hoy2-survey-label">${opt.label}</span>
+                            ${hasVoted ? `<span class="hoy2-survey-pct">${pct}%</span>` : ''}
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+            ${hasVoted ? `
+                <div class="hoy2-survey-result">
+                    ${survey.kind === 'trivia'
+                        ? (survey.options.find(o => o.key === chosen)?.correct
+                            ? '¡Correcto! 👏 Gracias por participar.'
+                            : 'Respuesta incorrecta. ¡Inténtalo la próxima!')
+                        : 'Gracias por participar'}
+                </div>
+                <button class="hoy2-survey-reset" data-survey-reset="${survey.id}">Volver a contestar</button>
+            ` : ''}
         </div>
     `;
 }
@@ -1702,7 +1890,11 @@ function render() {
         tabBarHTML = renderVipTabBar();
     } else {
         switch (state.tab) {
-            case 'hoy':        content = renderHoy();        break;
+            case 'hoy':
+                content = Flags.isEnabled('fan.hoy.v2-structure')
+                    ? renderHoyV2()
+                    : renderHoy();
+                break;
             case 'noticias':   content = renderNoticias();   break;
             case 'calendario': content = renderCalendario(); break;
             case 'rmtv':       content = renderRMTV();       break;
@@ -1714,8 +1906,14 @@ function render() {
     body.innerHTML = content;
     $('#tabBarSlot').innerHTML = tabBarHTML;
 
-    // Sheets (fan news + vip restaurant/perfil)
-    $('#newsSheetSlot').innerHTML = (state.app === 'fan' && state.newsId) ? renderNewsDetail() : '';
+    // Sheets (fan news + vip restaurant/perfil + hoy-v2 video player)
+    if (state.app === 'fan' && state.newsId) {
+        $('#newsSheetSlot').innerHTML = renderNewsDetail();
+    } else if (state.app === 'fan' && state.playingVideoId) {
+        renderHoyV2VideoSheet();
+    } else {
+        $('#newsSheetSlot').innerHTML = '';
+    }
 
     // VIP sheets
     renderVipSheets();
@@ -1998,6 +2196,87 @@ function attachListeners() {
     };
     if (close) close.addEventListener('click', closeMenu);
     if (dim)   dim.addEventListener('click', closeMenu);
+
+    // ── Hoy v2 listeners ────────────────────────────────────────
+    // Compact match card → open the existing match detail (Resumen subtab)
+    const hoy2Match = $('[data-hoy2-match]');
+    if (hoy2Match) hoy2Match.addEventListener('click', () => {
+        // Switch to the legacy sticky tabs layout focused on match detail.
+        // The match info is the same — we reuse Resumen / Estadísticas.
+        const current = HEADER_MATCHES[state.matchIndex];
+        state.sub = current.status === 'upcoming' ? 'jornada' : 'resumen';
+        // Temporarily disable the v2 flag so the user lands in Match Centre
+        // (the sticky-tabs layout). They can toggle v2 back on from the sidebar.
+        Flags.set('fan.hoy.v2-structure', false);
+    });
+
+    // "Ver todas" / RMTV section CTAs
+    $$('[data-go-tab]').forEach(btn => btn.addEventListener('click', () => {
+        const tab = btn.dataset.goTab;
+        state.tab = tab;
+        if (tab === 'noticias') state.newsId = null;
+        render();
+    }));
+
+    // Video thumbnail click → simulated player
+    $$('[data-video-id]').forEach(btn => btn.addEventListener('click', () => {
+        state.playingVideoId = btn.dataset.videoId;
+        renderHoyV2VideoSheet();
+    }));
+
+    // Survey option click
+    $$('[data-survey-opt]').forEach(btn => btn.addEventListener('click', () => {
+        const sid = btn.dataset.surveyId;
+        const opt = btn.dataset.surveyOpt;
+        state.surveyAnswered = { ...state.surveyAnswered, [sid]: opt };
+        render();
+    }));
+    // Survey reset
+    $$('[data-survey-reset]').forEach(btn => btn.addEventListener('click', () => {
+        const sid = btn.dataset.surveyReset;
+        const next = { ...state.surveyAnswered };
+        delete next[sid];
+        state.surveyAnswered = next;
+        render();
+    }));
+}
+
+// ── Hoy v2: simulated video player sheet ──────────────────────────
+function renderHoyV2VideoSheet() {
+    const slot = $('#newsSheetSlot');
+    if (!slot) return;
+    if (!state.playingVideoId) { slot.innerHTML = ''; return; }
+    const videos = (typeof VIDEO_ITEMS !== 'undefined' ? VIDEO_ITEMS : []);
+    const v = videos.find(x => x.id === state.playingVideoId);
+    if (!v) { slot.innerHTML = ''; return; }
+
+    slot.innerHTML = `
+        <div class="news-sheet-backdrop" data-video-close></div>
+        <div class="news-sheet hoy2-video-sheet">
+            <div class="hoy2-player"
+                 style="background: linear-gradient(145deg, ${v.color1} 0%, ${v.color2} 100%)">
+                <button class="hoy2-player-close" data-video-close aria-label="Cerrar">
+                    ${I.xmark}
+                </button>
+                <div class="hoy2-player-center">
+                    ${I.play}
+                    <div class="hoy2-player-loading">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+                <div class="hoy2-player-foot">
+                    <span class="hoy2-player-cat">${v.category}</span>
+                    <div class="hoy2-player-title">${v.title}</div>
+                    <div class="hoy2-player-duration">${v.duration} · simulación</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    $$('[data-video-close]').forEach(b => b.addEventListener('click', () => {
+        state.playingVideoId = null;
+        slot.innerHTML = '';
+    }));
 }
 
 // ── Side panel navigation handlers ──────────────────────────────
