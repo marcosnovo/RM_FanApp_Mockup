@@ -3358,7 +3358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="auth-shell"><div class="auth-card">
                     <h1 class="auth-title">No hemos podido cargar</h1>
                     <p class="auth-subtitle">Algo falló al arrancar. Prueba a recargar o ábrela en una ventana de incógnito.</p>
-                    <button class="auth-primary-btn" onclick="(() => { try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-') || k.startsWith('rm_')) localStorage.removeItem(k); }); } catch(e) {} location.reload(); })()">Reintentar (limpiar caché)</button>
+                    <button class="auth-primary-btn" onclick="(() => { try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-') || k === 'rm-auth' || k === 'rm_profile_v1') localStorage.removeItem(k); }); } catch(e) {} location.reload(); })()">Reintentar (limpiar caché)</button>
                 </div></div>
             `;
         }

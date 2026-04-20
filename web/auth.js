@@ -14,12 +14,21 @@ const SUPABASE_ANON_KEY = 'sb_publishable_bQtzqtvTegErZucUd_v6KQ_xpdrMlGW';
 // NOTE: we use implicit flow (not PKCE) so magic-link / recovery emails
 // work when opened in a different browser or device than the one that
 // triggered them.
+//
+// Keys used for session persistence:
+//   rm-auth           → Supabase access/refresh tokens (managed by SDK)
+//   rm_profile_v1     → our cached profiles table row (instant boot)
+// Both live in localStorage so the session survives tab closes and reloads
+// indefinitely (until the user explicitly logs out or revokes the refresh
+// token from Supabase). autoRefreshToken rotates the access token silently.
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
         detectSessionInUrl: true,
         flowType: 'implicit',
         persistSession: true,
-        autoRefreshToken: true
+        autoRefreshToken: true,
+        storage: window.localStorage,
+        storageKey: 'rm-auth'
     }
 });
 
@@ -28,6 +37,39 @@ let _cachedSession = null;
 let _cachedProfile = null;
 let _authStateListeners = [];
 let _recoveryTriggered = false;
+
+// Profile cache in localStorage — so a slow network never makes the user
+// re-login: we have their role/name available instantly from last time.
+const PROFILE_STORAGE_KEY = 'rm_profile_v1';
+
+function loadCachedProfile(userId) {
+    try {
+        const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        // Only trust the cached profile if it belongs to the current session
+        if (data && data.id === userId) return data;
+    } catch {}
+    return null;
+}
+
+function saveCachedProfile(profile) {
+    try {
+        if (profile) localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+        else         localStorage.removeItem(PROFILE_STORAGE_KEY);
+    } catch {}
+}
+
+// Refresh the profile in the background without blocking the UI. If it fails
+// (network down, Supabase slow, RLS misconfigured) we simply keep the cached
+// copy — the user stays logged in.
+function refreshProfileInBackground(userId) {
+    fetchProfile(userId).then(data => {
+        if (!data) return;
+        _cachedProfile = data;
+        saveCachedProfile(data);
+    }).catch(() => {});
+}
 
 // Wraps any promise with a timeout. Rejects with the given message if it takes
 // longer than `ms`. Prevents hung network calls from freezing the UI.
@@ -41,7 +83,25 @@ function withTimeout(promise, ms, label = 'timeout') {
 // ── Events ───────────────────────────────────────────────────────
 sb.auth.onAuthStateChange(async (event, session) => {
     _cachedSession = session;
-    _cachedProfile = session ? await fetchProfile(session.user.id) : null;
+
+    if (session) {
+        // Prefer cached profile (instant UI) and refresh in background
+        const cached = loadCachedProfile(session.user.id);
+        if (cached) {
+            _cachedProfile = cached;
+            refreshProfileInBackground(session.user.id);
+        } else {
+            // No cache yet — fetch now (e.g. first login on this device)
+            const p = await fetchProfile(session.user.id);
+            if (p) {
+                _cachedProfile = p;
+                saveCachedProfile(p);
+            }
+        }
+    } else {
+        _cachedProfile = null;
+        saveCachedProfile(null);
+    }
 
     if (event === 'PASSWORD_RECOVERY') {
         _recoveryTriggered = true;
@@ -72,17 +132,44 @@ async function fetchProfile(userId) {
 
 // Refresh cache from Supabase (session + profile). Call after any auth
 // operation to make sure Auth.current() is up-to-date immediately.
+//
+// Reading strategy:
+//   1) getSession() is synchronous on localStorage — always cheap.
+//   2) If we have a session, try the cached profile first (instant).
+//   3) If no cached profile, fetch from server. Otherwise refresh async.
+// This keeps the UI snappy even if the network is slow or down.
 async function syncCache() {
     const { data: { session } } = await sb.auth.getSession();
     _cachedSession = session;
-    _cachedProfile = session ? await fetchProfile(session.user.id) : null;
+
+    if (!session) {
+        _cachedProfile = null;
+        saveCachedProfile(null);
+        return;
+    }
+
+    const cached = loadCachedProfile(session.user.id);
+    if (cached) {
+        _cachedProfile = cached;
+        refreshProfileInBackground(session.user.id);
+        return;
+    }
+
+    const fresh = await fetchProfile(session.user.id);
+    if (fresh) {
+        _cachedProfile = fresh;
+        saveCachedProfile(fresh);
+    }
 }
 
 // ── Public API ───────────────────────────────────────────────────
 const Auth = {
     // Init: load existing session (if any) on page load.
-    // Guarded with a timeout so a stale/invalid cached session (e.g.,
-    // from a deleted user) can't block app startup forever.
+    //
+    // Previously, on timeout we were nuking the session + localStorage
+    // keys, which forced the user to log in on every slow reload. Now
+    // we only log a warning and keep whatever we have — the Supabase
+    // SDK itself refreshes tokens in the background via autoRefreshToken.
     async init() {
         try {
             await Promise.race([
@@ -90,17 +177,18 @@ const Auth = {
                 new Promise((_, rej) => setTimeout(() => rej(new Error('init timeout')), 5000))
             ]);
         } catch (err) {
-            console.warn('[auth] init timed out or errored, clearing session:', err.message);
-            // Fire-and-forget signOut (don't await — it may hang)
-            try { sb.auth.signOut().catch(() => {}); } catch {}
-            // Belt-and-suspenders: also purge Supabase keys from localStorage
-            try {
-                Object.keys(localStorage)
-                    .filter(k => k.startsWith('sb-'))
-                    .forEach(k => localStorage.removeItem(k));
-            } catch {}
-            _cachedSession = null;
-            _cachedProfile = null;
+            console.warn('[auth] init slow, keeping any cached session:', err.message);
+            // Do NOT clear session / profile. If there's a valid session in
+            // localStorage, the SDK will refresh the access token in the
+            // background; we just didn't finish fetching the profile in 5s.
+            // The cached profile (if any) is loaded synchronously anyway.
+            const { data: { session } } = await sb.auth.getSession().catch(() => ({ data: {} }));
+            _cachedSession = session || _cachedSession;
+            if (session) {
+                const cached = loadCachedProfile(session.user.id);
+                if (cached) _cachedProfile = cached;
+                refreshProfileInBackground(session.user.id);
+            }
         }
     },
 
@@ -163,17 +251,21 @@ const Auth = {
             // Fire-and-forget signOut — don't block returning the error to UI
             sb.auth.signOut().catch(() => {});
             _cachedSession = null;
+            saveCachedProfile(null);
             return {
                 ok: false,
                 error: 'Tu cuenta no tiene perfil asignado. Contacta al administrador.'
             };
         }
+        // Persist profile to localStorage so a reload is instantaneous
+        saveCachedProfile(_cachedProfile);
         return { ok: true };
     },
 
     async logout() {
         _cachedSession = null;
         _cachedProfile = null;
+        saveCachedProfile(null);
         // Fire-and-forget so UI updates even if the network is slow
         try { sb.auth.signOut().catch(() => {}); } catch {}
     },
