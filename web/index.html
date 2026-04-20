@@ -21,7 +21,9 @@
     <!-- RM Neue is the brand font; fall back to Inter (Cibeles uses near-identical metrics) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
-<body>
+<!-- body starts in auth-mode so the app-layout is hidden until the user is logged in.
+     JS removes this class in bootApp() when a valid session is detected. -->
+<body class="auth-mode">
     <div class="app-layout">
         <!-- ── Left navigation panel ────────────────────────────── -->
         <aside class="side-panel" id="sidePanel">
@@ -122,8 +124,41 @@
         </main>
     </div>
 
-    <!-- Auth overlay (login / forgot / reset / setup) -->
-    <div id="authOverlay" class="auth-overlay" hidden></div>
+    <!-- Auth overlay (login / forgot / reset / setup)
+         Starts visible with a pre-rendered login shell so the user sees
+         something even if JS is slow or fails. app.js replaces the
+         content when the user interacts or has a valid session. -->
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-shell">
+            <div class="auth-bg"></div>
+            <div class="auth-card">
+                <div class="auth-logo">
+                    <div class="auth-logo-mark">
+                        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2 L14 7 L19 7 L15 11 L17 17 L12 13 L7 17 L9 11 L5 7 L10 7 Z"/></svg>
+                    </div>
+                    <div>
+                        <div class="auth-brand">Real Madrid</div>
+                        <div class="auth-brand-sub">Web Mockup Console</div>
+                    </div>
+                </div>
+                <h1 class="auth-title">Iniciar sesión</h1>
+                <p class="auth-subtitle">Accede al panel de mockups de la app</p>
+                <form class="auth-form" data-auth-form="login" data-auth-bootstrap onsubmit="return false">
+                    <label class="auth-field">
+                        <span>Email</span>
+                        <input type="email" name="email" placeholder="tu@email.com" required autocomplete="email">
+                    </label>
+                    <label class="auth-field">
+                        <span>Contraseña</span>
+                        <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+                    </label>
+                    <button type="submit" class="auth-primary-btn">Entrar</button>
+                    <button type="button" class="auth-link-btn" data-auth-go="forgot">¿Has olvidado tu contraseña?</button>
+                </form>
+            </div>
+            <div class="auth-foot">Acceso controlado · auth por Supabase</div>
+        </div>
+    </div>
 
     <!-- Scripts with `defer` keep execution order but don't block HTML parsing -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
