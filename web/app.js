@@ -49,7 +49,13 @@ const state = {
     vipRestaurantId: null,        // null = no sheet; id = open
     vipHoursExpanded: false,
     vipPerfilOpen: false,
-    vipPerfilSub: 'main'          // 'main' | 'pedidos' | 'autorizados'
+    vipPerfilSub: 'main',         // 'main' | 'pedidos' | 'autorizados'
+
+    // Per-tab scroll memory for the VIP app. The scroll container
+    // (#screenBody) is shared between tabs — without this, switching
+    // tabs would leave the new tab pre-scrolled to the previous tab's
+    // position. Matches native iOS "keep me where I was" behaviour.
+    vipScrollPositions: { inicio: 0, eventos: 0, gestor: 0, perfil: 0 }
 };
 
 // ── App configurations for sidebar ───────────────────────────────
@@ -2372,13 +2378,56 @@ function setupVipGastroScroll() {
     }, { passive: true });
 }
 
+/**
+ * Change VIP navigation state while preserving scroll-per-tab independence.
+ *
+ * The scroll container (#screenBody) is shared across VIP tabs and is just
+ * repainted on re-render, so without this its scrollTop would leak between
+ * tabs. We keep a memory slot per TOP-LEVEL tab (inicio / eventos list /
+ * gestor / perfil) and reset to the top when entering a detail/tickets
+ * screen — the standard iOS push-navigation feel.
+ *
+ *   - Leaving a "listish" screen  → save its scrollTop for that tab
+ *   - Entering a "listish" screen → restore the saved scrollTop
+ *   - Entering a detail/tickets   → scroll to the top
+ *
+ * "Listish" = inicio / gestor / perfil / eventos-list. Detail + tickets
+ * are push-stack screens, not restoration targets.
+ */
+function switchVipTab(mutator) {
+    const screenBody = $('#screenBody');
+    const fromTab = state.vipTab;
+    const fromIsListish = state.vipEventScreen === 'list' || fromTab !== 'eventos';
+
+    if (screenBody && fromIsListish && fromTab in state.vipScrollPositions) {
+        state.vipScrollPositions[fromTab] = screenBody.scrollTop;
+    }
+
+    mutator();
+    render();
+
+    const sb2 = $('#screenBody');
+    if (!sb2) return;
+
+    const toTab = state.vipTab;
+    const toIsListish = state.vipEventScreen === 'list' || toTab !== 'eventos';
+
+    if (toIsListish && toTab in state.vipScrollPositions) {
+        sb2.scrollTop = state.vipScrollPositions[toTab] || 0;
+    } else {
+        // Detail / tickets — always start at the top
+        sb2.scrollTop = 0;
+    }
+}
+
 function attachVipListeners() {
     // VIP tab bar
     $$('[data-vip-tab]').forEach(btn => btn.addEventListener('click', () => {
-        state.vipTab = btn.dataset.vipTab;
-        state.vipEventScreen = 'list';
-        state.vipPerfilOpen = false;
-        render();
+        switchVipTab(() => {
+            state.vipTab = btn.dataset.vipTab;
+            state.vipEventScreen = 'list';
+            state.vipPerfilOpen = false;
+        });
     }));
 
     // Profile (avatar icon)
@@ -2393,38 +2442,46 @@ function attachVipListeners() {
 
     // Navigate to Eventos from chevron
     $$('[data-go-eventos]').forEach(btn => btn.addEventListener('click', () => {
-        state.vipTab = 'eventos';
-        state.vipEventScreen = 'list';
-        render();
+        switchVipTab(() => {
+            state.vipTab = 'eventos';
+            state.vipEventScreen = 'list';
+        });
     }));
 
     // Event card → detail
     $$('[data-vip-event-id]').forEach(el => el.addEventListener('click', e => {
         // Ignore if the click came from a button inside (handled separately)
         if (e.target.closest('[data-vip-open-event], [data-vip-open-tickets]')) return;
-        state.vipEventId = parseInt(el.dataset.vipEventId);
-        state.vipTab = 'eventos';
-        state.vipEventScreen = 'detail';
-        render();
+        switchVipTab(() => {
+            state.vipEventId = parseInt(el.dataset.vipEventId);
+            state.vipTab = 'eventos';
+            state.vipEventScreen = 'detail';
+        });
     }));
 
     $$('[data-vip-open-event]').forEach(btn => btn.addEventListener('click', e => {
         e.stopPropagation();
-        state.vipEventId = parseInt(btn.dataset.vipOpenEvent);
-        state.vipTab = 'eventos';
-        state.vipEventScreen = 'tickets';
-        render();
+        switchVipTab(() => {
+            state.vipEventId = parseInt(btn.dataset.vipOpenEvent);
+            state.vipTab = 'eventos';
+            state.vipEventScreen = 'tickets';
+        });
     }));
 
     $$('[data-vip-open-tickets]').forEach(btn => btn.addEventListener('click', () => {
-        state.vipEventScreen = 'tickets';
-        render();
+        // Forward push — route through switchVipTab so the new screen lands
+        // at the top instead of inheriting the previous screen's scroll.
+        switchVipTab(() => { state.vipEventScreen = 'tickets'; });
     }));
 
     $$('[data-vip-back]').forEach(btn => btn.addEventListener('click', () => {
-        if (state.vipEventScreen === 'tickets') state.vipEventScreen = 'detail';
-        else if (state.vipEventScreen === 'detail') state.vipEventScreen = 'list';
-        render();
+        // Pop back — routed through switchVipTab so returning to the list
+        // restores the list's saved scroll position, while intermediate
+        // push screens (detail) always start at the top.
+        switchVipTab(() => {
+            if (state.vipEventScreen === 'tickets') state.vipEventScreen = 'detail';
+            else if (state.vipEventScreen === 'detail') state.vipEventScreen = 'list';
+        });
     }));
 
     // Event sub-tabs
@@ -3138,13 +3195,18 @@ function handleSideNavTab(tab) {
         if (tab === 'hoy') state.sub = 'directo';
         if (tab === 'noticias') state.newsId = null;
         if (tab === 'calendario') state.calendarSegment = 0;
+        render();
     } else {
-        state.vipTab = tab;
-        if (tab === 'perfil') state.vipPerfilOpen = true;
-        else state.vipPerfilOpen = false;
-        if (tab === 'eventos') state.vipEventScreen = 'list';
+        // Route through switchVipTab so the scroll position is saved for
+        // the previous tab and restored for the new one (same helper used
+        // by the in-phone tab bar).
+        switchVipTab(() => {
+            state.vipTab = tab;
+            if (tab === 'perfil') state.vipPerfilOpen = true;
+            else state.vipPerfilOpen = false;
+            if (tab === 'eventos') state.vipEventScreen = 'list';
+        });
     }
-    render();
 }
 
 function handleSideNavSub(tab, sub) {
