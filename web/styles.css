@@ -2813,19 +2813,53 @@ html, body {
    ================================================================ */
 
 .vip-app {
-    --vip-bg: #0a0a0f;
-    --vip-bg-2: #13131a;
-    --vip-bg-3: #1a1a22;
-    --vip-card: #151520;
-    --vip-card-border: #2a2a35;
-    --vip-gold: #d4af79;
-    --vip-gold-2: #e6c27a;
-    --vip-gold-dark: #b88b4a;
-    --vip-gold-soft: #3a2d18;
-    --vip-text: #ffffff;
-    --vip-text-secondary: #9a9aa8;
-    --vip-text-tertiary: #6b6b7a;
-    --vip-separator: #2a2a35;
+    /* ── Surfaces ────────────────────────────────────────────── */
+    --vip-bg: #0A0B14;            /* near-black navy, primary background */
+    --vip-bg-2: #14171F;          /* palco top bar — subtly raised vs body */
+    --vip-bg-3: #1A1D28;           /* inline cards / event rows */
+    --vip-card: #1A1D28;          /* settings rows, seat cards */
+    --vip-card-border: rgba(255, 255, 255, 0.06);
+    --vip-separator: rgba(255, 255, 255, 0.06);
+
+    /* ── Text ────────────────────────────────────────────────── */
+    --vip-text: #FFFFFF;
+    --vip-text-secondary: #A0A3B0;
+    --vip-text-tertiary: #6E7280;
+
+    /* ── Gold — reserved for CTAs, active chips, profile icons ── */
+    --vip-gold: #C9A36E;          /* canonical hair-line gold */
+    --vip-gold-2: #E6D19C;        /* light highlight */
+    --vip-gold-dark: #8A6B3E;
+    --vip-gold-soft: #3A2D18;
+    --vip-gold-text: #1A1309;     /* deep navy-brown for text over gold */
+
+    /* Primary CTA gradient (pill buttons: Llamar al gestor / Mis entradas /
+       Reserva mediante Area VIP / Gestionar peticiones). Mimics a brushed
+       metallic champagne band seen in the Figma screenshots. */
+    --vip-gradient-gold:
+        linear-gradient(100deg,
+            #F5E5D0 0%,
+            #EBD4A3 22%,
+            #D4B47E 55%,
+            #A07A3E 100%);
+
+    /* Silver/steel metallic gradient used for the "//" separator between
+       crests — matches LaLiga's brand mark. Gold is reserved for actions,
+       so the slashes stay neutral. */
+    --vip-silver-slash:
+        linear-gradient(180deg, #C4C6CF 0%, #9A9CA6 55%, #61636C 100%);
+
+    /* Diagonal stripe pattern layered on top of match / ticket cards.
+       Very low contrast — it's a texture, not an ornament. */
+    --vip-card-pattern:
+        repeating-linear-gradient(115deg,
+            transparent 0px, transparent 44px,
+            rgba(255, 255, 255, 0.028) 44px, rgba(255, 255, 255, 0.028) 46px);
+
+    /* Neutral navy-slate card background (NO green tint) + top gleam */
+    --vip-card-gradient:
+        radial-gradient(ellipse at 30% -10%, rgba(255, 255, 255, 0.06) 0%, transparent 55%),
+        linear-gradient(160deg, #1F2330 0%, #151824 55%, #12141E 100%);
 
     background: var(--vip-bg);
     color: var(--vip-text);
@@ -2840,7 +2874,9 @@ html, body {
     position: sticky;
     top: 0;
     z-index: 15;
-    background: var(--vip-bg);
+    /* Slightly raised vs the body so the safe-area reads as a discrete band
+       (matches the real app where the top strip is visibly lighter). */
+    background: var(--vip-bg-2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2853,7 +2889,7 @@ html, body {
     align-items: center;
     gap: 6px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 1.4px;
     color: var(--vip-text-secondary);
 }
@@ -2868,8 +2904,10 @@ html, body {
 }
 
 .vip-screen-title {
+    /* The real design uses a medium weight (not bold) for page titles —
+       lighter, more editorial feel. */
     font-size: 30px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--vip-text);
     letter-spacing: -0.3px;
 }
@@ -2878,13 +2916,15 @@ html, body {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: #2e2e3b;
-    color: var(--vip-text-secondary);
+    /* Desaturated champagne orb like the top-right avatar in the real app */
+    background: linear-gradient(180deg, #C9B99A 0%, #8F8168 100%);
+    color: var(--vip-gold-text);
     border: 0;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 .vip-avatar-btn > svg { width: 18px !important; height: 18px !important; }
 
@@ -2908,10 +2948,12 @@ html, body {
 }
 .vip-head-icon-btn > svg { width: 18px !important; height: 18px !important; }
 
-/* Section title */
+/* Section title — medium weight, secondary chevron. The real app has a
+   two-tone feel: title in white + a light-gray tail (e.g. "Recomendado
+   para usted" where "para usted" is secondary). Use <small> for the tail. */
 .vip-section-title {
-    font-size: 22px;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 500;
     color: var(--vip-text);
     padding: 22px 20px 14px;
     display: flex;
@@ -2921,7 +2963,8 @@ html, body {
 }
 
 .vip-section-title .vip-chevron {
-    color: var(--vip-gold);
+    /* Neutral, not gold — gold is reserved for CTAs and active states. */
+    color: var(--vip-text-secondary);
     cursor: pointer;
 }
 .vip-section-title .vip-chevron > svg { width: 18px !important; height: 18px !important; }
@@ -2929,7 +2972,7 @@ html, body {
 .vip-section-title small {
     font-weight: 500;
     color: var(--vip-text-secondary);
-    font-size: 14px;
+    font-size: 20px;         /* same as title — the contrast comes from color, not size */
     margin-left: 6px;
 }
 
@@ -2942,25 +2985,24 @@ html, body {
 }
 .g-slash > span {
     display: block;
-    background: linear-gradient(180deg, #efd084 0%, #c69950 50%, #7e5c2b 100%);
+    /* Silver — matches the LaLiga-style "//" between crests in the Figma
+       screenshots. Gold here would pull focus away from real CTAs. */
+    background: var(--vip-silver-slash);
     border-radius: 1px;
 }
 
-/* Recommended match card */
+/* Recommended match card — navy slate with subtle diagonal weave.
+   The previous green tint (#11322a) was an artistic choice that didn't
+   match the Figma. The real design is a neutral dark navy-gray. */
 .vip-reco-card {
     margin: 0 16px;
     min-height: 350px;
     border-radius: 22px;
     padding: 20px 22px 24px;
     background:
-        /* Soft gleam on top */
-        radial-gradient(ellipse at 30% 0%, rgba(180, 220, 200, 0.12) 0%, transparent 50%),
-        /* Diagonal stripes */
-        repeating-linear-gradient(115deg,
-            transparent 0px, transparent 40px,
-            rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 42px),
-        linear-gradient(150deg, #11322a 0%, #0b1e1a 45%, #0c201c 100%);
-    border: 1px solid #1f3a32;
+        var(--vip-card-pattern),
+        var(--vip-card-gradient);
+    border: 1px solid var(--vip-card-border);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -2968,7 +3010,7 @@ html, body {
     position: relative;
     overflow: hidden;
     cursor: pointer;
-    box-shadow: 0 10px 30px #00000055;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
 }
 
 .vip-reco-ball {
@@ -3115,15 +3157,15 @@ html, body {
     background:
         repeating-linear-gradient(115deg,
             transparent 0px, transparent 12px,
-            rgba(255,255,255,0.03) 12px, rgba(255,255,255,0.03) 14px),
-        #191923;
+            rgba(255, 255, 255, 0.03) 12px, rgba(255, 255, 255, 0.03) 14px),
+        var(--vip-bg-3);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 4px;
     flex-shrink: 0;
-    border: 1px solid #2a2a35;
+    border: 1px solid var(--vip-card-border);
 }
 .vip-event-crests > div {
     display: flex;
@@ -3154,13 +3196,13 @@ html, body {
 
 .vip-event-cat {
     font-size: 12px;
-    color: var(--vip-gold);
+    color: var(--vip-text-secondary);
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-.vip-event-cat > svg { width: 11px !important; height: 11px !important; color: var(--vip-gold); }
+.vip-event-cat > svg { width: 11px !important; height: 11px !important; color: var(--vip-text-tertiary); }
 
 /* Bernabéu Gastro horizontal carousel */
 .vip-gastro-scroll {
@@ -3237,7 +3279,7 @@ html, body {
     position: relative;
     z-index: 2;
     font-size: 26px;
-    font-weight: 700;
+    font-weight: 600;
     color: white;
     margin-bottom: 4px;
     letter-spacing: -0.3px;
@@ -3407,21 +3449,25 @@ html, body {
 
 .vip-reserve-btn {
     width: 100%;
-    height: 52px;
-    border-radius: 26px;
-    border: 1px solid var(--vip-card-border);
-    background: linear-gradient(180deg, #333333 0%, #1a1a22 100%);
-    color: var(--vip-text);
+    height: 58px;
+    border-radius: 34px;
+    border: 0;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
     font-family: inherit;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    letter-spacing: 0.2px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 8px 22px rgba(201, 163, 110, 0.18);
 }
-.vip-reserve-btn > svg { width: 16px !important; height: 16px !important; color: var(--vip-gold); }
+.vip-reserve-btn > svg { width: 16px !important; height: 16px !important; color: var(--vip-gold-text); }
 
 /* ── Mis eventos tab ─────────────────────────────────────────── */
 .vip-events-cards {
@@ -3433,17 +3479,14 @@ html, body {
 
 .vip-event-card {
     background:
-        radial-gradient(ellipse at 20% 0%, rgba(180, 220, 200, 0.10) 0%, transparent 50%),
-        repeating-linear-gradient(115deg,
-            transparent 0px, transparent 40px,
-            rgba(255,255,255,0.025) 40px, rgba(255,255,255,0.025) 42px),
-        linear-gradient(150deg, #0f2a25 0%, #0a1c19 45%, #0b1e1b 100%);
-    border: 1px solid #1f3a32;
+        var(--vip-card-pattern),
+        var(--vip-card-gradient);
+    border: 1px solid var(--vip-card-border);
     border-radius: 20px;
     padding: 22px 20px 18px;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 8px 24px #00000048;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 .vip-event-card-head {
@@ -3469,10 +3512,11 @@ html, body {
 }
 
 .vip-event-name {
-    font-size: 22px;
-    font-weight: 700;
+    font-size: 21px;
+    font-weight: 600;
     color: var(--vip-text);
     margin-bottom: 4px;
+    letter-spacing: -0.1px;
 }
 
 .vip-event-division {
@@ -3485,19 +3529,21 @@ html, body {
     width: 100%;
     height: 48px;
     border-radius: 28px;
+    /* Outlined secondary — soft champagne stroke, transparent fill.
+       Matches the "Entradas" CTA inside the match card. */
     border: 1px solid var(--vip-gold);
     background: transparent;
-    color: var(--vip-gold);
+    color: var(--vip-text);
     font-family: inherit;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
 }
-.vip-ticket-btn > svg { width: 16px !important; height: 16px !important; }
+.vip-ticket-btn > svg { width: 16px !important; height: 16px !important; color: var(--vip-gold); }
 
 .vip-ticket-hint {
     text-align: center;
@@ -3509,32 +3555,33 @@ html, body {
 .vip-peticiones-btn {
     margin-top: 16px;
     padding: 14px 18px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #b09473 0%, #907656 100%);
+    border-radius: 14px;
+    background: var(--vip-gradient-gold);
     display: flex;
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
     border: 0;
-    color: white;
+    color: var(--vip-gold-text);
     font-family: inherit;
     width: 100%;
     text-align: left;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
-.vip-peticiones-btn > svg { width: 16px !important; height: 16px !important; color: #2a1e10; }
+.vip-peticiones-btn > svg { width: 16px !important; height: 16px !important; color: var(--vip-gold-text); }
 
 .vip-peticiones-btn strong {
     display: block;
     font-size: 14px;
-    font-weight: 700;
-    color: #2a1e10;
+    font-weight: 600;
+    color: var(--vip-gold-text);
     margin-bottom: 3px;
 }
 
 .vip-peticiones-btn span {
     font-size: 11.5px;
-    color: #2a1e10bf;
+    color: rgba(26, 19, 9, 0.72);
 }
 
 /* Event detail screen */
@@ -3577,21 +3624,20 @@ html, body {
 .vip-mis-entradas-btn {
     margin: 0 30px 22px;
     padding: 15px 30px;
-    border-radius: 30px;
-    background:
-        linear-gradient(180deg, #f4e6cc 0%, #e3cfa6 40%, #b99d72 100%);
-    color: #1e1608;
+    border-radius: 34px;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
     font-family: inherit;
     font-size: 16px;
-    font-weight: 700;
-    border: 1px solid #d4b47e;
+    font-weight: 600;
+    border: 0;
     cursor: pointer;
     width: calc(100% - 60px);
-    height: 56px;
-    letter-spacing: 0.3px;
+    height: 58px;
+    letter-spacing: 0.2px;
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.7),
-        0 4px 16px rgba(212, 175, 121, 0.2);
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 8px 22px rgba(201, 163, 110, 0.18);
 }
 
 .vip-event-meta {
@@ -3629,19 +3675,21 @@ html, body {
 .vip-subtab {
     padding: 10px 16px;
     border: 0;
-    background: #1a1a22;
+    background: transparent;
     color: var(--vip-text-secondary);
     font-family: inherit;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     border-radius: 20px;
     cursor: pointer;
     white-space: nowrap;
 }
 
 .vip-subtab.active {
-    background: #d4af79;
-    color: #1a1309;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .vip-subtab-content { padding: 0 20px 30px; }
@@ -3691,15 +3739,12 @@ html, body {
     margin: 14px 20px;
     padding: 22px 20px 18px;
     border-radius: 20px;
-    border: 1px solid #1f3a32;
+    border: 1px solid var(--vip-card-border);
     background:
-        radial-gradient(ellipse at 50% 0%, rgba(180, 220, 200, 0.12) 0%, transparent 60%),
-        repeating-linear-gradient(115deg,
-            transparent 0px, transparent 40px,
-            rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 42px),
-        linear-gradient(150deg, #0f2a25 0%, #0a1c19 45%, #0b1e1b 100%);
+        var(--vip-card-pattern),
+        var(--vip-card-gradient);
     text-align: center;
-    box-shadow: 0 10px 24px #00000048;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
 }
 
 .vip-tickets-crests {
@@ -3713,9 +3758,10 @@ html, body {
 
 .vip-tickets-title {
     font-size: 20px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--vip-text);
     margin-bottom: 4px;
+    letter-spacing: -0.1px;
 }
 
 .vip-tickets-sub {
@@ -3756,11 +3802,11 @@ html, body {
 .vip-segmented {
     margin: 0 20px 14px;
     padding: 4px;
-    background: #0e1a24;
+    background: var(--vip-bg-3);
     border-radius: 30px;
     display: flex;
     gap: 2px;
-    border: 1px solid #1a2a36;
+    border: 1px solid var(--vip-card-border);
 }
 
 .vip-segment {
@@ -3771,16 +3817,17 @@ html, body {
     color: var(--vip-text-secondary);
     font-family: inherit;
     font-size: 12.5px;
-    font-weight: 600;
+    font-weight: 500;
     border-radius: 26px;
     cursor: pointer;
     white-space: nowrap;
 }
 
 .vip-segment.active {
-    background: linear-gradient(180deg, #f4e6cc 0%, #e3cfa6 40%, #b99d72 100%);
-    color: #1e1608;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .vip-seat-card {
@@ -3909,33 +3956,34 @@ html, body {
 .vip-gestor-avatar > svg { width: 68px !important; height: 68px !important; color: #f3dbaa; z-index: 1; filter: drop-shadow(0 2px 4px #000); }
 
 .vip-gestor-title {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 22px;
+    font-weight: 500;
     color: var(--vip-text);
-    line-height: 1.3;
+    line-height: 1.32;
     margin-bottom: 24px;
+    letter-spacing: -0.2px;
 }
 
 .vip-call-btn {
     width: 100%;
-    height: 56px;
-    border-radius: 30px;
-    background:
-        linear-gradient(180deg, #f4e6cc 0%, #e3cfa6 40%, #b99d72 100%);
-    color: #1e1608;
+    height: 58px;
+    border-radius: 34px;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
     font-family: inherit;
     font-size: 16px;
-    font-weight: 700;
-    border: 1px solid #d4b47e;
+    font-weight: 600;
+    border: 0;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
     margin-bottom: 20px;
+    letter-spacing: 0.2px;
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.7),
-        0 4px 16px rgba(212, 175, 121, 0.2);
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 8px 22px rgba(201, 163, 110, 0.18);
 }
 .vip-call-btn > svg { width: 18px !important; height: 18px !important; }
 
@@ -3979,50 +4027,53 @@ html, body {
 
 .vip-perfil-title {
     font-size: 30px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--vip-text);
+    letter-spacing: -0.3px;
 }
 
 .vip-perfil-close {
-    width: 38px;
-    height: 38px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
-    background: linear-gradient(180deg, #e8d0a6 0%, #b29072 100%);
-    color: #1a1309;
+    /* Desaturated champagne orb, not the full CTA gradient — matches the
+       subtle close button in the Figma profile screen. */
+    background: linear-gradient(180deg, #C9B99A 0%, #8F8168 100%);
+    color: var(--vip-gold-text);
     border: 0;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .vip-perfil-close > svg { width: 16px !important; height: 16px !important; }
 
 .vip-perfil-card {
     margin: 0 20px 22px;
-    padding: 20px;
-    background: #0f1820;
-    border: 1px solid #1a2a36;
-    border-radius: 18px;
+    padding: 22px 22px 18px;
+    background: var(--vip-card);
+    border: 1px solid var(--vip-card-border);
+    border-radius: 20px;
 }
 
 .vip-perfil-name {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 22px;
+    font-weight: 600;
     color: var(--vip-text);
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .vip-perfil-tag {
     display: inline-block;
-    padding: 5px 14px;
-    background: #0a1921;
-    border: 1px solid #1f3a47;
+    padding: 6px 16px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 20px;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--vip-text-secondary);
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
     margin-bottom: 18px;
 }
 
@@ -4050,10 +4101,12 @@ html, body {
 .vip-perfil-menu-row .ico-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
 }
 
-.vip-perfil-menu-row .ico-left > svg { width: 16px !important; height: 16px !important; color: var(--vip-text-secondary); }
+/* Left-side icon in menu rows (clock, person+, logout) — thin gold stroke
+   like the Figma, not secondary gray. */
+.vip-perfil-menu-row .ico-left > svg { width: 18px !important; height: 18px !important; color: var(--vip-gold); }
 
 .vip-perfil-toggle-row {
     display: flex;
@@ -4065,12 +4118,16 @@ html, body {
 }
 
 .vip-toggle {
-    width: 48px;
-    height: 28px;
-    background: #4a3c2e;
+    width: 52px;
+    height: 30px;
+    /* ON: cream/champagne track with a deep navy knob (pushed right).
+       Matches the Figma "Notificaciones" and "Biometría" toggles. */
+    background: linear-gradient(180deg, #E5D4B0 0%, #B69C74 100%);
     border-radius: 16px;
     position: relative;
     cursor: pointer;
+    transition: background 0.18s;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .vip-toggle::after {
@@ -4078,20 +4135,23 @@ html, body {
     position: absolute;
     top: 3px;
     right: 3px;
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    background: #1a1309;
+    background: var(--vip-bg);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    transition: left 0.18s, right 0.18s, background 0.18s;
 }
 
 .vip-toggle.off {
-    background: #2a2a35;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: none;
 }
 
 .vip-toggle.off::after {
     left: 3px;
     right: auto;
-    background: #5a5a68;
+    background: #9FA2AE;
 }
 
 .vip-perfil-divider {
@@ -4102,15 +4162,24 @@ html, body {
 
 /* ── VIP Tab bar ─────────────────────────────────────────────── */
 .vip-tab-bar {
-    background: rgba(10, 10, 15, 0.96);
+    background: rgba(10, 11, 20, 0.96);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-top: 0.5px solid var(--vip-separator);
     color: var(--vip-text-secondary);
 }
 
-.vip-tab-bar .tab-bar-item { color: #6b6b7a; }
+.vip-tab-bar .tab-bar-item { color: var(--vip-text-tertiary); }
 .vip-tab-bar .tab-bar-item.active { color: var(--vip-text); }
+
+/* Subtle raised pill behind the active tab's icon — matches the Figma
+   where the active tab sits on a slightly lighter navy chip. */
+.vip-tab-bar .tab-bar-item.active .tab-bar-icon,
+.vip-tab-bar .tab-bar-item.active > svg:first-child {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    padding: 6px 16px;
+}
 
 
 
