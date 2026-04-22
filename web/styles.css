@@ -4708,19 +4708,22 @@ body.auth-mode .app-layout { visibility: hidden; }
 
 .settings-logout:hover { background: #ff8a9514; }
 
+/* Layout: email ocupa la fila entera. Debajo role + tag + botón.
+   El drawer son 420px con 22px de padding: sobran ~376px para contenido,
+   así evitamos que el botón "Invitar" quede fuera. */
 .settings-add-form {
     display: grid;
-    grid-template-columns: 1fr 100px 130px auto;
+    grid-template-columns: 1fr 1fr auto;
+    grid-template-areas:
+        "email email email"
+        "role  tag   submit";
     gap: 6px;
     margin-bottom: 14px;
 }
-
-@media (max-width: 720px) {
-    .settings-add-form {
-        grid-template-columns: 1fr 1fr;
-    }
-    .settings-add-form > button { grid-column: 1 / -1; }
-}
+.settings-add-form input[name="email"] { grid-area: email; }
+.settings-add-form select[name="role"] { grid-area: role; }
+.settings-add-form select[name="tag"]  { grid-area: tag; }
+.settings-add-form button              { grid-area: submit; }
 
 .settings-add-form input,
 .settings-add-form select {
@@ -4757,33 +4760,33 @@ body.auth-mode .app-layout { visibility: hidden; }
     gap: 8px;
 }
 
+/* Cada fila de usuario se organiza en dos niveles dentro del drawer
+   (que sólo tiene ~376px útiles):
+     · Línea 1: avatar + email/estado/chip
+     · Línea 2: selector de rol, selector de tag, invitar, borrar
+   Así el email no se aplasta ni el chip "Activo" se solapa con los
+   selects. */
 .settings-user-row {
     display: grid;
-    grid-template-columns: 40px 1fr 94px 120px 28px 28px;
+    grid-template-columns: 40px 1fr 1fr 28px 28px;
+    grid-template-areas:
+        "avatar meta meta meta meta"
+        "avatar role tag  inv  del";
     align-items: center;
-    gap: 10px;
+    column-gap: 10px;
+    row-gap: 8px;
     padding: 10px 12px;
     background: #ffffff05;
     border: 1px solid #ffffff0c;
     border-radius: 11px;
 }
 
-@media (max-width: 720px) {
-    .settings-user-row {
-        grid-template-columns: 40px 1fr;
-        grid-template-areas:
-            "avatar meta"
-            "role   tag"
-            "invite del";
-        row-gap: 6px;
-    }
-    .settings-user-row .settings-user-avatar    { grid-area: avatar; }
-    .settings-user-row .settings-user-meta      { grid-area: meta; }
-    .settings-user-row .settings-user-role      { grid-area: role; }
-    .settings-user-row .settings-user-tag-select { grid-area: tag; }
-    .settings-user-row .settings-user-invite    { grid-area: invite; }
-    .settings-user-row .settings-user-del       { grid-area: del; }
-}
+.settings-user-row .settings-user-avatar     { grid-area: avatar; align-self: start; margin-top: 2px; }
+.settings-user-row .settings-user-meta       { grid-area: meta; }
+.settings-user-row .settings-user-role       { grid-area: role; min-width: 0; }
+.settings-user-row .settings-user-tag-select { grid-area: tag; min-width: 0; }
+.settings-user-row .settings-user-invite     { grid-area: inv; }
+.settings-user-row .settings-user-del        { grid-area: del; }
 
 .settings-user-row.is-self { border-color: #4a3de855; background: #4a3de80c; }
 
