@@ -16,7 +16,7 @@
 
     <!-- Cibeles Design System tokens (Madridistas) -->
     <link rel="stylesheet" href="tokens/cibeles-tokens.css">
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=10">
 
     <!-- RM Neue is the brand font; fall back to Inter (Cibeles uses near-identical metrics) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -69,6 +69,14 @@
             <div class="side-footer">
                 <div class="side-version" id="sideVersion">10.2.11 (Build 15970)</div>
                 <div class="side-note">Mockup · Rama <code>main</code></div>
+            </div>
+
+            <!-- Handle para redimensionar el ancho del panel con el ratón.
+                 Al pasar el cursor aparece el indicador con flechas. -->
+            <div class="side-resize-handle" id="sideResizeHandle" aria-label="Ajustar ancho del panel"></div>
+            <div class="side-resize-cue" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,6 9,12 15,18"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>
             </div>
         </aside>
 
@@ -170,9 +178,9 @@
          don't keep a stale copy (Python http.server and GH Pages both respect
          a different query string as a different cache entry). -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script defer src="auth.js?v=9"></script>
-    <script defer src="flags.js?v=9"></script>
-    <script defer src="data.js?v=9"></script>
-    <script defer src="app.js?v=9"></script>
+    <script defer src="auth.js?v=10"></script>
+    <script defer src="flags.js?v=10"></script>
+    <script defer src="data.js?v=10"></script>
+    <script defer src="app.js?v=10"></script>
 </body>
 </html>

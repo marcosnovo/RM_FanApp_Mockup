@@ -58,11 +58,25 @@ html, body {
 }
 
 /* ── Layout ──────────────────────────────────────────────────── */
+/* El ancho del panel lateral se controla vía CSS var `--side-panel-w`
+   que JS persiste en localStorage. Se puede ajustar con ratón
+   arrastrando el borde derecho del panel. */
+:root { --side-panel-w: 320px; }
+
 .app-layout {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: var(--side-panel-w) 1fr;
     height: 100vh;
     width: 100vw;
+}
+
+/* Durante un arrastre de redimensión aplicamos `body.resizing-side`
+   para (1) inhibir selección de texto y (2) pintar cursor col-resize
+   incluso fuera del handle. */
+body.resizing-side,
+body.resizing-side * {
+    user-select: none !important;
+    cursor: col-resize !important;
 }
 
 /* ── Left side panel ─────────────────────────────────────────── */
@@ -72,6 +86,55 @@ html, body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;     /* para el handle absoluto */
+}
+
+/* ── Resize handle del side panel ────────────────────────────── */
+.side-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -3px;            /* pisar el borde para capturar el cursor */
+    width: 6px;
+    height: 100%;
+    z-index: 50;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.15s;
+}
+.side-resize-handle:hover,
+.side-resize-handle.active {
+    background: rgba(62, 49, 250, 0.35);
+}
+
+/* Indicador visible al pasar por encima (flechas izquierda/derecha) */
+.side-resize-cue {
+    position: absolute;
+    top: 50%;
+    right: -14px;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(62, 49, 250, 0.85);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s, transform 0.18s;
+    box-shadow: 0 4px 12px rgba(62, 49, 250, 0.45);
+    z-index: 51;
+}
+.side-resize-handle:hover + .side-resize-cue,
+.side-resize-handle.active + .side-resize-cue {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.05);
+}
+.side-resize-cue svg {
+    width: 10px !important;
+    height: 10px !important;
 }
 
 .side-header {
@@ -8313,47 +8376,54 @@ body.auth-mode .app-layout { visibility: hidden; }
 }
 .app-topbar-slot.visible { display: block; }
 
-/* Cuando el login bar es visible, empujamos screen-body ~68px abajo
-   (altura aproximada del cluster, ligeramente mayor para el padding). */
+/* Cuando el topbar global está visible, el screen-body baja para
+   dejar hueco. La altura real se mide en JS y se expone como la
+   custom property `--app-topbar-h` sobre `.phone-screen`. */
 .app-topbar-slot.visible ~ .screen-body {
-    top: 120px;                /* 52 (status) + 68 (topbar) */
+    top: calc(52px + var(--app-topbar-h, 68px));
+}
+
+/* Cuando el topbar global está visible, las pestañas que tienen su
+   propio topbar lo esconden para no duplicar cabecera. */
+.app-topbar-slot.visible ~ .screen-body .hoy2-topbar,
+.app-topbar-slot.visible ~ .screen-body .home-top-row-fixed {
+    display: none !important;
 }
 
 .app-topbar {
     width: 100%;
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
+    align-items: stretch;
     background: #f2f5fb;
     border-bottom: 1px solid var(--rm-separator);
-    cursor: pointer;
-    text-align: left;
     font-family: inherit;
-    border: 0;
-    border-bottom: 1px solid var(--rm-separator);
-    transition: background 0.14s;
+    box-sizing: border-box;
 }
-
-.app-topbar:hover { background: #e8ecf5; }
 
 .app-topbar.is-logged {
     background: linear-gradient(135deg, var(--rm-dark) 0%, var(--rm-primary-dark, #2115AB) 100%);
     border-bottom-color: rgba(255, 255, 255, 0.08);
     color: #fff;
 }
-.app-topbar.is-logged:hover {
-    background: linear-gradient(135deg, #13264e 0%, #2518bc 100%);
-}
 
-.app-topbar-text {
+.app-topbar-login {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 1px;
+    padding: 12px 16px 14px;
+    background: transparent;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+    font-family: inherit;
     line-height: 1.15;
+    transition: background 0.14s;
 }
+.app-topbar-login:hover { background: rgba(15, 33, 69, 0.06); }
+.app-topbar.is-logged .app-topbar-login:hover { background: rgba(255, 255, 255, 0.08); }
 
 .app-topbar-kicker {
     font-size: 12px;
@@ -8399,33 +8469,18 @@ body.auth-mode .app-layout { visibility: hidden; }
     flex-shrink: 0;
 }
 
-.app-topbar-avatar {
-    flex-shrink: 0;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: #fff;
-    border: 1px solid var(--rm-separator);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--rm-dark);
-    overflow: hidden;
-}
-.app-topbar-avatar > svg { width: 26px !important; height: 26px !important; }
-
-.app-topbar.is-logged .app-topbar-avatar {
-    background: #fff;
-    border: 0;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
-}
-
-.app-topbar-initials {
-    font-family: inherit;
-    font-size: 15px;
+/* Título de la sección activa a la derecha (Hoy · Noticias · Calendario…) */
+.app-topbar-title {
+    flex: 0 0 auto;
+    align-self: center;
+    padding: 0 18px 0 8px;
+    font-size: 20px;
     font-weight: 800;
-    color: var(--rm-primary-dark, #2115AB);
-    letter-spacing: -0.2px;
+    letter-spacing: -0.3px;
+    color: var(--rm-dark);
+}
+.app-topbar.is-logged .app-topbar-title {
+    color: #fff;
 }
 
 /* ================================================================

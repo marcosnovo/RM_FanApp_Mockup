@@ -270,24 +270,37 @@ function hoyLoginGreeting() {
 
 /**
  * Cabecera global de login/bienvenida (flag `fan.app.login-header`).
- * Persiste en todas las secciones de la Fan App (Hoy, Noticias, …)
- * porque se renderiza en un slot fuera del contenido scrolleable.
+ * Persiste en todas las secciones de la Fan App y sustituye al topbar
+ * propio de cada tab. A la derecha muestra el nombre de la sección
+ * activa para que siempre sepas dónde estás.
  *
  * Click sobre el cluster → cicla por los 6 estados (Visitante → Socio
  * → Madridista → Junior → Premium → Platinum → Visitante …).
  */
+function appTabTitle() {
+    if (state.app === 'vip') return '';
+    switch (state.tab) {
+        case 'hoy':        return 'Hoy';
+        case 'noticias':   return 'Noticias';
+        case 'calendario': return 'Calendario';
+        case 'rmtv':       return Flags.isEnabled('fan.rmtv.play') ? 'RM Play' : 'RMTV';
+        case 'tienda':     return 'Tienda';
+        default:           return '';
+    }
+}
+
 function renderAppLoginBar() {
     const logged = HoyLoginHeader.isLogged();
     const tier = HoyLoginHeader.tierLabel();
     const name = state.hoyAuthMock?.name || 'Marcos';
     const greeting = hoyLoginGreeting();
-    const initials = (name[0] || 'M').toUpperCase();
+    const title = appTabTitle();
 
     return `
-        <button class="app-topbar ${logged ? 'is-logged' : ''}"
-                data-login-cycle
-                title="mock · haz clic para cambiar estado">
-            <div class="app-topbar-text">
+        <div class="app-topbar ${logged ? 'is-logged' : ''}">
+            <button class="app-topbar-login"
+                    data-login-cycle
+                    title="mock · haz clic para cambiar estado">
                 ${logged ? `
                     <span class="app-topbar-kicker">Hola,</span>
                     <span class="app-topbar-name">${name}</span>
@@ -301,13 +314,9 @@ function renderAppLoginBar() {
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                     </span>
                 `}
-            </div>
-            <div class="app-topbar-avatar">
-                ${logged
-                    ? `<span class="app-topbar-initials">${initials}</span>`
-                    : I.personCircle}
-            </div>
-        </button>
+            </button>
+            <div class="app-topbar-title">${title}</div>
+        </div>
     `;
 }
 
@@ -3407,6 +3416,20 @@ function render() {
             ? renderAppLoginBar()
             : '';
         topbarSlot.classList.toggle('visible', topbarSlot.innerHTML !== '');
+
+        // Mide la altura real del topbar y la expone como custom property
+        // para que el CSS empuje `screen-body` exactamente lo necesario.
+        const phoneScreen = $('#phoneScreen');
+        if (phoneScreen) {
+            const apply = () => {
+                const h = topbarSlot.classList.contains('visible')
+                    ? topbarSlot.getBoundingClientRect().height
+                    : 0;
+                phoneScreen.style.setProperty('--app-topbar-h', `${Math.ceil(h)}px`);
+            };
+            apply();                         // primero sincrónico (layout ya existe)
+            requestAnimationFrame(apply);    // y otra vez tras layout por si cambió
+        }
     }
 
     // Sheets (fan news + vip restaurant/perfil + hoy v2 sheets)
@@ -4061,6 +4084,76 @@ function renderHoyV2VideoSheet() {
 }
 
 // ── Side panel navigation handlers ──────────────────────────────
+// ── Panel lateral redimensionable (drag del borde derecho) ──────
+//
+// El ancho se persiste en localStorage y se expone vía la CSS var
+// `--side-panel-w` sobre :root, que `.app-layout` usa como columna.
+// Límites: [240px, 560px] para evitar valores absurdos.
+
+const SIDE_PANEL_WIDTH_KEY = 'rm_side_panel_w_v1';
+const SIDE_PANEL_MIN = 240;
+const SIDE_PANEL_MAX = 560;
+
+function setupSidePanelResize() {
+    const handle = document.getElementById('sideResizeHandle');
+    if (!handle) return;
+
+    // Aplica el ancho guardado (si existe) al arrancar.
+    try {
+        const saved = parseInt(localStorage.getItem(SIDE_PANEL_WIDTH_KEY), 10);
+        if (saved >= SIDE_PANEL_MIN && saved <= SIDE_PANEL_MAX) {
+            document.documentElement.style.setProperty('--side-panel-w', `${saved}px`);
+        }
+    } catch {}
+
+    let startX = 0;
+    let startW = 0;
+
+    const onMove = (e) => {
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        let next = startW + (clientX - startX);
+        next = Math.max(SIDE_PANEL_MIN, Math.min(SIDE_PANEL_MAX, next));
+        document.documentElement.style.setProperty('--side-panel-w', `${next}px`);
+    };
+
+    const onUp = () => {
+        handle.classList.remove('active');
+        document.body.classList.remove('resizing-side');
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        window.removeEventListener('touchmove', onMove);
+        window.removeEventListener('touchend', onUp);
+
+        // Persistir el ancho final.
+        const w = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--side-panel-w'), 10);
+        if (!isNaN(w)) {
+            try { localStorage.setItem(SIDE_PANEL_WIDTH_KEY, String(w)); } catch {}
+        }
+    };
+
+    const onDown = (e) => {
+        e.preventDefault();
+        startX = e.touches ? e.touches[0].clientX : e.clientX;
+        const panel = document.querySelector('.side-panel');
+        startW = panel ? panel.getBoundingClientRect().width : 320;
+        handle.classList.add('active');
+        document.body.classList.add('resizing-side');
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('touchend', onUp);
+    };
+
+    handle.addEventListener('mousedown', onDown);
+    handle.addEventListener('touchstart', onDown, { passive: false });
+
+    // Doble click del handle → reset al ancho por defecto.
+    handle.addEventListener('dblclick', () => {
+        document.documentElement.style.setProperty('--side-panel-w', '320px');
+        try { localStorage.removeItem(SIDE_PANEL_WIDTH_KEY); } catch {}
+    });
+}
+
 function attachAppSwitcher() {
     $$('#appSwitcher .app-switch-btn').forEach(btn => btn.addEventListener('click', () => {
         state.app = btn.dataset.app;
@@ -5085,6 +5178,11 @@ function renderSidebarFlags() {
     const host = $('#sideFlags');
     if (!host) return;
 
+    // Preservar la posición de scroll dentro del panel al re-render
+    // (evita que cada toggle vuelva la lista al principio).
+    const prevScroll = host.querySelector('.flags-scroll');
+    const savedScrollTop = prevScroll ? prevScroll.scrollTop : 0;
+
     const app = state.app; // 'fan' | 'vip'
     const appLabel = app === 'vip' ? 'VIP App' : 'Fan App';
 
@@ -5160,6 +5258,11 @@ function renderSidebarFlags() {
 
     // Attach listeners
     _attachFlagsPanelListeners();
+
+    // Restaurar scroll tras el re-render para que el usuario no pierda
+    // la posición al togglear o buscar.
+    const newScroll = host.querySelector('.flags-scroll');
+    if (newScroll && savedScrollTop) newScroll.scrollTop = savedScrollTop;
 }
 
 function _attachFlagsPanelListeners() {
@@ -5307,6 +5410,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof Gamification    !== 'undefined') Gamification.hydrate();
         if (typeof HoyTeamTabs     !== 'undefined') HoyTeamTabs.hydrate();
         if (typeof HoyLoginHeader  !== 'undefined') HoyLoginHeader.hydrate();
+
+        // Panel lateral redimensionable (drag del handle).
+        setupSidePanelResize();
 
         // Re-render the entire app when a feature flag changes so new UI
         // gated behind the flag appears / disappears instantly.
