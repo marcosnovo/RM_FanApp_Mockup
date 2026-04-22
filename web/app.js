@@ -209,6 +209,26 @@ function renderHoyV2() {
     const surveys = (typeof SURVEY_ITEMS !== 'undefined' ? SURVEY_ITEMS : []);
     const survey = surveys[0];
 
+    // Pestañas por equipo (flag anidado bajo Hoy v2).
+    const teamTabsOn = Flags.isEnabled('fan.hoy.team-tabs');
+    const editorOn   = Flags.isEnabled('fan.hoy.team-tabs.editor');
+
+    // Fallback: si la pestaña activa se oculta, volvemos a "Todo".
+    if (teamTabsOn
+        && state.hoyTeamFilter !== 'all'
+        && !state.hoyTabsVisible[state.hoyTeamFilter]) {
+        state.hoyTeamFilter = 'all';
+        HoyTeamTabs.persist();
+    }
+
+    // Filtro efectivo (sólo aplica cuando las pestañas están on).
+    const filter = teamTabsOn ? state.hoyTeamFilter : 'all';
+
+    // Las predicciones de gamificación sólo están mockeadas para el
+    // primer equipo masculino, así que las ocultamos fuera de "Todo" y "Masc".
+    const showPrediction = Flags.isEnabled('fan.hoy.gamification')
+        && (filter === 'all' || filter === 'masc');
+
     return `
         <div class="hoy2-wrap">
 
@@ -221,18 +241,20 @@ function renderHoyV2() {
                 <div class="hoy2-top-spacer"></div>
             </div>
 
+            ${teamTabsOn ? renderHoyV2TeamTabsBar(editorOn) : ''}
+
             <div class="hoy2-scroll">
 
                 <!-- ── 0. Stories carousel (flag 'fan.hoy.stories') ── -->
                 ${Flags.isEnabled('fan.hoy.stories') ? renderHoyV2Stories() : ''}
 
-                <!-- ── 1. Próximos partidos (hasta 3 equipos) ─────────
-                     Cada card integra Radio y un resumen del último
-                     partido con enlace "Ver resumen". -->
-                ${renderHoyV2NextMatches()}
+                <!-- ── 1. Próximos partidos ─────────
+                     En "Todo" se muestran los 3 equipos; filtrando por uno
+                     concreto, sólo el partido de ese equipo. -->
+                ${renderHoyV2NextMatches(filter)}
 
                 <!-- ── 1.5 Gamificación: predicciones (flag) ───────── -->
-                ${Flags.isEnabled('fan.hoy.gamification') ? renderHoyV2Prediction() : ''}
+                ${showPrediction ? renderHoyV2Prediction() : ''}
 
                 <!-- ── 2. Noticias ─────────────────────────────────── -->
                 <section class="hoy2-section">
@@ -258,12 +280,12 @@ function renderHoyV2() {
                 </section>
 
                 <!-- ── 3.5 Tras las cámaras (flag 'fan.hoy.stories') ── -->
-                ${Flags.isEnabled('fan.hoy.stories') ? renderHoyV2BehindScenes() : ''}
+                ${Flags.isEnabled('fan.hoy.stories') && filter === 'all' ? renderHoyV2BehindScenes() : ''}
 
-                <!-- ── 4. Highlights (mixto) ────────────────────────── -->
-                ${renderHoyV2Highlights()}
+                <!-- ── 4. Highlights (mixto o filtrado por equipo) ──── -->
+                ${renderHoyV2Highlights(filter)}
 
-                <!-- ── 5. Trivia del día ────────────────────────────── -->
+                <!-- ── 5. Trivia del día (se mantiene siempre) ─────── -->
                 <section class="hoy2-section">
                     <div class="hoy2-section-head">
                         <h2 class="hoy2-section-title">Trivia del día</h2>
@@ -276,15 +298,49 @@ function renderHoyV2() {
         </div>
 
         ${renderSideMenu()}
+        ${state.hoyEditorOpen ? renderHoyTabsEditorSheet() : ''}
+    `;
+}
+
+// ── Barra de pestañas por equipo (en Hoy v2) ──────────────────
+// Sticky justo debajo del topbar.
+function renderHoyV2TeamTabsBar(editorOn) {
+    const tabs = HoyTeamTabs.visibleTabKeys();
+    const current = state.hoyTeamFilter;
+
+    return `
+        <div class="hoy2-team-tabs" id="hoy2TeamTabs">
+            <div class="hoy2-team-tabs-scroll">
+                ${tabs.map(k => `
+                    <button class="hoy2-team-tab ${k === current ? 'active' : ''}" data-team-tab="${k}">
+                        <span class="hoy2-team-tab-label">${HoyTeamTabs.labelFor(k)}</span>
+                        <span class="hoy2-team-tab-underline"></span>
+                    </button>
+                `).join('')}
+            </div>
+            ${editorOn ? `
+                <button class="hoy2-team-tabs-edit" id="btnHoyTabsEditor" aria-label="Editar pestañas">
+                    ${I.slider}
+                </button>
+            ` : ''}
+        </div>
     `;
 }
 
 // ── Próximos partidos (hasta 3, scroll horizontal) ─────────────
-function renderHoyV2NextMatches() {
+//
+// Opcionalmente filtra por equipo vía el flag `fan.hoy.team-tabs`.
+// · filter='all'      → muestra los 3 equipos seguidos (scroll horizontal).
+// · filter='masc'/... → muestra sólo la card de ese equipo (1 bloque).
+function renderHoyV2NextMatches(filter = 'all') {
     const teams = (typeof TEAMS !== 'undefined' ? TEAMS : []);
     const nextByTeam = (typeof NEXT_MATCHES_BY_TEAM !== 'undefined' ? NEXT_MATCHES_BY_TEAM : {});
-    const followed = teams.filter(t => state.followedTeams[t.id]);
+    let followed = teams.filter(t => state.followedTeams[t.id]);
+    if (filter !== 'all') {
+        followed = followed.filter(t => t.id === filter);
+    }
     if (followed.length === 0) return '';
+    const singleCard = filter !== 'all';
 
     return `
         <section class="hoy2-section">
@@ -294,7 +350,7 @@ function renderHoyV2NextMatches() {
                     Calendario
                 </button>
             </div>
-            <div class="hoy2-nm-scroll">
+            <div class="hoy2-nm-scroll ${singleCard ? 'single' : ''}">
                 ${followed.map(team => {
                     const m = nextByTeam[team.id];
                     if (!m) return '';
@@ -390,8 +446,15 @@ function renderHoyV2LastMatches() {
 }
 
 // ── Highlights (mixto: categorías) ────────────────────────────
-function renderHoyV2Highlights() {
-    const highlights = (typeof HIGHLIGHT_ITEMS !== 'undefined' ? HIGHLIGHT_ITEMS : []);
+//
+// Opcionalmente filtrados por equipo vía `fan.hoy.team-tabs`.
+function renderHoyV2Highlights(filter = 'all') {
+    let highlights = (typeof HIGHLIGHT_ITEMS !== 'undefined' ? HIGHLIGHT_ITEMS : []);
+    if (filter !== 'all') {
+        highlights = highlights.filter(h => h.teamId === filter);
+    }
+    if (highlights.length === 0) return '';
+
     // On the Hoy screen we show ONE item per category as a mixed carousel
     const byCat = {};
     for (const h of highlights) {
@@ -1104,35 +1167,7 @@ const HoyTeamTabs = {
 
 // ── HOY view ────────────────────────────────────────────────────
 function renderHoy() {
-    const teamTabsOn = Flags.isEnabled('fan.hoy.team-tabs');
-    const editorOn   = Flags.isEnabled('fan.hoy.team-tabs.editor');
-
-    // Si se ocultó la pestaña actualmente seleccionada, caemos a "Todo".
-    if (teamTabsOn
-        && state.hoyTeamFilter !== 'all'
-        && !state.hoyTabsVisible[state.hoyTeamFilter]) {
-        state.hoyTeamFilter = 'all';
-        HoyTeamTabs.persist();
-    }
-
-    // Partido a mostrar:
-    //  · Todo → carrusel clásico (usa state.matchIndex).
-    //  · Equipo concreto → un único partido (próximo / último).
-    let match;
-    let singleMode = false;
-    if (teamTabsOn && state.hoyTeamFilter !== 'all') {
-        match = HoyTeamTabs.primaryMatchForFilter();
-        singleMode = true;
-    } else {
-        // Clamp en caso de que el índice haya quedado fuera de rango.
-        if (state.matchIndex < 0 || state.matchIndex >= HEADER_MATCHES.length) {
-            state.matchIndex = 0;
-        }
-        match = HEADER_MATCHES[state.matchIndex];
-    }
-
-    // Si no hay partido (p.ej. pestaña sin datos), usamos un placeholder.
-    if (!match) match = HEADER_MATCHES[0];
+    const match = HEADER_MATCHES[state.matchIndex];
 
     // Upcoming matches only expose Directo/Jornada; finished & live expose all 4
     const upcoming = match.status === 'upcoming';
@@ -1146,50 +1181,6 @@ function renderHoy() {
     const smallHomeCrest = bigCrestFor(match.homeTeam);
     const smallAwayCrest = bigCrestFor(match.awayTeam);
 
-    // Top-row center: dots (Todo) vs crest+fecha (single-team).
-    // En single-team no tiene sentido mostrar los dots del carrusel.
-    const topCenter = singleMode
-        ? `
-            <div class="home-top-collapsed" id="homeCollapsedFade" style="opacity: 1">
-                <div class="home-top-mini-crest">${smallHomeCrest}</div>
-                <span class="home-top-datetime">${match.dateString.replace(' · ', ' - ')}</span>
-                <div class="home-top-mini-crest">${smallAwayCrest}</div>
-            </div>
-        `
-        : `
-            <div class="home-top-dots" id="homeDotsFade">
-                ${HEADER_MATCHES.map((_, i) => `
-                    <button class="home-dot ${i === state.matchIndex ? 'active' : ''}" data-match="${i}" aria-label="Match ${i + 1}"></button>
-                `).join('')}
-            </div>
-            <div class="home-top-collapsed" id="homeCollapsedFade">
-                <div class="home-top-mini-crest">${smallHomeCrest}</div>
-                <span class="home-top-datetime">${match.dateString.replace(' · ', ' - ')}</span>
-                <div class="home-top-mini-crest">${smallAwayCrest}</div>
-            </div>
-        `;
-
-    // Bloque de partido: carrusel en "Todo", card única en pestaña de equipo.
-    const matchArea = singleMode
-        ? `
-            <div class="home-match-area">
-                <div class="match-single">
-                    ${renderMatchCard(match)}
-                </div>
-            </div>
-        `
-        : `
-            <div class="home-match-area">
-                <div class="match-carousel" id="matchCarousel">
-                    <button class="carousel-nav prev" data-carousel-prev>${I.chevronLeft}</button>
-                    <div class="match-carousel-track" id="matchTrack" style="transform: translateX(-${state.matchIndex * 100}%)">
-                        ${HEADER_MATCHES.map(m => renderMatchCard(m)).join('')}
-                    </div>
-                    <button class="carousel-nav next" data-carousel-next>${I.chevronRight}</button>
-                </div>
-            </div>
-        `;
-
     return `
         <div class="home-wrap" id="homeWrap">
             <!-- Fixed top row (morphs during scroll) -->
@@ -1200,7 +1191,16 @@ function renderHoy() {
                 </button>
 
                 <div class="home-top-center">
-                    ${topCenter}
+                    <div class="home-top-dots" id="homeDotsFade">
+                        ${HEADER_MATCHES.map((_, i) => `
+                            <button class="home-dot ${i === state.matchIndex ? 'active' : ''}" data-match="${i}" aria-label="Match ${i + 1}"></button>
+                        `).join('')}
+                    </div>
+                    <div class="home-top-collapsed" id="homeCollapsedFade">
+                        <div class="home-top-mini-crest">${smallHomeCrest}</div>
+                        <span class="home-top-datetime">${match.dateString.replace(' · ', ' - ')}</span>
+                        <div class="home-top-mini-crest">${smallAwayCrest}</div>
+                    </div>
                 </div>
 
                 <button class="home-top-btn">
@@ -1209,11 +1209,17 @@ function renderHoy() {
                 </button>
             </div>
 
-            ${teamTabsOn ? renderHoyTeamTabsBar(editorOn) : ''}
-
             <!-- Scrollable area: match carousel + segment bar + content -->
             <div class="home-scroll-content">
-                ${matchArea}
+                <div class="home-match-area">
+                    <div class="match-carousel" id="matchCarousel">
+                        <button class="carousel-nav prev" data-carousel-prev>${I.chevronLeft}</button>
+                        <div class="match-carousel-track" id="matchTrack" style="transform: translateX(-${state.matchIndex * 100}%)">
+                            ${HEADER_MATCHES.map(m => renderMatchCard(m)).join('')}
+                        </div>
+                        <button class="carousel-nav next" data-carousel-next>${I.chevronRight}</button>
+                    </div>
+                </div>
 
                 <div class="home-segment-bar" id="homeSegmentBar">
                     ${segments.map(([key, label]) => `
@@ -1229,7 +1235,6 @@ function renderHoy() {
         </div>
 
         ${renderSideMenu()}
-        ${state.hoyEditorOpen ? renderHoyTabsEditorSheet() : ''}
     `;
 }
 
@@ -4501,94 +4506,295 @@ function sortFlagsByDependency(flags) {
     return result;
 }
 
+// ────────────────────────────────────────────────────────────────
+// Flag panel — state persistido en memoria (UI-only, no localStorage)
+// ────────────────────────────────────────────────────────────────
+if (typeof state.flagsSearch === 'undefined') state.flagsSearch = '';
+if (typeof state.flagsFilter === 'undefined') state.flagsFilter = 'all';   // 'all' | 'active' | 'inactive'
+if (typeof state.flagsCollapsed === 'undefined') state.flagsCollapsed = {}; // { [cat]: bool } — categorías plegadas
+if (typeof state.flagsOpen === 'undefined') state.flagsOpen = true;         // panel entero
+
+/**
+ * Construye una lista agrupada y filtrada de flags listos para pintar.
+ * Cada item trae su `children` inline bajo el padre; los huérfanos van
+ * a un grupo "Otros" si no tuvieran categoría (no debería pasar).
+ */
+function buildFlagView(app, search, filter) {
+    const all = Flags.forApp(app);
+
+    // Adjacency: padre → children[] (un solo nivel; soporta jerarquía
+    // de profundidad arbitraria encadenando varios `requires`).
+    const childrenByParent = {};
+    for (const f of all) {
+        if (f.requires) {
+            (childrenByParent[f.requires] ||= []).push(f);
+        }
+    }
+
+    // Filtros
+    const q = (search || '').trim().toLowerCase();
+    const matchesQuery = (f) => !q
+        || f.label.toLowerCase().includes(q)
+        || (f.description || '').toLowerCase().includes(q);
+
+    const matchesFilter = (f) => {
+        if (filter === 'all')      return true;
+        if (filter === 'active')   return f.enabled;
+        if (filter === 'inactive') return !f.enabled;
+        return true;
+    };
+
+    // Asciende el árbol marcando visibles: si un descendiente matchea,
+    // todos sus ancestros también entran (para mantener el árbol intacto).
+    const visibleKeys = new Set();
+    const byKey = new Map(all.map(f => [f.key, f]));
+    for (const f of all) {
+        if (matchesQuery(f) && matchesFilter(f)) {
+            let cur = f;
+            while (cur) {
+                if (visibleKeys.has(cur.key)) break;
+                visibleKeys.add(cur.key);
+                cur = cur.requires ? byKey.get(cur.requires) : null;
+            }
+        }
+    }
+
+    // Construcción recursiva del subárbol de un padre.
+    const buildSubtree = (parentKey) => {
+        const kids = (childrenByParent[parentKey] || [])
+            .filter(c => visibleKeys.has(c.key));
+        return kids.map(k => ({
+            flag: k,
+            children: buildSubtree(k.key)
+        }));
+    };
+
+    // Top level: flags sin padre, agrupados por categoría.
+    const grouped = new Map();
+    for (const f of all) {
+        if (f.requires) continue;
+        if (!visibleKeys.has(f.key)) continue;
+        const cat = f.category || 'General';
+        if (!grouped.has(cat)) grouped.set(cat, []);
+        grouped.get(cat).push({
+            flag: f,
+            children: buildSubtree(f.key)
+        });
+    }
+
+    // Cuenta total de flags visibles dentro de un subárbol.
+    const subtreeCount = (node) => 1 + node.children.reduce((n, c) => n + subtreeCount(c), 0);
+    const subtreeActive = (node) => (node.flag.enabled ? 1 : 0)
+        + node.children.reduce((n, c) => n + subtreeActive(c), 0);
+
+    return {
+        groups: [...grouped.entries()].map(([cat, items]) => ({
+            cat,
+            items,
+            activeCount: items.reduce((n, it) => n + subtreeActive(it), 0),
+            totalCount: items.reduce((n, it) => n + subtreeCount(it), 0)
+        })),
+        visibleCount: visibleKeys.size,
+        totalCount: all.length,
+        activeCount: all.filter(f => f.enabled).length
+    };
+}
+
+/**
+ * Renderiza un subárbol de flags (padre + descendientes) con indent
+ * visual. La profundidad controla la posición del conector del árbol.
+ */
+function flagTreeHTML(node, depth = 0) {
+    const { flag, children } = node;
+    return `
+        <div class="flags-tree ${depth > 0 ? 'is-nested' : ''}">
+            ${flagRowHTML(flag, { indent: depth > 0 })}
+            ${children.length ? `
+                <div class="flags-tree-children">
+                    ${children.map(c => flagTreeHTML(c, depth + 1)).join('')}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function statusChip(flag) {
+    const parent = flag.parent;
+    if (parent && !parent.enabled) {
+        return `<span class="flag-chip locked" title="El flag padre está apagado">BLOQUEADA</span>`;
+    }
+    return flag.enabled
+        ? `<span class="flag-chip on">ACTIVA</span>`
+        : `<span class="flag-chip off">INACTIVA</span>`;
+}
+
+function flagRowHTML(f, { indent = false } = {}) {
+    const parent = f.parent;
+    const parentEnabled = !parent || parent.enabled;
+    const effectiveOn = f.rawEnabled && parentEnabled;
+    const locked = parent && !parent.enabled;
+
+    return `
+        <div class="flag-row ${indent ? 'is-child' : ''} ${locked ? 'is-locked' : ''}" data-flag-row="${f.key}">
+            <div class="flag-row-main">
+                <div class="flag-row-top">
+                    <span class="flag-row-title">${f.label}</span>
+                    ${f.app === 'shared' ? '<span class="flag-row-scope">compartida</span>' : ''}
+                    ${statusChip(f)}
+                </div>
+                <div class="flag-row-desc">${f.description}</div>
+            </div>
+            <label class="flag-toggle ${effectiveOn ? 'on' : ''}" aria-label="Activar ${f.label}">
+                <input type="checkbox"
+                       data-flag-key="${f.key}"
+                       ${effectiveOn ? 'checked' : ''}>
+                <span class="flag-toggle-knob"></span>
+            </label>
+        </div>
+    `;
+}
+
 function renderSidebarFlags() {
     const host = $('#sideFlags');
     if (!host) return;
 
-    const app = state.app;                 // 'fan' | 'vip'
-    const groups = Flags.groupedForApp(app);
-    const total = Flags.count(app);
-    const active = Flags.activeCount(app);
-    const cats = Object.keys(groups).sort();
-
+    const app = state.app; // 'fan' | 'vip'
     const appLabel = app === 'vip' ? 'VIP App' : 'Fan App';
 
+    const view = buildFlagView(app, state.flagsSearch, state.flagsFilter);
+    const isOpen = state.flagsOpen !== false;
+
     host.innerHTML = `
-        <button class="side-flags-head" id="sideFlagsHead" aria-expanded="true">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="side-flags-chev"><polyline points="6,9 12,15 18,9"/></svg>
-            <span class="side-flags-title">Funcionalidades</span>
-            <span class="side-flags-app">${appLabel}</span>
-            <span class="side-flags-count">${active}/${total}</span>
-        </button>
-        <div class="side-flags-body" id="sideFlagsBody">
-            ${total === 0 ? `
-                <div class="side-flags-empty">
-                    Aún no hay funcionalidades en la ${appLabel}. Pídeme una y se activa aquí.
+        <div class="flags-panel ${isOpen ? 'open' : 'closed'}" id="flagsPanel">
+
+            <button class="flags-head" id="flagsHead" aria-expanded="${isOpen}">
+                <span class="flags-head-icon">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+                </span>
+                <span class="flags-head-title">Funcionalidades</span>
+                <span class="flags-head-app">${appLabel}</span>
+                <span class="flags-head-count" title="${view.activeCount} activas de ${view.totalCount}">${view.activeCount}/${view.totalCount}</span>
+            </button>
+
+            <div class="flags-body" ${isOpen ? '' : 'hidden'}>
+
+                <!-- Buscador -->
+                <div class="flags-search">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="19" y1="19" x2="15" y2="15"/></svg>
+                    <input type="search" id="flagsSearch" placeholder="Buscar por nombre o descripción"
+                           value="${(state.flagsSearch || '').replace(/"/g, '&quot;')}">
+                    ${state.flagsSearch ? `<button class="flags-search-clear" id="flagsSearchClear" aria-label="Limpiar">×</button>` : ''}
                 </div>
-            ` : cats.map(cat => {
-                // Sort so parents render before their children, and
-                // children appear indented right below their parent.
-                const items = sortFlagsByDependency(groups[cat]);
-                return `
-                    <div class="side-flags-cat">${cat}</div>
-                    ${items.map(f => {
-                        const hasParent = !!f.parent;
-                        const parentEnabled = !hasParent || f.parent.enabled;
-                        // "Effectively enabled" means the toggle should render ON
-                        // only if the user turned it on AND parent is on.
-                        const effectiveOn = f.rawEnabled && parentEnabled;
+
+                <!-- Filtro segmentado -->
+                <div class="flags-filter" role="tablist">
+                    <button class="flags-filter-btn ${state.flagsFilter === 'all' ? 'active' : ''}"      data-flags-filter="all">Todas <span>${view.totalCount}</span></button>
+                    <button class="flags-filter-btn ${state.flagsFilter === 'active' ? 'active' : ''}"   data-flags-filter="active">Activas <span>${view.activeCount}</span></button>
+                    <button class="flags-filter-btn ${state.flagsFilter === 'inactive' ? 'active' : ''}" data-flags-filter="inactive">Inactivas <span>${view.totalCount - view.activeCount}</span></button>
+                </div>
+
+                <!-- Contenido -->
+                <div class="flags-scroll">
+                    ${view.groups.length === 0 ? `
+                        <div class="flags-empty">
+                            ${state.flagsSearch
+                                ? `Ningún flag coincide con «${state.flagsSearch}».`
+                                : state.flagsFilter === 'active'
+                                    ? 'No hay funcionalidades activas. Activa alguna abajo.'
+                                    : state.flagsFilter === 'inactive'
+                                        ? '¡Todas las funcionalidades están activas!'
+                                        : `Aún no hay funcionalidades en la ${appLabel}.`}
+                        </div>
+                    ` : view.groups.map(({ cat, items, activeCount, totalCount }) => {
+                        const collapsed = !!state.flagsCollapsed[cat];
                         return `
-                            <label class="side-flag-row ${hasParent ? 'is-child' : ''} ${hasParent && !parentEnabled ? 'is-locked' : ''}"
-                                   title="${f.description.replace(/"/g, '&quot;')}">
-                                <div class="side-flag-text">
-                                    <div class="side-flag-label">
-                                        ${hasParent ? '<span class="side-flag-arrow">↳</span>' : ''}
-                                        ${f.label}
-                                        ${f.app === 'shared' ? ' <span class="side-flag-shared">compartida</span>' : ''}
-                                    </div>
-                                    <div class="side-flag-desc">${f.description}</div>
-                                    ${hasParent ? `
-                                        <div class="side-flag-requires ${parentEnabled ? 'ok' : 'off'}">
-                                            ${parentEnabled ? '✓' : '⚠'} Requiere: ${f.parent.label}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                                <input type="checkbox"
-                                    class="side-flag-toggle"
-                                    data-flag-key="${f.key}"
-                                    ${effectiveOn ? 'checked' : ''}>
-                            </label>
+                            <div class="flags-group">
+                                <button class="flags-group-head" data-flags-group="${cat}" aria-expanded="${!collapsed}">
+                                    <span class="flags-group-chev ${collapsed ? 'collapsed' : ''}">
+                                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+                                    </span>
+                                    <span class="flags-group-title">${cat}</span>
+                                    <span class="flags-group-count">${activeCount}/${totalCount}</span>
+                                </button>
+                                ${collapsed ? '' : items.map(item => flagTreeHTML(item, 0)).join('')}
+                            </div>
                         `;
                     }).join('')}
-                `;
-            }).join('')}
-            ${active > 0 ? `
-                <button class="side-flags-reset" id="sideFlagsResetBtn">Desactivar todas</button>
-            ` : ''}
+                </div>
+
+                <!-- Footer: acciones -->
+                <div class="flags-foot">
+                    <button class="flags-foot-btn" id="flagsResetDefaults" title="Restablece cada flag a su valor por defecto">Por defecto</button>
+                    <button class="flags-foot-btn danger" id="flagsDisableAll" ${view.activeCount === 0 ? 'disabled' : ''}>Desactivar todas</button>
+                </div>
+            </div>
         </div>
     `;
 
-    // Toggle open/close
-    const head = $('#sideFlagsHead');
-    const body = $('#sideFlagsBody');
-    head.addEventListener('click', () => {
-        const expanded = head.getAttribute('aria-expanded') === 'true';
-        head.setAttribute('aria-expanded', String(!expanded));
-        body.style.display = expanded ? 'none' : '';
+    // Attach listeners
+    _attachFlagsPanelListeners();
+}
+
+function _attachFlagsPanelListeners() {
+    // Head: abrir/cerrar panel
+    const head = $('#flagsHead');
+    if (head) head.addEventListener('click', () => {
+        state.flagsOpen = !state.flagsOpen;
+        renderSidebarFlags();
     });
 
-    // Wire up toggles (stopPropagation so we don't collapse panel)
-    host.querySelectorAll('.side-flag-toggle').forEach(inp => {
+    // Buscador (no re-render global; update local)
+    const search = $('#flagsSearch');
+    if (search) search.addEventListener('input', e => {
+        state.flagsSearch = e.target.value;
+        renderSidebarFlags();
+        const again = $('#flagsSearch');
+        if (again) {
+            again.focus();
+            try { again.setSelectionRange(again.value.length, again.value.length); } catch {}
+        }
+    });
+    const clear = $('#flagsSearchClear');
+    if (clear) clear.addEventListener('click', () => {
+        state.flagsSearch = '';
+        renderSidebarFlags();
+    });
+
+    // Filtro segmentado
+    $$('[data-flags-filter]').forEach(b => b.addEventListener('click', () => {
+        state.flagsFilter = b.dataset.flagsFilter;
+        renderSidebarFlags();
+    }));
+
+    // Colapsar categoría
+    $$('[data-flags-group]').forEach(b => b.addEventListener('click', () => {
+        const cat = b.dataset.flagsGroup;
+        state.flagsCollapsed = { ...state.flagsCollapsed, [cat]: !state.flagsCollapsed[cat] };
+        renderSidebarFlags();
+    }));
+
+    // Toggles
+    $$('.flag-toggle input[type="checkbox"]').forEach(inp => {
         inp.addEventListener('click', e => e.stopPropagation());
         inp.addEventListener('change', () => {
             Flags.set(inp.dataset.flagKey, inp.checked);
         });
     });
 
-    const resetBtn = $('#sideFlagsResetBtn');
-    if (resetBtn) resetBtn.addEventListener('click', e => {
-        e.stopPropagation();
+    // Reset a defaults
+    const resetD = $('#flagsResetDefaults');
+    if (resetD) resetD.addEventListener('click', () => {
         Flags.resetAll();
+    });
+
+    // Desactivar todas
+    const disable = $('#flagsDisableAll');
+    if (disable) disable.addEventListener('click', () => {
+        // Apaga todos los flags del app actual (uno por uno para respetar cascada).
+        const app = state.app;
+        Flags.forApp(app).forEach(f => {
+            if (f.rawEnabled) Flags.set(f.key, false);
+        });
     });
 }
 

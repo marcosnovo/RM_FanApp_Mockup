@@ -4966,9 +4966,493 @@ body.auth-mode .app-layout { visibility: hidden; }
 
 
 /* ================================================================
-   SIDEBAR FEATURE FLAGS PANEL (per app)
+   SIDEBAR FEATURE FLAGS PANEL v2 (per app) — rediseño con search,
+   filter chips, árbol padre/hijo, status chips y acciones claras.
    ================================================================ */
 .side-flags {
+    padding: 0;
+    border-top: 1px solid #ffffff0a;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 60vh;
+}
+
+.flags-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1 1 auto;
+}
+
+.flags-panel.closed {
+    flex: 0 0 auto;
+}
+
+.flags-head {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    color: #ffffffbf;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: background 0.12s ease;
+}
+
+.flags-head:hover { background: #ffffff06; }
+
+.flags-head-icon {
+    color: #ffffff70;
+    display: flex;
+    transition: transform 0.2s ease;
+}
+
+.flags-panel.closed .flags-head-icon {
+    transform: rotate(-90deg);
+}
+
+.flags-head-title {
+    flex: 1;
+    text-align: left;
+}
+
+.flags-head-app {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(62, 49, 250, 0.22);
+    color: #cfcbff;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: none;
+}
+
+.flags-head-count {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #ffffff12;
+    color: #ffffffc0;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    text-transform: none;
+}
+
+.flags-body {
+    padding: 4px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: 8px;
+}
+
+/* ── Buscador ─────────────────────────────────────────────── */
+.flags-search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    height: 32px;
+    border-radius: 8px;
+    background: #ffffff0d;
+    border: 1px solid #ffffff14;
+}
+
+.flags-search > svg {
+    color: #ffffff80;
+    flex-shrink: 0;
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.flags-search input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    color: #fff;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 0;
+}
+
+.flags-search input::placeholder {
+    color: #ffffff70;
+}
+
+.flags-search-clear {
+    background: transparent;
+    border: 0;
+    color: #ffffff80;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+.flags-search-clear:hover { color: #fff; }
+
+/* ── Filtro segmentado (chips) ────────────────────────────── */
+.flags-filter {
+    display: flex;
+    gap: 4px;
+    background: #ffffff08;
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.flags-filter-btn {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    color: #ffffff9a;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 6px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: background 0.12s, color 0.12s;
+}
+
+.flags-filter-btn:hover { color: #fff; }
+
+.flags-filter-btn.active {
+    background: #ffffff16;
+    color: #fff;
+    font-weight: 600;
+}
+
+.flags-filter-btn span {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background: #ffffff14;
+    color: #ffffffad;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+.flags-filter-btn.active span {
+    background: var(--rm-primary);
+    color: #fff;
+}
+
+/* ── Lista scrolleable ────────────────────────────────────── */
+.flags-scroll {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 100px;
+    padding-right: 2px;
+    margin-right: -4px;
+}
+
+.flags-scroll::-webkit-scrollbar { width: 6px; }
+.flags-scroll::-webkit-scrollbar-thumb {
+    background: #ffffff1a;
+    border-radius: 3px;
+}
+
+/* ── Empty ───────────────────────────────────────────────── */
+.flags-empty {
+    font-size: 11.5px;
+    color: #ffffff80;
+    padding: 14px 12px;
+    background: #ffffff05;
+    border: 1px dashed #ffffff18;
+    border-radius: 9px;
+    line-height: 1.45;
+    text-align: center;
+}
+
+/* ── Grupo por categoría ─────────────────────────────────── */
+.flags-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.flags-group-head {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 6px;
+    color: #ffffffa0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 6px;
+}
+.flags-group-head:hover { color: #fff; background: #ffffff06; }
+
+.flags-group-chev {
+    display: inline-flex;
+    color: #ffffff80;
+    transition: transform 0.18s;
+}
+.flags-group-chev.collapsed { transform: rotate(-90deg); }
+
+.flags-group-title {
+    flex: 1;
+    text-align: left;
+}
+
+.flags-group-count {
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #ffffff10;
+    color: #ffffffa0;
+    font-variant-numeric: tabular-nums;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+}
+
+/* ── Árbol padre→hijos ───────────────────────────────────── */
+.flags-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.flags-tree-children {
+    position: relative;
+    padding-left: 18px;
+    margin-left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Línea vertical del árbol */
+.flags-tree-children::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 2px;
+    bottom: 10px;
+    width: 1px;
+    background: #ffffff18;
+}
+
+/* ── Row individual ──────────────────────────────────────── */
+.flag-row {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #ffffff07;
+    border: 1px solid #ffffff12;
+    border-radius: 10px;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.flag-row:hover {
+    background: #ffffff0c;
+    border-color: #ffffff22;
+}
+
+/* Child card: conector horizontal del árbol */
+.flag-row.is-child::before {
+    content: "";
+    position: absolute;
+    left: -18px;
+    top: 22px;
+    width: 14px;
+    height: 1px;
+    background: #ffffff22;
+}
+
+/* Card marcada cuando está ACTIVA */
+.flag-row.has-active,
+.flags-tree:has(> .flag-row .flag-toggle.on) > .flag-row,
+.flag-row:has(.flag-toggle.on) {
+    border-color: rgba(62, 49, 250, 0.45);
+    background: rgba(62, 49, 250, 0.08);
+}
+
+/* Bloqueada (padre off) — atenuada pero visible */
+.flag-row.is-locked {
+    opacity: 0.6;
+}
+
+.flag-row.is-locked .flag-toggle {
+    pointer-events: none;
+}
+
+.flag-row-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.flag-row-top {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 3px;
+}
+
+.flag-row-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.25;
+}
+
+.flag-row-scope {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(62, 49, 250, 0.2);
+    color: #cfcbff;
+}
+
+.flag-chip {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+}
+
+.flag-chip.on {
+    background: rgba(74, 222, 128, 0.18);
+    color: #7ee198;
+}
+
+.flag-chip.off {
+    background: #ffffff10;
+    color: #ffffff78;
+}
+
+.flag-chip.locked {
+    background: rgba(250, 180, 80, 0.16);
+    color: #f0b955;
+}
+
+.flag-row-desc {
+    font-size: 10.5px;
+    color: #ffffff80;
+    line-height: 1.4;
+}
+
+/* ── Toggle (switch) ─────────────────────────────────────── */
+.flag-toggle {
+    position: relative;
+    flex-shrink: 0;
+    width: 38px;
+    height: 22px;
+    border-radius: 999px;
+    background: #ffffff1d;
+    cursor: pointer;
+    margin-top: 2px;
+    transition: background 0.18s;
+}
+
+.flag-toggle input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    margin: 0;
+}
+
+.flag-toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 4px #00000055;
+    transition: transform 0.18s, background 0.18s;
+}
+
+.flag-toggle.on {
+    background: var(--rm-primary);
+}
+
+.flag-toggle.on .flag-toggle-knob {
+    transform: translateX(16px);
+}
+
+/* ── Footer con acciones ─────────────────────────────────── */
+.flags-foot {
+    display: flex;
+    gap: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #ffffff0e;
+    margin-top: 2px;
+}
+
+.flags-foot-btn {
+    flex: 1;
+    padding: 8px;
+    background: #ffffff08;
+    border: 1px solid #ffffff14;
+    border-radius: 8px;
+    color: #ffffffc0;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.flags-foot-btn:hover {
+    background: #ffffff10;
+    color: #fff;
+    border-color: #ffffff22;
+}
+
+.flags-foot-btn.danger {
+    color: #ffb0b0;
+}
+.flags-foot-btn.danger:hover {
+    background: rgba(217, 38, 38, 0.14);
+    border-color: rgba(217, 38, 38, 0.4);
+    color: #ff9a9a;
+}
+.flags-foot-btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ================================================================
+   SIDEBAR FEATURE FLAGS PANEL (legacy, por si algo aún lo referencia)
+   ================================================================ */
+.side-flags-legacy {
     padding: 4px 12px 14px;
     border-top: 1px solid #ffffff0a;
     flex-shrink: 0;
@@ -7627,40 +8111,42 @@ body.auth-mode .app-layout { visibility: hidden; }
 }
 
 /* ================================================================
-   HOY — Pestañas por equipo (flag 'fan.hoy.team-tabs')
+   HOY v2 — Pestañas por equipo (flag 'fan.hoy.team-tabs')
+   Anidadas bajo Hoy v2: por eso el fondo es claro y combinan con
+   el topbar de Hoy v2 (no con la cabecera oscura de Hoy v1).
    ================================================================ */
 
-.home-team-tabs {
+.hoy2-team-tabs {
     position: sticky;
-    top: 92px;            /* justo bajo `.home-top-row-fixed` (min-height 92) */
+    top: 0;
     z-index: 14;
-    background: var(--rm-dark);
+    background: var(--color-grayscale-bg, #F3F5F8);
     display: flex;
     align-items: stretch;
     min-height: 44px;
-    box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--rm-separator);
 }
 
-.home-team-tabs-scroll {
+.hoy2-team-tabs-scroll {
     flex: 1;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
     display: flex;
     gap: 20px;
-    padding: 0 18px;
+    padding: 0 16px;
     align-items: flex-end;
 }
-.home-team-tabs-scroll::-webkit-scrollbar { display: none; }
+.hoy2-team-tabs-scroll::-webkit-scrollbar { display: none; }
 
-.home-team-tab {
+.hoy2-team-tab {
     background: transparent;
     border: 0;
-    color: #ffffff8c;
+    color: var(--color-grayscale-placeholder, #8990a6);
     font-family: inherit;
     font-size: 14px;
     font-weight: 500;
-    padding: 0 2px 0;
+    padding: 0 2px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -7670,17 +8156,17 @@ body.auth-mode .app-layout { visibility: hidden; }
     flex: 0 0 auto;
 }
 
-.home-team-tab.active {
-    color: #fff;
+.hoy2-team-tab.active {
+    color: var(--rm-dark);
     font-weight: 600;
 }
 
-.home-team-tab-label {
+.hoy2-team-tab-label {
     padding: 12px 0 6px;
     line-height: 1;
 }
 
-.home-team-tab-underline {
+.hoy2-team-tab-underline {
     width: 100%;
     height: 2.5px;
     background: transparent;
@@ -7688,17 +8174,19 @@ body.auth-mode .app-layout { visibility: hidden; }
     transition: background 0.15s;
 }
 
-.home-team-tab.active .home-team-tab-underline {
-    background: #fff;
+.hoy2-team-tab.active .hoy2-team-tab-underline {
+    background: var(--rm-primary);
 }
 
-.home-team-tabs-edit {
+.hoy2-team-tabs-edit {
     flex: 0 0 auto;
     width: 44px;
     height: 44px;
-    background: linear-gradient(to right, rgba(15, 33, 69, 0), var(--rm-dark) 40%);
+    background: linear-gradient(to right,
+        rgba(243, 245, 248, 0),
+        var(--color-grayscale-bg, #F3F5F8) 40%);
     border: 0;
-    color: #ffffffcc;
+    color: var(--rm-dark-2);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -7706,19 +8194,23 @@ body.auth-mode .app-layout { visibility: hidden; }
     padding: 0;
 }
 
-.home-team-tabs-edit > svg {
+.hoy2-team-tabs-edit > svg {
     width: 18px !important;
     height: 18px !important;
 }
 
-/* Single-match mode (pestaña de equipo concreta).
-   Reutiliza .match-card pero sin el carrusel alrededor. */
-.match-single {
-    overflow: hidden;
+/* Cuando hay sólo un equipo seleccionado, la card del "próximo partido"
+   pasa a ocupar todo el ancho en vez de mantener el scroll horizontal. */
+.hoy2-nm-scroll.single {
+    overflow-x: hidden;
+    padding: 0 16px;
 }
 
-.match-single .match-card {
+.hoy2-nm-scroll.single .hoy2-nm-card {
+    min-width: 100%;
     width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
 }
 
 /* ================================================================

@@ -61,14 +61,17 @@ const FLAGS = [
         requires: 'fan.hoy.v2-structure'
     },
 
-    // ── Hoy — pestañas por equipo (sobre la Hoy clásica, v1) ──────
+    // ── Hoy v2 — pestañas por equipo ──────────────────────────────
+    // Anidada bajo `fan.hoy.v2-structure`: sólo tiene sentido encima del
+    // Hoy v2 (scroll vertical modular), no sobre la Hoy clásica.
     {
         app: 'fan',
         key: 'fan.hoy.team-tabs',
         label: 'Pestañas por equipo en Hoy',
-        description: 'Añade arriba del todo 4 pestañas: Todo · Fútbol masc. · Fútbol fem. · Baloncesto. "Todo" mantiene el diseño actual; cada equipo muestra sólo su contenido con un único bloque de partido.',
+        description: 'Añade arriba del todo 4 pestañas: Todo · Fútbol masc. · Fútbol fem. · Baloncesto. "Todo" mantiene el Hoy v2 completo; cada equipo filtra el contenido a ese deporte.',
         category: 'Hoy',
-        default: false
+        default: false,
+        requires: 'fan.hoy.v2-structure'
     },
     {
         app: 'fan',
