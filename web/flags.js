@@ -59,6 +59,44 @@ const FLAGS = [
         category: 'Hoy',
         default: false,
         requires: 'fan.hoy.v2-structure'
+    },
+
+    // ── Hoy — pestañas por equipo (sobre la Hoy clásica, v1) ──────
+    {
+        app: 'fan',
+        key: 'fan.hoy.team-tabs',
+        label: 'Pestañas por equipo en Hoy',
+        description: 'Añade arriba del todo 4 pestañas: Todo · Fútbol masc. · Fútbol fem. · Baloncesto. "Todo" mantiene el diseño actual; cada equipo muestra sólo su contenido con un único bloque de partido.',
+        category: 'Hoy',
+        default: false
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.team-tabs.emoji',
+        label: 'Pestañas con emojis',
+        description: 'Variante opcional de las pestañas con emojis (⚽️ Masculino, ⚽️ Femenino, 🏀 1er equipo) en lugar de texto plano. Más visual, ocupa algo más de ancho.',
+        category: 'Hoy',
+        default: false,
+        requires: 'fan.hoy.team-tabs'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.team-tabs.editor',
+        label: 'Editor de pestañas (activar/ocultar)',
+        description: 'Botón ⚙ junto a las pestañas que abre un editor para activar u ocultar cada pestaña de equipo. La pestaña «Todo» siempre se muestra.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.team-tabs'
+    },
+
+    // ── Side menu v2 ──────────────────────────────────────────────
+    {
+        app: 'fan',
+        key: 'fan.sidemenu.v2',
+        label: 'Side menu v2 — escalable',
+        description: 'Rediseña el menú lateral con header compacto, buscador, accesos rápidos y secciones agrupadas (Tu cuenta · Preferencias · App · Ayuda · Legal) para que escale bien al añadir más opciones.',
+        category: 'Navegación',
+        default: false
     }
 
     // ── VIP App flags ─────────────────────────────────────────────

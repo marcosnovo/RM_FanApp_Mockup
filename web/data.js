@@ -151,6 +151,11 @@ function bigCrestFor(teamName) {
 }
 
 // ── Header matches carousel ─────────────────────────────────────
+//
+// Cada partido declara `category`: 'masc' | 'fem' | 'basket'.
+// Las pestañas por equipo en Hoy (flag `fan.hoy.team-tabs`) filtran
+// por este campo. En la pestaña "Todo" se muestran todos en el
+// carrusel clásico.
 const HEADER_MATCHES = [
     {
         competition: 'CHAMPIONS LEAGUE',
@@ -167,7 +172,8 @@ const HEADER_MATCHES = [
         awayScorers: '',
         matchInfo: 'Fútbol · Primer Equipo\nCuartos de final (vuelta) · Allianz Arena',
         status: 'upcoming',
-        stats: []
+        stats: [],
+        category: 'masc'
     },
     {
         competition: 'LALIGA EA SPORTS',
@@ -184,6 +190,7 @@ const HEADER_MATCHES = [
         awayScorers: "Stuani 88'",
         matchInfo: 'Fútbol · Primer Equipo\nJornada 31 · Santiago Bernabéu',
         status: 'finished',
+        category: 'masc',
         stats: [
             { label: 'Posesión',            home: 54, away: 46, isPercent: true },
             { label: 'Tiros totales',       home: 16, away: 9,  isPercent: false },
@@ -209,6 +216,7 @@ const HEADER_MATCHES = [
         awayScorers: "Vinicius 55'",
         matchInfo: 'Fútbol · Primer Equipo\nJornada 30 · Iberostar Estadi',
         status: 'finished',
+        category: 'masc',
         stats: [
             { label: 'Posesión',            home: 38, away: 62, isPercent: true },
             { label: 'Tiros totales',       home: 8,  away: 18, isPercent: false },
@@ -234,6 +242,7 @@ const HEADER_MATCHES = [
         awayScorers: "Foden 45'",
         matchInfo: 'Fútbol · Primer Equipo\nCuartos de final (ida) · Santiago Bernabéu',
         status: 'finished',
+        category: 'masc',
         stats: [
             { label: 'Posesión',            home: 48, away: 52, isPercent: true },
             { label: 'Tiros totales',       home: 14, away: 11, isPercent: false },
@@ -259,6 +268,7 @@ const HEADER_MATCHES = [
         awayScorers: '',
         matchInfo: 'Fútbol · Primer Equipo\nJornada 29 · Santiago Bernabéu',
         status: 'finished',
+        category: 'masc',
         stats: [
             { label: 'Posesión',            home: 61, away: 39, isPercent: true },
             { label: 'Tiros totales',       home: 19, away: 7,  isPercent: false },
@@ -267,6 +277,94 @@ const HEADER_MATCHES = [
             { label: 'Faltas',              home: 8,  away: 15, isPercent: false },
             { label: 'Fuera de juego',      home: 4,  away: 0,  isPercent: false },
             { label: 'Tarjetas amarillas',  home: 1,  away: 3,  isPercent: false }
+        ]
+    },
+
+    // ── Fútbol femenino ────────────────────────────────────────────
+    {
+        competition: 'LIGA F',
+        dateString: 'Dom 19 abr · 12:00',
+        homeTeam: 'Real Madrid',
+        homeTeamColor: RM_BLUE,
+        homeTeamSymbol: ICON_CROWN,
+        homeScore: null,
+        homeScorers: '',
+        awayTeam: 'FC Barcelona',
+        awayTeamColor: '#990033',
+        awayTeamSymbol: ICON_SHIELD,
+        awayScore: null,
+        awayScorers: '',
+        matchInfo: 'Fútbol Femenino\nJornada 28 · Alfredo Di Stéfano',
+        status: 'upcoming',
+        category: 'fem',
+        stats: []
+    },
+    {
+        competition: 'LIGA F',
+        dateString: 'Sáb 5 abr · 18:30',
+        homeTeam: 'Real Madrid',
+        homeTeamColor: RM_BLUE,
+        homeTeamSymbol: ICON_CROWN,
+        homeScore: 2,
+        homeScorers: "Caroline Weir 22' · Caicedo 67'",
+        awayTeam: 'Atlético de Madrid',
+        awayTeamColor: '#d92626',
+        awayTeamSymbol: ICON_SHIELD,
+        awayScore: 1,
+        awayScorers: "Eva Navarro 54'",
+        matchInfo: 'Fútbol Femenino\nJornada 27 · Alfredo Di Stéfano',
+        status: 'finished',
+        category: 'fem',
+        stats: [
+            { label: 'Posesión',            home: 57, away: 43, isPercent: true },
+            { label: 'Tiros totales',       home: 13, away: 8,  isPercent: false },
+            { label: 'Tiros a puerta',      home: 5,  away: 3,  isPercent: false },
+            { label: 'Córners',             home: 6,  away: 2,  isPercent: false },
+            { label: 'Faltas',              home: 9,  away: 13, isPercent: false }
+        ]
+    },
+
+    // ── Baloncesto ─────────────────────────────────────────────────
+    {
+        competition: 'EUROLEAGUE',
+        dateString: 'Vie 17 abr · 20:30',
+        homeTeam: 'Real Madrid',
+        homeTeamColor: RM_BLUE,
+        homeTeamSymbol: ICON_CROWN,
+        homeScore: null,
+        homeScorers: '',
+        awayTeam: 'Panathinaikos',
+        awayTeamColor: '#0b7a2e',
+        awayTeamSymbol: ICON_SHIELD,
+        awayScore: null,
+        awayScorers: '',
+        matchInfo: 'Baloncesto · Primer Equipo\nPlayoff (Partido 3) · WiZink Center',
+        status: 'upcoming',
+        category: 'basket',
+        stats: []
+    },
+    {
+        competition: 'LIGA ENDESA',
+        dateString: 'Mar 8 abr · 19:00',
+        homeTeam: 'Real Madrid',
+        homeTeamColor: RM_BLUE,
+        homeTeamSymbol: ICON_CROWN,
+        homeScore: 88,
+        homeScorers: 'Campazzo 21 · Tavares 14',
+        awayTeam: 'FC Barcelona',
+        awayTeamColor: '#990033',
+        awayTeamSymbol: ICON_SHIELD,
+        awayScore: 83,
+        awayScorers: 'Vesely 18 · Laprovíttola 15',
+        matchInfo: 'Baloncesto · Primer Equipo\nJornada 29 · WiZink Center',
+        status: 'finished',
+        category: 'basket',
+        stats: [
+            { label: 'Tiros de 2',   home: 58, away: 49, isPercent: true },
+            { label: 'Triples',      home: 42, away: 33, isPercent: true },
+            { label: 'Tiros libres', home: 82, away: 74, isPercent: true },
+            { label: 'Rebotes',      home: 38, away: 31, isPercent: false },
+            { label: 'Asistencias',  home: 22, away: 16, isPercent: false }
         ]
     }
 ];

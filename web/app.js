@@ -39,6 +39,16 @@ const state = {
     predictionDraft: {},        // { [matchId]: { home, away } } working values
     openRanking: false,
 
+    // Hoy — pestañas por equipo (flag 'fan.hoy.team-tabs')
+    // Persistidas en localStorage vía HoyTeamTabs.
+    hoyTeamFilter: 'all',                                // 'all' | 'masc' | 'fem' | 'basket'
+    hoyTabsVisible: { masc: true, fem: true, basket: true },
+    hoyTabsEmoji: false,
+    hoyEditorOpen: false,
+
+    // Side menu v2 (flag 'fan.sidemenu.v2')
+    sideMenuSearch: '',
+
     // VIP App state
     vipTab: 'inicio',             // 'inicio' | 'eventos' | 'gestor' | 'perfil'
     vipEventId: null,             // null = list; id = detail
@@ -1008,9 +1018,121 @@ function renderHoyV2Survey(survey) {
     `;
 }
 
+// ================================================================
+// HOY — Pestañas por equipo (flag 'fan.hoy.team-tabs')
+// ================================================================
+//
+// Añade 4 pestañas sobre el Hoy clásico: Todo · Masc · Fem · Basket.
+// · "Todo" preserva el carrusel de partidos (comportamiento original).
+// · Cada pestaña de equipo filtra HEADER_MATCHES por `category` y
+//   muestra un único bloque (el próximo partido, o el más reciente
+//   si no hay próximo).
+//
+// Persistencia: localStorage para recordar entre recargas la pestaña
+// seleccionada, qué pestañas están visibles y si se muestran emojis.
+
+const HOY_TABS_STORAGE_KEY   = 'rm_hoy_team_tabs_v1';
+
+const HoyTeamTabs = {
+    DEFAULT_VISIBLE: { masc: true, fem: true, basket: true },
+
+    /** { filter, visible, emojiMode } con defaults aplicados. */
+    load() {
+        let raw = {};
+        try { raw = JSON.parse(localStorage.getItem(HOY_TABS_STORAGE_KEY) || '{}'); }
+        catch {}
+        return {
+            filter: raw.filter || 'all',   // 'all' | 'masc' | 'fem' | 'basket'
+            visible: { ...this.DEFAULT_VISIBLE, ...(raw.visible || {}) },
+            emojiMode: !!raw.emojiMode
+        };
+    },
+
+    save(next) {
+        try { localStorage.setItem(HOY_TABS_STORAGE_KEY, JSON.stringify(next)); }
+        catch {}
+    },
+
+    hydrate() {
+        const s = this.load();
+        state.hoyTeamFilter   = s.filter;
+        state.hoyTabsVisible  = s.visible;
+        state.hoyTabsEmoji    = s.emojiMode;
+    },
+
+    persist() {
+        this.save({
+            filter: state.hoyTeamFilter,
+            visible: state.hoyTabsVisible,
+            emojiMode: state.hoyTabsEmoji
+        });
+    },
+
+    /** Etiqueta visible para una categoría según el modo. */
+    labelFor(key) {
+        if (key === 'all') return 'Todo';
+        const emoji = state.hoyTabsEmoji;
+        if (key === 'masc')   return emoji ? '⚽️ Masculino'  : 'Fútbol masc.';
+        if (key === 'fem')    return emoji ? '⚽️ Femenino'   : 'Fútbol fem.';
+        if (key === 'basket') return emoji ? '🏀 1er equipo' : 'Baloncesto';
+        return key;
+    },
+
+    /** Lista de tabs a renderizar según la configuración. */
+    visibleTabKeys() {
+        const list = ['all'];
+        if (state.hoyTabsVisible.masc)   list.push('masc');
+        if (state.hoyTabsVisible.fem)    list.push('fem');
+        if (state.hoyTabsVisible.basket) list.push('basket');
+        return list;
+    },
+
+    /** Partidos visibles bajo la pestaña actual. */
+    matchesForFilter() {
+        const f = state.hoyTeamFilter;
+        if (f === 'all') return HEADER_MATCHES;
+        return HEADER_MATCHES.filter(m => m.category === f);
+    },
+
+    /** Partido "principal" cuando hay un equipo concreto: próximo > último. */
+    primaryMatchForFilter() {
+        const list = this.matchesForFilter();
+        const next = list.find(m => m.status === 'upcoming' || m.status === 'live');
+        return next || list[0] || null;
+    }
+};
+
 // ── HOY view ────────────────────────────────────────────────────
 function renderHoy() {
-    const match = HEADER_MATCHES[state.matchIndex];
+    const teamTabsOn = Flags.isEnabled('fan.hoy.team-tabs');
+    const editorOn   = Flags.isEnabled('fan.hoy.team-tabs.editor');
+
+    // Si se ocultó la pestaña actualmente seleccionada, caemos a "Todo".
+    if (teamTabsOn
+        && state.hoyTeamFilter !== 'all'
+        && !state.hoyTabsVisible[state.hoyTeamFilter]) {
+        state.hoyTeamFilter = 'all';
+        HoyTeamTabs.persist();
+    }
+
+    // Partido a mostrar:
+    //  · Todo → carrusel clásico (usa state.matchIndex).
+    //  · Equipo concreto → un único partido (próximo / último).
+    let match;
+    let singleMode = false;
+    if (teamTabsOn && state.hoyTeamFilter !== 'all') {
+        match = HoyTeamTabs.primaryMatchForFilter();
+        singleMode = true;
+    } else {
+        // Clamp en caso de que el índice haya quedado fuera de rango.
+        if (state.matchIndex < 0 || state.matchIndex >= HEADER_MATCHES.length) {
+            state.matchIndex = 0;
+        }
+        match = HEADER_MATCHES[state.matchIndex];
+    }
+
+    // Si no hay partido (p.ej. pestaña sin datos), usamos un placeholder.
+    if (!match) match = HEADER_MATCHES[0];
 
     // Upcoming matches only expose Directo/Jornada; finished & live expose all 4
     const upcoming = match.status === 'upcoming';
@@ -1024,6 +1146,50 @@ function renderHoy() {
     const smallHomeCrest = bigCrestFor(match.homeTeam);
     const smallAwayCrest = bigCrestFor(match.awayTeam);
 
+    // Top-row center: dots (Todo) vs crest+fecha (single-team).
+    // En single-team no tiene sentido mostrar los dots del carrusel.
+    const topCenter = singleMode
+        ? `
+            <div class="home-top-collapsed" id="homeCollapsedFade" style="opacity: 1">
+                <div class="home-top-mini-crest">${smallHomeCrest}</div>
+                <span class="home-top-datetime">${match.dateString.replace(' · ', ' - ')}</span>
+                <div class="home-top-mini-crest">${smallAwayCrest}</div>
+            </div>
+        `
+        : `
+            <div class="home-top-dots" id="homeDotsFade">
+                ${HEADER_MATCHES.map((_, i) => `
+                    <button class="home-dot ${i === state.matchIndex ? 'active' : ''}" data-match="${i}" aria-label="Match ${i + 1}"></button>
+                `).join('')}
+            </div>
+            <div class="home-top-collapsed" id="homeCollapsedFade">
+                <div class="home-top-mini-crest">${smallHomeCrest}</div>
+                <span class="home-top-datetime">${match.dateString.replace(' · ', ' - ')}</span>
+                <div class="home-top-mini-crest">${smallAwayCrest}</div>
+            </div>
+        `;
+
+    // Bloque de partido: carrusel en "Todo", card única en pestaña de equipo.
+    const matchArea = singleMode
+        ? `
+            <div class="home-match-area">
+                <div class="match-single">
+                    ${renderMatchCard(match)}
+                </div>
+            </div>
+        `
+        : `
+            <div class="home-match-area">
+                <div class="match-carousel" id="matchCarousel">
+                    <button class="carousel-nav prev" data-carousel-prev>${I.chevronLeft}</button>
+                    <div class="match-carousel-track" id="matchTrack" style="transform: translateX(-${state.matchIndex * 100}%)">
+                        ${HEADER_MATCHES.map(m => renderMatchCard(m)).join('')}
+                    </div>
+                    <button class="carousel-nav next" data-carousel-next>${I.chevronRight}</button>
+                </div>
+            </div>
+        `;
+
     return `
         <div class="home-wrap" id="homeWrap">
             <!-- Fixed top row (morphs during scroll) -->
@@ -1034,16 +1200,7 @@ function renderHoy() {
                 </button>
 
                 <div class="home-top-center">
-                    <div class="home-top-dots" id="homeDotsFade">
-                        ${HEADER_MATCHES.map((_, i) => `
-                            <button class="home-dot ${i === state.matchIndex ? 'active' : ''}" data-match="${i}" aria-label="Match ${i + 1}"></button>
-                        `).join('')}
-                    </div>
-                    <div class="home-top-collapsed" id="homeCollapsedFade">
-                        <div class="home-top-mini-crest">${smallHomeCrest}</div>
-                        <span class="home-top-datetime">${match.dateString.replace(' · ', ' - ')}</span>
-                        <div class="home-top-mini-crest">${smallAwayCrest}</div>
-                    </div>
+                    ${topCenter}
                 </div>
 
                 <button class="home-top-btn">
@@ -1052,17 +1209,11 @@ function renderHoy() {
                 </button>
             </div>
 
+            ${teamTabsOn ? renderHoyTeamTabsBar(editorOn) : ''}
+
             <!-- Scrollable area: match carousel + segment bar + content -->
             <div class="home-scroll-content">
-                <div class="home-match-area">
-                    <div class="match-carousel" id="matchCarousel">
-                        <button class="carousel-nav prev" data-carousel-prev>${I.chevronLeft}</button>
-                        <div class="match-carousel-track" id="matchTrack" style="transform: translateX(-${state.matchIndex * 100}%)">
-                            ${HEADER_MATCHES.map(m => renderMatchCard(m)).join('')}
-                        </div>
-                        <button class="carousel-nav next" data-carousel-next>${I.chevronRight}</button>
-                    </div>
-                </div>
+                ${matchArea}
 
                 <div class="home-segment-bar" id="homeSegmentBar">
                     ${segments.map(([key, label]) => `
@@ -1078,6 +1229,82 @@ function renderHoy() {
         </div>
 
         ${renderSideMenu()}
+        ${state.hoyEditorOpen ? renderHoyTabsEditorSheet() : ''}
+    `;
+}
+
+// ── Team tabs bar (sticky, debajo del top row) ─────────────────
+function renderHoyTeamTabsBar(editorOn) {
+    const tabs = HoyTeamTabs.visibleTabKeys();
+    const current = state.hoyTeamFilter;
+
+    return `
+        <div class="home-team-tabs" id="homeTeamTabs">
+            <div class="home-team-tabs-scroll">
+                ${tabs.map(k => `
+                    <button class="home-team-tab ${k === current ? 'active' : ''}" data-team-tab="${k}">
+                        <span class="home-team-tab-label">${HoyTeamTabs.labelFor(k)}</span>
+                        <span class="home-team-tab-underline"></span>
+                    </button>
+                `).join('')}
+            </div>
+            ${editorOn ? `
+                <button class="home-team-tabs-edit" id="btnHoyTabsEditor" aria-label="Editar pestañas">
+                    ${I.slider}
+                </button>
+            ` : ''}
+        </div>
+    `;
+}
+
+// ── Editor sheet: qué pestañas mostrar + modo emoji ────────────
+function renderHoyTabsEditorSheet() {
+    const v = state.hoyTabsVisible;
+    const emoji = state.hoyTabsEmoji;
+
+    const row = (teamKey, description) => `
+        <label class="hoy-tabs-editor-row">
+            <div class="hoy-tabs-editor-row-main">
+                <div class="hoy-tabs-editor-row-title">${HoyTeamTabs.labelFor(teamKey)}</div>
+                <div class="hoy-tabs-editor-row-sub">${description}</div>
+            </div>
+            <span class="hoy-tabs-editor-toggle ${v[teamKey] ? 'on' : ''}" data-editor-toggle="${teamKey}">
+                <span class="hoy-tabs-editor-knob"></span>
+            </span>
+        </label>
+    `;
+
+    return `
+        <div class="hoy-tabs-editor-overlay" id="hoyTabsEditorOverlay">
+            <div class="hoy-tabs-editor-dim" data-editor-close></div>
+            <div class="hoy-tabs-editor-sheet" role="dialog" aria-label="Editar pestañas de Hoy">
+                <div class="hoy-tabs-editor-head">
+                    <div class="hoy-tabs-editor-title">Editar pestañas</div>
+                    <button class="hoy-tabs-editor-done" data-editor-close>Hecho</button>
+                </div>
+
+                <div class="hoy-tabs-editor-section-title">Pestañas visibles en Hoy</div>
+                <div class="hoy-tabs-editor-group">
+                    ${row('masc',   'Primer equipo · Fútbol masculino')}
+                    ${row('fem',    'Primer equipo · Fútbol femenino')}
+                    ${row('basket', 'Primer equipo · Baloncesto')}
+                </div>
+                <div class="hoy-tabs-editor-foot">La pestaña «Todo» siempre se muestra.</div>
+
+                <div class="hoy-tabs-editor-section-title">Apariencia</div>
+                <div class="hoy-tabs-editor-group">
+                    <label class="hoy-tabs-editor-row">
+                        <div class="hoy-tabs-editor-row-main">
+                            <div class="hoy-tabs-editor-row-title">Mostrar emojis en las pestañas</div>
+                            <div class="hoy-tabs-editor-row-sub">⚽️ Masculino / ⚽️ Femenino / 🏀 1er equipo</div>
+                        </div>
+                        <span class="hoy-tabs-editor-toggle ${emoji ? 'on' : ''}" data-editor-emoji>
+                            <span class="hoy-tabs-editor-knob"></span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
     `;
 }
 
@@ -2526,6 +2753,12 @@ function attachVipListeners() {
 
 // ── SIDE MENU (¡Hola!) ──────────────────────────────────────────
 function renderSideMenu() {
+    return Flags.isEnabled('fan.sidemenu.v2')
+        ? renderSideMenuV2()
+        : renderSideMenuV1();
+}
+
+function renderSideMenuV1() {
     return `
         <div class="side-menu-overlay ${state.sideMenuOpen ? 'visible' : ''}" id="sideMenuOverlay">
             <div class="side-menu-dim" id="sideMenuDim"></div>
@@ -2567,6 +2800,150 @@ function renderSideMenu() {
             </div>
         </div>
     `;
+}
+
+// ================================================================
+// Side menu V2 — estructura escalable
+// ----------------------------------------------------------------
+//  · Header: avatar + saludo + CTA de login compacta.
+//  · Buscador de ajustes (filtra las secciones en vivo).
+//  · Accesos rápidos (Carnet / Entradas / Radio / Cerca / Tienda).
+//  · Secciones agrupadas: Tu cuenta · Preferencias · App · Ayuda · Legal.
+//  · Footer: sponsors + versión en una línea.
+//
+// Añadir nuevas opciones es cuestión de meter un item en `_v2Sections`.
+// ================================================================
+
+function renderSideMenuV2() {
+    const q = (state.sideMenuSearch || '').trim().toLowerCase();
+    const sections = _v2Sections().map(sec => ({
+        ...sec,
+        items: q
+            ? sec.items.filter(it => it.title.toLowerCase().includes(q))
+            : sec.items
+    })).filter(sec => sec.items.length > 0);
+
+    return `
+        <div class="side-menu-overlay v2 ${state.sideMenuOpen ? 'visible' : ''}" id="sideMenuOverlay">
+            <div class="side-menu-dim" id="sideMenuDim"></div>
+            <div class="side-menu-panel v2">
+
+                <div class="sm2-topbar">
+                    <button class="sm2-close" id="sideMenuClose" aria-label="Cerrar">${I.xmark}</button>
+                    <div class="sm2-topbar-title">Tu área</div>
+                    <div class="sm2-topbar-spacer"></div>
+                </div>
+
+                <div class="sm2-scroll">
+                    <div class="sm2-header">
+                        <div class="sm2-avatar">${I.person}</div>
+                        <div class="sm2-header-text">
+                            <div class="sm2-hello">¡Hola!</div>
+                            <div class="sm2-hello-sub">Inicia sesión para personalizar tu experiencia</div>
+                        </div>
+                    </div>
+                    <button class="sm2-login">
+                        Inicia sesión o regístrate ${I.arrowRight}
+                    </button>
+
+                    <label class="sm2-search">
+                        ${I.search}
+                        <input type="search" id="sideMenuSearch" placeholder="Buscar en ajustes"
+                               value="${state.sideMenuSearch || ''}">
+                    </label>
+
+                    ${q ? '' : `
+                        <div class="sm2-quick">
+                            ${[
+                                { icon: I.star,       label: 'Carnet' },
+                                { icon: I.calendar,   label: 'Entradas' },
+                                { icon: I.radio,      label: 'Radio' },
+                                { icon: I.photo,      label: 'Cerca' },
+                                { icon: I.cart,       label: 'Tienda' }
+                            ].map(q => `
+                                <button class="sm2-quick-btn">
+                                    <span class="sm2-quick-icon">${q.icon}</span>
+                                    <span class="sm2-quick-label">${q.label}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    `}
+
+                    ${sections.map(sec => `
+                        <div class="sm2-section">
+                            <div class="sm2-section-title">${sec.title}</div>
+                            <div class="sm2-section-card">
+                                ${sec.items.map((it, i) => `
+                                    <button class="sm2-row" ${it.action ? `data-sm2-action="${it.action}"` : ''}>
+                                        <span class="sm2-row-icon">${it.icon}</span>
+                                        <span class="sm2-row-title">${it.title}</span>
+                                        ${it.badge ? `<span class="sm2-row-badge">${it.badge}</span>` : ''}
+                                        ${it.trailing ? `<span class="sm2-row-trailing">${it.trailing}</span>` : ''}
+                                        <span class="sm2-row-chev">${I.chevronRight}</span>
+                                    </button>
+                                    ${i < sec.items.length - 1 ? '<div class="sm2-row-sep"></div>' : ''}
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+
+                    ${sections.length === 0 ? `
+                        <div class="sm2-empty">No hay resultados para «${q}».</div>
+                    ` : ''}
+
+                    <div class="sm2-footer">
+                        <div class="sm2-footer-sponsors">
+                            <span class="sm2-sponsor-emirates">${I.airplane} Emirates</span>
+                            <span class="sm2-sponsor-adidas"><span></span><span></span><span></span></span>
+                        </div>
+                        <div class="sm2-footer-version">10.2.11 (15970)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function _v2Sections() {
+    // Preferencias — incluye el editor de pestañas si el flag está ON.
+    const preferences = [
+        { icon: I.star,       title: 'Equipos favoritos' },
+        { icon: I.figureRun,  title: 'Notificaciones', badge: '3' },
+        { icon: I.doc,        title: 'Idioma', trailing: 'Español' },
+        { icon: I.photo,      title: 'Apariencia', trailing: 'Sistema' }
+    ];
+    if (Flags.isEnabled('fan.hoy.team-tabs') && Flags.isEnabled('fan.hoy.team-tabs.editor')) {
+        preferences.push({
+            icon: I.slider,
+            title: 'Editar pestañas de Hoy',
+            action: 'open-hoy-tabs-editor'
+        });
+    }
+
+    return [
+        { title: 'TU CUENTA', items: [
+            { icon: I.person,       title: 'Mi perfil' },
+            { icon: I.calendar,     title: 'Mis entradas' },
+            { icon: I.cart,         title: 'Carnet digital' },
+            { icon: I.star,         title: 'Socios & Madridistas' }
+        ]},
+        { title: 'PREFERENCIAS', items: preferences },
+        { title: 'APP', items: [
+            { icon: I.gear,         title: 'Configuración de la app' },
+            { icon: I.sportscourt,  title: 'Novedades' },
+            { icon: I.thumbUp,      title: 'Valorar la app' }
+        ]},
+        { title: 'AYUDA', items: [
+            { icon: I.doc,          title: 'Centro de ayuda' },
+            { icon: I.photo,        title: 'Contacto' },
+            { icon: I.thumbUp,      title: 'Danos tu opinión' }
+        ]},
+        { title: 'LEGAL', items: [
+            { icon: I.doc,          title: 'Términos y condiciones' },
+            { icon: I.doc,          title: 'Privacidad' },
+            { icon: I.doc,          title: 'Cookies' }
+        ]}
+    ];
 }
 
 // ── Status bar style helpers ─────────────────────────────────────
@@ -2917,6 +3294,82 @@ function attachListeners() {
     };
     if (close) close.addEventListener('click', closeMenu);
     if (dim)   dim.addEventListener('click', closeMenu);
+
+    // ── Hoy: pestañas por equipo (flag 'fan.hoy.team-tabs') ─────
+    $$('[data-team-tab]').forEach(btn => btn.addEventListener('click', () => {
+        const key = btn.dataset.teamTab;
+        if (state.hoyTeamFilter === key) return;
+        state.hoyTeamFilter = key;
+        state.matchIndex = 0;        // reset carousel position si se vuelve a "Todo"
+        state.sub = 'directo';       // volver a la sub-tab por defecto
+        state.statsTab = 0;
+        HoyTeamTabs.persist();
+        render();
+    }));
+
+    // Abrir editor de pestañas
+    const editorBtn = $('#btnHoyTabsEditor');
+    if (editorBtn) editorBtn.addEventListener('click', () => {
+        state.hoyEditorOpen = true;
+        render();
+    });
+
+    // Cerrar editor (botón Hecho / tap en el dim)
+    $$('[data-editor-close]').forEach(el => el.addEventListener('click', () => {
+        state.hoyEditorOpen = false;
+        render();
+    }));
+
+    // Toggle visibilidad de una pestaña de equipo
+    $$('[data-editor-toggle]').forEach(sw => sw.addEventListener('click', e => {
+        e.preventDefault();
+        const key = sw.dataset.editorToggle;
+        state.hoyTabsVisible = {
+            ...state.hoyTabsVisible,
+            [key]: !state.hoyTabsVisible[key]
+        };
+        // Si deshabilitas la pestaña activa, salta a "Todo".
+        if (!state.hoyTabsVisible[key] && state.hoyTeamFilter === key) {
+            state.hoyTeamFilter = 'all';
+        }
+        HoyTeamTabs.persist();
+        render();
+    }));
+
+    // Toggle modo emoji
+    const emojiSw = $('[data-editor-emoji]');
+    if (emojiSw) emojiSw.addEventListener('click', e => {
+        e.preventDefault();
+        state.hoyTabsEmoji = !state.hoyTabsEmoji;
+        HoyTeamTabs.persist();
+        render();
+    });
+
+    // ── Side menu v2: buscador + acciones ──────────────────────
+    const searchInput = $('#sideMenuSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', e => {
+            state.sideMenuSearch = e.target.value;
+            // Re-render y devolvemos el foco al input (la re-render
+            // recrea el DOM, así que recuperamos caret/selection).
+            const caret = e.target.selectionStart;
+            render();
+            const again = $('#sideMenuSearch');
+            if (again) {
+                again.focus();
+                try { again.setSelectionRange(caret, caret); } catch {}
+            }
+        });
+    }
+
+    $$('[data-sm2-action]').forEach(btn => btn.addEventListener('click', () => {
+        const action = btn.dataset.sm2Action;
+        if (action === 'open-hoy-tabs-editor') {
+            state.sideMenuOpen = false;
+            state.hoyEditorOpen = true;
+            render();
+        }
+    }));
 
     // ── Hoy v2 listeners ────────────────────────────────────────
     // "Ver todas" / RMTV / Calendario section CTAs
@@ -4219,6 +4672,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Rehydrate feature-flag state that lives in localStorage
         if (typeof Gamification !== 'undefined') Gamification.hydrate();
+        if (typeof HoyTeamTabs   !== 'undefined') HoyTeamTabs.hydrate();
 
         // Re-render the entire app when a feature flag changes so new UI
         // gated behind the flag appears / disappears instantly.

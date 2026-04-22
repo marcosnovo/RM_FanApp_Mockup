@@ -7625,3 +7625,564 @@ body.auth-mode .app-layout { visibility: hidden; }
     .invite-actions .auth-primary-btn { margin-left: 0; width: 100%; }
     .invite-actions { flex-direction: column; align-items: stretch; }
 }
+
+/* ================================================================
+   HOY — Pestañas por equipo (flag 'fan.hoy.team-tabs')
+   ================================================================ */
+
+.home-team-tabs {
+    position: sticky;
+    top: 92px;            /* justo bajo `.home-top-row-fixed` (min-height 92) */
+    z-index: 14;
+    background: var(--rm-dark);
+    display: flex;
+    align-items: stretch;
+    min-height: 44px;
+    box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.08);
+}
+
+.home-team-tabs-scroll {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    display: flex;
+    gap: 20px;
+    padding: 0 18px;
+    align-items: flex-end;
+}
+.home-team-tabs-scroll::-webkit-scrollbar { display: none; }
+
+.home-team-tab {
+    background: transparent;
+    border: 0;
+    color: #ffffff8c;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 2px 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+.home-team-tab.active {
+    color: #fff;
+    font-weight: 600;
+}
+
+.home-team-tab-label {
+    padding: 12px 0 6px;
+    line-height: 1;
+}
+
+.home-team-tab-underline {
+    width: 100%;
+    height: 2.5px;
+    background: transparent;
+    border-radius: 2px;
+    transition: background 0.15s;
+}
+
+.home-team-tab.active .home-team-tab-underline {
+    background: #fff;
+}
+
+.home-team-tabs-edit {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(to right, rgba(15, 33, 69, 0), var(--rm-dark) 40%);
+    border: 0;
+    color: #ffffffcc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.home-team-tabs-edit > svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+/* Single-match mode (pestaña de equipo concreta).
+   Reutiliza .match-card pero sin el carrusel alrededor. */
+.match-single {
+    overflow: hidden;
+}
+
+.match-single .match-card {
+    width: 100%;
+}
+
+/* ================================================================
+   HOY — Editor de pestañas (hoja modal)
+   ================================================================ */
+
+.hoy-tabs-editor-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeIn 0.18s ease;
+}
+
+.hoy-tabs-editor-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.42);
+}
+
+.hoy-tabs-editor-sheet {
+    position: relative;
+    width: 100%;
+    max-height: 82%;
+    background: var(--rm-bg-secondary);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    padding: 6px 18px 28px;
+    overflow-y: auto;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.hoy-tabs-editor-sheet::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--rm-separator);
+    margin: 8px auto 12px;
+}
+
+.hoy-tabs-editor-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 4px 14px;
+}
+
+.hoy-tabs-editor-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--rm-dark);
+}
+
+.hoy-tabs-editor-done {
+    background: transparent;
+    border: 0;
+    color: var(--rm-primary);
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 6px 4px;
+    font-family: inherit;
+}
+
+.hoy-tabs-editor-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-grayscale-placeholder, #8990a6);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 6px 8px 6px;
+}
+
+.hoy-tabs-editor-group {
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.hoy-tabs-editor-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--rm-separator);
+    cursor: pointer;
+}
+.hoy-tabs-editor-row:last-child { border-bottom: 0; }
+
+.hoy-tabs-editor-row-main {
+    flex: 1;
+}
+
+.hoy-tabs-editor-row-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--rm-dark);
+    line-height: 1.25;
+}
+
+.hoy-tabs-editor-row-sub {
+    font-size: 12px;
+    color: var(--color-grayscale-placeholder, #8990a6);
+    margin-top: 2px;
+}
+
+.hoy-tabs-editor-toggle {
+    flex: 0 0 auto;
+    width: 46px;
+    height: 28px;
+    border-radius: 14px;
+    background: var(--rm-bg-tertiary);
+    position: relative;
+    transition: background 0.18s;
+    cursor: pointer;
+}
+
+.hoy-tabs-editor-toggle.on {
+    background: var(--rm-primary);
+}
+
+.hoy-tabs-editor-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    transition: transform 0.18s;
+}
+
+.hoy-tabs-editor-toggle.on .hoy-tabs-editor-knob {
+    transform: translateX(18px);
+}
+
+.hoy-tabs-editor-foot {
+    padding: 8px 10px 14px;
+    font-size: 12px;
+    color: var(--color-grayscale-placeholder, #8990a6);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ================================================================
+   Side menu v2 — rediseño escalable (flag 'fan.sidemenu.v2')
+   ================================================================ */
+
+.side-menu-overlay.v2 .side-menu-panel.v2 {
+    /* Override del layout v1: ya no usamos padding rígido ni spacers,
+       todo va dentro de un scroll con su propio padding interno. */
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--rm-bg);
+}
+
+.sm2-topbar {
+    padding: 54px 12px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--rm-bg);
+    border-bottom: 1px solid var(--rm-separator);
+}
+
+.sm2-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--rm-bg-tertiary);
+    border: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--rm-dark-2);
+    cursor: pointer;
+}
+.sm2-close > svg { width: 14px !important; height: 14px !important; }
+
+.sm2-topbar-title {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-grayscale-placeholder, #8990a6);
+}
+
+.sm2-topbar-spacer { width: 34px; }
+
+.sm2-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 16px 28px;
+}
+
+.sm2-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 4px 12px;
+}
+
+.sm2-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--rm-primary-gradient);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.sm2-avatar > svg { width: 26px !important; height: 26px !important; }
+
+.sm2-header-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.sm2-hello {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--rm-dark);
+    line-height: 1.1;
+}
+
+.sm2-hello-sub {
+    font-size: 12px;
+    color: var(--color-grayscale-placeholder, #8990a6);
+    margin-top: 3px;
+    line-height: 1.3;
+}
+
+.sm2-login {
+    width: 100%;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--rm-primary-gradient);
+    color: #fff;
+    border: 0;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 6px 0 16px;
+    font-family: inherit;
+}
+.sm2-login > svg { width: 14px !important; height: 14px !important; }
+
+.sm2-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: var(--rm-bg-tertiary);
+    margin-bottom: 16px;
+}
+.sm2-search > svg {
+    width: 16px !important;
+    height: 16px !important;
+    color: var(--color-grayscale-placeholder, #8990a6);
+    flex-shrink: 0;
+}
+.sm2-search input {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: var(--rm-dark);
+    font-family: inherit;
+    min-width: 0;
+}
+.sm2-search input::placeholder {
+    color: var(--color-grayscale-placeholder, #8990a6);
+}
+
+.sm2-quick {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 2px 0 14px;
+    margin: 0 -4px;
+}
+.sm2-quick::-webkit-scrollbar { display: none; }
+
+.sm2-quick-btn {
+    flex: 0 0 auto;
+    width: 68px;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.sm2-quick-icon {
+    width: 64px;
+    height: 58px;
+    border-radius: 14px;
+    background: var(--rm-bg-tertiary);
+    color: var(--rm-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sm2-quick-icon > svg { width: 20px !important; height: 20px !important; }
+
+.sm2-quick-label {
+    font-size: 11px;
+    color: var(--color-grayscale-placeholder, #8990a6);
+    font-weight: 500;
+}
+
+.sm2-section {
+    margin: 12px 0 6px;
+}
+
+.sm2-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-grayscale-placeholder, #8990a6);
+    letter-spacing: 0.7px;
+    padding: 4px 12px 6px;
+}
+
+.sm2-section-card {
+    background: var(--rm-bg-tertiary);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.sm2-row {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    padding: 12px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+}
+
+.sm2-row-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(62, 49, 250, 0.12);
+    color: var(--rm-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.sm2-row-icon > svg { width: 14px !important; height: 14px !important; }
+
+.sm2-row-title {
+    flex: 1;
+    font-size: 15px;
+    color: var(--rm-dark);
+    font-weight: 500;
+}
+
+.sm2-row-badge {
+    background: #d92626;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    min-width: 18px;
+    text-align: center;
+}
+
+.sm2-row-trailing {
+    font-size: 13px;
+    color: var(--color-grayscale-placeholder, #8990a6);
+}
+
+.sm2-row-chev {
+    color: var(--color-grayscale-placeholder, #8990a6);
+    display: flex;
+    align-items: center;
+}
+.sm2-row-chev > svg { width: 12px !important; height: 12px !important; }
+
+.sm2-row-sep {
+    height: 1px;
+    background: var(--rm-separator);
+    margin-left: 54px;
+}
+
+.sm2-empty {
+    padding: 18px 12px;
+    font-size: 14px;
+    color: var(--color-grayscale-placeholder, #8990a6);
+    text-align: center;
+}
+
+.sm2-footer {
+    margin-top: 22px;
+    padding: 14px 8px 4px;
+    border-top: 1px solid var(--rm-separator);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.sm2-footer-sponsors {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--color-grayscale-placeholder, #8990a6);
+    font-weight: 600;
+}
+
+.sm2-sponsor-emirates {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #1e4680;
+}
+.sm2-sponsor-emirates > svg { width: 16px !important; height: 16px !important; }
+
+.sm2-sponsor-adidas {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+}
+.sm2-sponsor-adidas > span {
+    display: inline-block;
+    width: 5px;
+    background: var(--rm-dark);
+}
+.sm2-sponsor-adidas > span:nth-child(1) { height: 12px; }
+.sm2-sponsor-adidas > span:nth-child(2) { height: 15px; }
+.sm2-sponsor-adidas > span:nth-child(3) { height: 18px; }
+
+.sm2-footer-version {
+    font-size: 11px;
+    color: var(--color-grayscale-placeholder, #8990a6);
+}
