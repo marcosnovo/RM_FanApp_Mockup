@@ -100,14 +100,59 @@ const FLAGS = [
         requires: 'fan.hoy.team-tabs'
     },
 
-    // ── Side menu v2 ──────────────────────────────────────────────
+    // ── Side menu v2 — padre y sub-funcionalidades anidadas ───────
     {
         app: 'fan',
         key: 'fan.sidemenu.v2',
         label: 'Side menu v2 — escalable',
-        description: 'Rediseña el menú lateral con header compacto, buscador, accesos rápidos y secciones agrupadas (Tu cuenta · Preferencias · App · Ayuda · Legal) para que escale bien al añadir más opciones.',
+        description: 'Rediseña el menú lateral con header compacto y secciones agrupadas. Las sub-funcionalidades controlan cada bloque por separado.',
         category: 'Navegación',
         default: false
+    },
+    {
+        app: 'fan',
+        key: 'fan.sidemenu.v2.search',
+        label: 'Buscador de ajustes',
+        description: 'Añade un buscador dentro del menú lateral que filtra las opciones en vivo por nombre.',
+        category: 'Navegación',
+        default: true,
+        requires: 'fan.sidemenu.v2'
+    },
+    {
+        app: 'fan',
+        key: 'fan.sidemenu.v2.quick-actions',
+        label: 'Accesos rápidos',
+        description: 'Fila horizontal de chips con los accesos más frecuentes: Carnet, Entradas, Radio, Cerca, Tienda. Click abre una hoja con contenido ficticio.',
+        category: 'Navegación',
+        default: true,
+        requires: 'fan.sidemenu.v2'
+    },
+    {
+        app: 'fan',
+        key: 'fan.sidemenu.v2.preferences',
+        label: 'Sección Preferencias',
+        description: 'Añade la sección «Preferencias» con equipos favoritos, notificaciones, idioma y apariencia. También ancla el editor de pestañas de Hoy si está activo.',
+        category: 'Navegación',
+        default: true,
+        requires: 'fan.sidemenu.v2'
+    },
+    {
+        app: 'fan',
+        key: 'fan.sidemenu.v2.support',
+        label: 'Sección Ayuda y Legal',
+        description: 'Añade las secciones «Ayuda» (centro de ayuda, contacto, opinión) y «Legal» (términos, privacidad, cookies).',
+        category: 'Navegación',
+        default: true,
+        requires: 'fan.sidemenu.v2'
+    },
+    {
+        app: 'fan',
+        key: 'fan.sidemenu.v2.mock-detail',
+        label: 'Pantallas ficticias al pulsar',
+        description: 'Al tocar una opción del menú, abre una hoja con contenido placeholder (mi perfil, mis entradas, idiomas, configuración de app…). Útil para probar los flujos sin tener backend.',
+        category: 'Navegación',
+        default: true,
+        requires: 'fan.sidemenu.v2'
     },
 
     // ── RM Play (rebrand de la tab RMTV) ──────────────────────────

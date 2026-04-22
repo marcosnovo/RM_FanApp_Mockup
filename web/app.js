@@ -48,6 +48,7 @@ const state = {
 
     // Side menu v2 (flag 'fan.sidemenu.v2')
     sideMenuSearch: '',
+    sideMenuDetail: null,         // key de SM2_MOCK_DETAILS | null
 
     // VIP App state
     vipTab: 'inicio',             // 'inicio' | 'eventos' | 'gestor' | 'perfil'
@@ -298,6 +299,9 @@ function renderAppLoginBar() {
 
     return `
         <div class="app-topbar ${logged ? 'is-logged' : ''}">
+            <button class="app-topbar-menu" id="btnSideMenu" aria-label="Abrir menú">
+                ${I.line3}
+            </button>
             <button class="app-topbar-login"
                     data-login-cycle
                     title="mock · haz clic para cambiar estado">
@@ -1307,10 +1311,17 @@ const HoyTeamTabs = {
         });
     },
 
-    /** Etiqueta visible para una categoría según el modo. */
+    /** Etiqueta visible para una categoría según el modo.
+     *  El "modo emoji" está dictado por el flag `fan.hoy.team-tabs.emoji`.
+     *  Así el toggle del editor y el toggle del panel de funcionalidades
+     *  comparten una única fuente de verdad. */
+    isEmojiMode() {
+        return typeof Flags !== 'undefined'
+            && Flags.isEnabled('fan.hoy.team-tabs.emoji');
+    },
     labelFor(key) {
         if (key === 'all') return 'Todo';
-        const emoji = state.hoyTabsEmoji;
+        const emoji = this.isEmojiMode();
         if (key === 'masc')   return emoji ? '⚽️ Masculino'  : 'Fútbol masc.';
         if (key === 'fem')    return emoji ? '⚽️ Femenino'   : 'Fútbol fem.';
         if (key === 'basket') return emoji ? '🏀 1er equipo' : 'Baloncesto';
@@ -1441,7 +1452,8 @@ function renderHoyTeamTabsBar(editorOn) {
 // ── Editor sheet: qué pestañas mostrar + modo emoji ────────────
 function renderHoyTabsEditorSheet() {
     const v = state.hoyTabsVisible;
-    const emoji = state.hoyTabsEmoji;
+    // El modo emoji está en el flag — editor y panel comparten estado.
+    const emoji = HoyTeamTabs.isEmojiMode();
 
     const row = (teamKey, description) => `
         <label class="hoy-tabs-editor-row">
@@ -3226,13 +3238,21 @@ function renderSideMenuV1() {
 // ================================================================
 
 function renderSideMenuV2() {
-    const q = (state.sideMenuSearch || '').trim().toLowerCase();
+    // Sub-flags anidados bajo `fan.sidemenu.v2`
+    const fSearch       = Flags.isEnabled('fan.sidemenu.v2.search');
+    const fQuickActions = Flags.isEnabled('fan.sidemenu.v2.quick-actions');
+
+    const q = fSearch ? (state.sideMenuSearch || '').trim().toLowerCase() : '';
     const sections = _v2Sections().map(sec => ({
         ...sec,
         items: q
             ? sec.items.filter(it => it.title.toLowerCase().includes(q))
             : sec.items
     })).filter(sec => sec.items.length > 0);
+
+    const detailHTML = state.sideMenuDetail
+        ? renderSideMenuV2Detail(state.sideMenuDetail)
+        : '';
 
     return `
         <div class="side-menu-overlay v2 ${state.sideMenuOpen ? 'visible' : ''}" id="sideMenuOverlay">
@@ -3257,43 +3277,50 @@ function renderSideMenuV2() {
                         Inicia sesión o regístrate ${I.arrowRight}
                     </button>
 
-                    <label class="sm2-search">
-                        ${I.search}
-                        <input type="search" id="sideMenuSearch" placeholder="Buscar en ajustes"
-                               value="${state.sideMenuSearch || ''}">
-                    </label>
+                    ${fSearch ? `
+                        <label class="sm2-search">
+                            ${I.search}
+                            <input type="search" id="sideMenuSearch" placeholder="Buscar en ajustes"
+                                   value="${state.sideMenuSearch || ''}">
+                        </label>
+                    ` : ''}
 
-                    ${q ? '' : `
+                    ${fQuickActions && !q ? `
                         <div class="sm2-quick">
                             ${[
-                                { icon: I.star,       label: 'Carnet' },
-                                { icon: I.calendar,   label: 'Entradas' },
-                                { icon: I.radio,      label: 'Radio' },
-                                { icon: I.photo,      label: 'Cerca' },
-                                { icon: I.cart,       label: 'Tienda' }
-                            ].map(q => `
-                                <button class="sm2-quick-btn">
-                                    <span class="sm2-quick-icon">${q.icon}</span>
-                                    <span class="sm2-quick-label">${q.label}</span>
+                                { icon: I.star,       label: 'Carnet',   detail: 'carnet' },
+                                { icon: I.calendar,   label: 'Entradas', detail: 'entradas' },
+                                { icon: I.radio,      label: 'Radio',    detail: 'radio' },
+                                { icon: I.photo,      label: 'Cerca',    detail: 'cerca' },
+                                { icon: I.cart,       label: 'Tienda',   detail: 'tienda-quick' }
+                            ].map(qi => `
+                                <button class="sm2-quick-btn" data-sm2-detail="${qi.detail}">
+                                    <span class="sm2-quick-icon">${qi.icon}</span>
+                                    <span class="sm2-quick-label">${qi.label}</span>
                                 </button>
                             `).join('')}
                         </div>
-                    `}
+                    ` : ''}
 
                     ${sections.map(sec => `
                         <div class="sm2-section">
                             <div class="sm2-section-title">${sec.title}</div>
                             <div class="sm2-section-card">
-                                ${sec.items.map((it, i) => `
-                                    <button class="sm2-row" ${it.action ? `data-sm2-action="${it.action}"` : ''}>
-                                        <span class="sm2-row-icon">${it.icon}</span>
-                                        <span class="sm2-row-title">${it.title}</span>
-                                        ${it.badge ? `<span class="sm2-row-badge">${it.badge}</span>` : ''}
-                                        ${it.trailing ? `<span class="sm2-row-trailing">${it.trailing}</span>` : ''}
-                                        <span class="sm2-row-chev">${I.chevronRight}</span>
-                                    </button>
-                                    ${i < sec.items.length - 1 ? '<div class="sm2-row-sep"></div>' : ''}
-                                `).join('')}
+                                ${sec.items.map((it, i) => {
+                                    const attrs = it.action
+                                        ? `data-sm2-action="${it.action}"`
+                                        : (it.detail ? `data-sm2-detail="${it.detail}"` : '');
+                                    return `
+                                        <button class="sm2-row" ${attrs}>
+                                            <span class="sm2-row-icon">${it.icon}</span>
+                                            <span class="sm2-row-title">${it.title}</span>
+                                            ${it.badge ? `<span class="sm2-row-badge">${it.badge}</span>` : ''}
+                                            ${it.trailing ? `<span class="sm2-row-trailing">${it.trailing}</span>` : ''}
+                                            <span class="sm2-row-chev">${I.chevronRight}</span>
+                                        </button>
+                                        ${i < sec.items.length - 1 ? '<div class="sm2-row-sep"></div>' : ''}
+                                    `;
+                                }).join('')}
                             </div>
                         </div>
                     `).join('')}
@@ -3310,51 +3337,348 @@ function renderSideMenuV2() {
                         <div class="sm2-footer-version">10.2.11 (15970)</div>
                     </div>
                 </div>
+
+                ${detailHTML}
             </div>
         </div>
     `;
 }
 
 function _v2Sections() {
-    // Preferencias — incluye el editor de pestañas si el flag está ON.
-    const preferences = [
-        { icon: I.star,       title: 'Equipos favoritos' },
-        { icon: I.figureRun,  title: 'Notificaciones', badge: '3' },
-        { icon: I.doc,        title: 'Idioma', trailing: 'Español' },
-        { icon: I.photo,      title: 'Apariencia', trailing: 'Sistema' }
-    ];
-    if (Flags.isEnabled('fan.hoy.team-tabs') && Flags.isEnabled('fan.hoy.team-tabs.editor')) {
-        preferences.push({
-            icon: I.slider,
-            title: 'Editar pestañas de Hoy',
-            action: 'open-hoy-tabs-editor'
-        });
-    }
+    const fPreferences = Flags.isEnabled('fan.sidemenu.v2.preferences');
+    const fSupport     = Flags.isEnabled('fan.sidemenu.v2.support');
 
-    return [
+    // La sección "Tu cuenta" siempre está presente — es el núcleo.
+    const sections = [
         { title: 'TU CUENTA', items: [
-            { icon: I.person,       title: 'Mi perfil' },
-            { icon: I.calendar,     title: 'Mis entradas' },
-            { icon: I.cart,         title: 'Carnet digital' },
-            { icon: I.star,         title: 'Socios & Madridistas' }
-        ]},
-        { title: 'PREFERENCIAS', items: preferences },
-        { title: 'APP', items: [
-            { icon: I.gear,         title: 'Configuración de la app' },
-            { icon: I.sportscourt,  title: 'Novedades' },
-            { icon: I.thumbUp,      title: 'Valorar la app' }
-        ]},
-        { title: 'AYUDA', items: [
-            { icon: I.doc,          title: 'Centro de ayuda' },
-            { icon: I.photo,        title: 'Contacto' },
-            { icon: I.thumbUp,      title: 'Danos tu opinión' }
-        ]},
-        { title: 'LEGAL', items: [
-            { icon: I.doc,          title: 'Términos y condiciones' },
-            { icon: I.doc,          title: 'Privacidad' },
-            { icon: I.doc,          title: 'Cookies' }
+            { icon: I.person,       title: 'Mi perfil',             detail: 'perfil' },
+            { icon: I.calendar,     title: 'Mis entradas',          detail: 'entradas' },
+            { icon: I.cart,         title: 'Carnet digital',        detail: 'carnet' },
+            { icon: I.star,         title: 'Socios & Madridistas',  detail: 'socios' }
         ]}
     ];
+
+    if (fPreferences) {
+        const preferences = [
+            { icon: I.star,       title: 'Equipos favoritos', detail: 'equipos-favoritos' },
+            { icon: I.figureRun,  title: 'Notificaciones',    detail: 'notificaciones', badge: '3' },
+            { icon: I.doc,        title: 'Idioma',            detail: 'idioma',         trailing: 'Español' },
+            { icon: I.photo,      title: 'Apariencia',        detail: 'apariencia',     trailing: 'Sistema' }
+        ];
+        if (Flags.isEnabled('fan.hoy.team-tabs') && Flags.isEnabled('fan.hoy.team-tabs.editor')) {
+            preferences.push({
+                icon: I.slider,
+                title: 'Editar pestañas de Hoy',
+                action: 'open-hoy-tabs-editor'
+            });
+        }
+        sections.push({ title: 'PREFERENCIAS', items: preferences });
+    }
+
+    // La sección App siempre va — contiene Configuración, que es crítico.
+    sections.push({ title: 'APP', items: [
+        { icon: I.gear,         title: 'Configuración de la app', detail: 'config-app' },
+        { icon: I.sportscourt,  title: 'Novedades',               detail: 'novedades' },
+        { icon: I.thumbUp,      title: 'Valorar la app',          detail: 'valorar' }
+    ]});
+
+    if (fSupport) {
+        sections.push({ title: 'AYUDA', items: [
+            { icon: I.doc,          title: 'Centro de ayuda', detail: 'ayuda' },
+            { icon: I.photo,        title: 'Contacto',        detail: 'contacto' },
+            { icon: I.thumbUp,      title: 'Danos tu opinión', detail: 'opinion' }
+        ]});
+        sections.push({ title: 'LEGAL', items: [
+            { icon: I.doc,          title: 'Términos y condiciones', detail: 'terminos' },
+            { icon: I.doc,          title: 'Privacidad',             detail: 'privacidad' },
+            { icon: I.doc,          title: 'Cookies',                detail: 'cookies' }
+        ]});
+    }
+
+    return sections;
+}
+
+// ================================================================
+// Side Menu v2 — contenido ficticio al pulsar una opción.
+// Flag `fan.sidemenu.v2.mock-detail` habilita esta navegación.
+// ================================================================
+
+const SM2_MOCK_DETAILS = {
+    perfil: {
+        title: 'Mi perfil', icon: 'person',
+        hero: { kicker: 'Socio desde 2018', name: 'Marcos Novo' },
+        fields: [
+            { label: 'Email',            value: 'marcos.novo@email.com' },
+            { label: 'Número de socio',  value: '48 219' },
+            { label: 'Tier',             value: 'Madridista Premium' },
+            { label: 'Fecha de alta',    value: '12 de agosto de 2018' }
+        ]
+    },
+    entradas: {
+        title: 'Mis entradas', icon: 'calendar',
+        list: [
+            { top: 'Champions League · Vuelta',      middle: 'Bayern Múnich · Real Madrid', bottom: 'Mié 15 abr · 21:00 · Allianz Arena', right: 'Tribuna · Fila 14 · A12' },
+            { top: 'LaLiga EA Sports · Jornada 33',  middle: 'Real Madrid · Celta de Vigo', bottom: 'Jue 17 abr · 21:00 · Santiago Bernabéu', right: 'Lateral · Fila 8 · 117' }
+        ]
+    },
+    carnet: {
+        title: 'Carnet digital', icon: 'cart',
+        hero: { kicker: 'Madridista #48 219', name: 'Marcos Novo' },
+        paragraphs: [
+            'Presenta este carnet digital en las taquillas y tornos del Santiago Bernabéu para acceder a las áreas de Madridistas.',
+            'Válido hasta el 30 de junio de 2026.'
+        ]
+    },
+    socios: {
+        title: 'Socios & Madridistas', icon: 'star',
+        paragraphs: [
+            'Forma parte de la familia madridista con ventajas exclusivas: preventa de entradas, descuentos en la tienda y contenido premium en Realmadrid TV.',
+            'Puedes consultar tus puntos y canjearlos por experiencias únicas en el estadio.'
+        ],
+        list: [
+            { top: 'Tus puntos', middle: '1 240 pts', bottom: 'Nivel 3 de 5',         right: '' },
+            { top: 'Ventajas',   middle: '12 activas', bottom: 'Ver catálogo completo', right: '' }
+        ]
+    },
+    'equipos-favoritos': {
+        title: 'Equipos favoritos', icon: 'star',
+        paragraphs: ['Elige qué equipos quieres seguir. Las noticias, partidos y highlights de la app se priorizarán según tu selección.'],
+        toggles: [
+            { label: 'Fútbol masculino',  sub: 'Primer equipo',       on: true },
+            { label: 'Fútbol femenino',   sub: 'Liga F · Champions',  on: true },
+            { label: 'Baloncesto',        sub: 'ACB · Euroliga',      on: true },
+            { label: 'Castilla',          sub: 'Primera Federación',  on: false },
+            { label: 'Juvenil A',         sub: 'UEFA Youth League',   on: false }
+        ]
+    },
+    notificaciones: {
+        title: 'Notificaciones', icon: 'radio',
+        paragraphs: ['Recibe alertas de lo que más te importa.'],
+        toggles: [
+            { label: 'Goles del partido',       sub: 'Notificación al marcar',     on: true },
+            { label: 'Alineaciones',            sub: '1 hora antes del partido',   on: true },
+            { label: 'Resumen post-partido',    sub: 'Al terminar el encuentro',   on: false },
+            { label: 'Ofertas de la tienda',    sub: 'Promociones y rebajas',      on: false },
+            { label: 'Noticias urgentes',       sub: 'Fichajes y fundamentales',   on: true }
+        ]
+    },
+    idioma: {
+        title: 'Idioma', icon: 'doc',
+        radio: [
+            { label: 'Español',  selected: true },
+            { label: 'English',  selected: false },
+            { label: 'Français', selected: false },
+            { label: 'Deutsch',  selected: false },
+            { label: '日本語',    selected: false }
+        ]
+    },
+    apariencia: {
+        title: 'Apariencia', icon: 'photo',
+        radio: [
+            { label: 'Sistema', sub: 'Sigue la configuración del dispositivo', selected: true },
+            { label: 'Claro',   sub: 'Siempre modo claro',                     selected: false },
+            { label: 'Oscuro',  sub: 'Siempre modo oscuro',                    selected: false }
+        ]
+    },
+    'config-app': {
+        title: 'Configuración de la app', icon: 'gear',
+        toggles: [
+            { label: 'Datos móviles',          sub: 'Usar datos fuera del WiFi',          on: true },
+            { label: 'Reproducción automática', sub: 'Vídeos al hacer scroll',             on: true },
+            { label: 'Analítica anónima',      sub: 'Ayúdanos a mejorar la app',          on: true },
+            { label: 'Modo ahorro de datos',   sub: 'Baja la calidad de imagen',          on: false }
+        ]
+    },
+    novedades: {
+        title: 'Novedades', icon: 'sportscourt',
+        paragraphs: ['Qué hay nuevo en la versión 10.2.11:'],
+        list: [
+            { top: 'Hoy v2',          middle: 'Nueva estructura modular',                 bottom: 'Scroll vertical · cards rediseñadas' },
+            { top: 'Pestañas equipo',  middle: 'Filtra Hoy por deporte',                   bottom: 'Todo · Fútbol masc. · Fútbol fem. · Baloncesto' },
+            { top: 'RM Play',          middle: 'Nueva Realmadrid TV',                      bottom: 'Layout tipo plataforma OTT' },
+            { top: 'Side menu v2',     middle: 'Menú lateral escalable',                   bottom: 'Secciones agrupadas + buscador' }
+        ]
+    },
+    valorar: {
+        title: 'Valorar la app', icon: 'thumbUp',
+        paragraphs: ['¿Cómo está siendo tu experiencia? Tu valoración en la App Store nos ayuda a mejorar cada actualización.'],
+        stars: true
+    },
+    ayuda: {
+        title: 'Centro de ayuda', icon: 'doc',
+        paragraphs: ['Preguntas frecuentes:'],
+        list: [
+            { top: '¿Cómo cambio mi tier?',          middle: 'Puedes gestionar tu abono desde realmadrid.com', bottom: 'Abre web' },
+            { top: '¿Dónde está mi entrada?',        middle: 'En la pestaña "Mis entradas"',                   bottom: '' },
+            { top: 'La app se cierra sola',          middle: 'Actualiza a la última versión',                  bottom: '' },
+            { top: 'No recibo notificaciones',       middle: 'Revisa los permisos del sistema',                bottom: 'Abrir ajustes' }
+        ]
+    },
+    contacto: {
+        title: 'Contacto', icon: 'photo',
+        paragraphs: ['Nuestro equipo de atención responde en menos de 24 h.'],
+        fields: [
+            { label: 'Email',              value: 'ayuda@realmadrid.com' },
+            { label: 'Teléfono',           value: '+34 913 984 300' },
+            { label: 'Horario',            value: 'L-V · 9:00 - 20:00' }
+        ]
+    },
+    opinion: {
+        title: 'Danos tu opinión', icon: 'thumbUp',
+        paragraphs: ['¿Qué te está pareciendo la app? Tu feedback llega directo al equipo de producto.'],
+        stars: true
+    },
+    terminos: {
+        title: 'Términos y condiciones', icon: 'doc',
+        paragraphs: [
+            'Última actualización: 1 de marzo de 2026.',
+            'El uso de la aplicación Real Madrid está sujeto a los términos que recogen la relación entre el Club y el Usuario.',
+            'Al descargar, instalar o utilizar la app aceptas íntegramente estos términos, incluidas las políticas de privacidad y cookies.',
+            'Texto completo disponible en realmadrid.com/terminos.'
+        ]
+    },
+    privacidad: {
+        title: 'Privacidad', icon: 'doc',
+        paragraphs: [
+            'Real Madrid CF es el responsable del tratamiento de tus datos personales.',
+            'Utilizamos los datos para prestar los servicios de la app, personalizar el contenido y mantener la seguridad del servicio.',
+            'Puedes ejercer los derechos de acceso, rectificación y supresión en privacidad@realmadrid.com.'
+        ]
+    },
+    cookies: {
+        title: 'Cookies', icon: 'doc',
+        toggles: [
+            { label: 'Técnicas',     sub: 'Necesarias · no se pueden desactivar', on: true, disabled: true },
+            { label: 'Preferencias', sub: 'Idioma, tema y configuración',         on: true },
+            { label: 'Analíticas',   sub: 'Medir uso y rendimiento',              on: true },
+            { label: 'Marketing',    sub: 'Personalizar anuncios',                on: false }
+        ]
+    },
+    radio: {
+        title: 'Radio', icon: 'radio',
+        paragraphs: ['Escucha los partidos narrados por la radio oficial del club y entrevistas exclusivas en directo.'],
+        list: [
+            { top: 'Ahora en directo', middle: 'Hoy Jugamos · Previa Bayern-RM', bottom: '85 800 oyentes',  right: 'EN VIVO' },
+            { top: 'Programado',       middle: 'Post-partido · Tertulia',         bottom: 'Mié 23:00',        right: '' }
+        ]
+    },
+    cerca: {
+        title: 'Cerca de mí', icon: 'photo',
+        paragraphs: ['Encuentra tiendas oficiales, bares madridistas y experiencias del club cerca de tu ubicación.'],
+        list: [
+            { top: 'Tienda oficial Gran Vía', middle: 'Gran Vía 31, Madrid',        bottom: 'Abierto · a 1,2 km' },
+            { top: 'Tour Bernabéu',           middle: 'Santiago Bernabéu',          bottom: 'Abierto · a 4,8 km' },
+            { top: 'Peña Madridista Centro',  middle: 'Bar La Blanca',              bottom: 'Abierto · a 800 m' }
+        ]
+    },
+    'tienda-quick': {
+        title: 'Tienda', icon: 'cart',
+        paragraphs: ['Las últimas equipaciones, calzado y accesorios oficiales del Real Madrid. Envío gratuito a partir de 50€.'],
+        list: [
+            { top: 'Camiseta 1ª equipación 25/26', middle: '99,95 €',                bottom: 'Todas las tallas disponibles' },
+            { top: 'Chaqueta Tiro 24',             middle: '64,95 €',                bottom: 'Edición limitada' },
+            { top: 'Balón oficial LaLiga 25/26',   middle: '29,95 €',                bottom: 'Stock: 12 unidades' }
+        ]
+    }
+};
+
+function renderSideMenuV2Detail(key) {
+    const d = SM2_MOCK_DETAILS[key];
+    if (!d) return '';
+    const iconMarkup = I[d.icon] || I.doc;
+
+    return `
+        <div class="sm2-detail" data-sm2-detail-sheet>
+            <div class="sm2-detail-head">
+                <button class="sm2-detail-back" data-sm2-detail-close aria-label="Volver">
+                    ${I.chevronLeft} Atrás
+                </button>
+                <div class="sm2-detail-title">${d.title}</div>
+            </div>
+            <div class="sm2-detail-scroll">
+                <div class="sm2-detail-hero">
+                    <div class="sm2-detail-hero-icon">${iconMarkup}</div>
+                    ${d.hero ? `
+                        <div class="sm2-detail-hero-text">
+                            <div class="sm2-detail-hero-kicker">${d.hero.kicker}</div>
+                            <div class="sm2-detail-hero-name">${d.hero.name}</div>
+                        </div>
+                    ` : `
+                        <div class="sm2-detail-hero-text">
+                            <div class="sm2-detail-hero-name">${d.title}</div>
+                        </div>
+                    `}
+                </div>
+
+                ${(d.paragraphs || []).map(p => `<p class="sm2-detail-p">${p}</p>`).join('')}
+
+                ${d.fields ? `
+                    <div class="sm2-detail-card">
+                        ${d.fields.map(f => `
+                            <div class="sm2-detail-field">
+                                <span class="sm2-detail-field-label">${f.label}</span>
+                                <span class="sm2-detail-field-value">${f.value}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                ${d.list ? `
+                    <div class="sm2-detail-card">
+                        ${d.list.map((it, i) => `
+                            <div class="sm2-detail-list-row">
+                                <div class="sm2-detail-list-main">
+                                    <div class="sm2-detail-list-top">${it.top || ''}</div>
+                                    <div class="sm2-detail-list-middle">${it.middle || ''}</div>
+                                    ${it.bottom ? `<div class="sm2-detail-list-bottom">${it.bottom}</div>` : ''}
+                                </div>
+                                ${it.right ? `<div class="sm2-detail-list-right">${it.right}</div>` : ''}
+                            </div>
+                            ${i < d.list.length - 1 ? '<div class="sm2-detail-list-sep"></div>' : ''}
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                ${d.toggles ? `
+                    <div class="sm2-detail-card">
+                        ${d.toggles.map((t, i) => `
+                            <div class="sm2-detail-toggle-row ${t.disabled ? 'disabled' : ''}">
+                                <div class="sm2-detail-toggle-text">
+                                    <div class="sm2-detail-toggle-label">${t.label}</div>
+                                    ${t.sub ? `<div class="sm2-detail-toggle-sub">${t.sub}</div>` : ''}
+                                </div>
+                                <span class="sm2-detail-switch ${t.on ? 'on' : ''}"></span>
+                            </div>
+                            ${i < d.toggles.length - 1 ? '<div class="sm2-detail-list-sep"></div>' : ''}
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                ${d.radio ? `
+                    <div class="sm2-detail-card">
+                        ${d.radio.map((r, i) => `
+                            <div class="sm2-detail-radio-row">
+                                <div class="sm2-detail-toggle-text">
+                                    <div class="sm2-detail-toggle-label">${r.label}</div>
+                                    ${r.sub ? `<div class="sm2-detail-toggle-sub">${r.sub}</div>` : ''}
+                                </div>
+                                <span class="sm2-detail-radio ${r.selected ? 'selected' : ''}"></span>
+                            </div>
+                            ${i < d.radio.length - 1 ? '<div class="sm2-detail-list-sep"></div>' : ''}
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                ${d.stars ? `
+                    <div class="sm2-detail-stars">
+                        <span>★</span><span>★</span><span>★</span><span>★</span><span>☆</span>
+                    </div>
+                ` : ''}
+
+                <div style="height: 28px"></div>
+            </div>
+        </div>
+    `;
 }
 
 // ── Status bar style helpers ─────────────────────────────────────
@@ -3774,13 +4098,14 @@ function attachListeners() {
         render();
     }));
 
-    // Toggle modo emoji
+    // Toggle modo emoji — escribimos directamente al flag (única fuente
+    // de verdad) para que panel de funcionalidades y editor estén en
+    // sincronía en los dos sentidos.
     const emojiSw = $('[data-editor-emoji]');
     if (emojiSw) emojiSw.addEventListener('click', e => {
         e.preventDefault();
-        state.hoyTabsEmoji = !state.hoyTabsEmoji;
-        HoyTeamTabs.persist();
-        render();
+        const next = !Flags.isEnabled('fan.hoy.team-tabs.emoji');
+        Flags.set('fan.hoy.team-tabs.emoji', next);
     });
 
     // ── Login cluster global (flag 'fan.app.login-header') ───────
@@ -3824,6 +4149,20 @@ function attachListeners() {
             state.hoyEditorOpen = true;
             render();
         }
+    }));
+
+    // ── Side menu v2: hojas de detalle con contenido ficticio ────
+    // Sólo si el flag `fan.sidemenu.v2.mock-detail` está on.
+    $$('[data-sm2-detail]').forEach(btn => btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!Flags.isEnabled('fan.sidemenu.v2.mock-detail')) return;
+        state.sideMenuDetail = btn.dataset.sm2Detail;
+        render();
+    }));
+
+    $$('[data-sm2-detail-close]').forEach(btn => btn.addEventListener('click', () => {
+        state.sideMenuDetail = null;
+        render();
     }));
 
     // ── Hoy v2 listeners ────────────────────────────────────────
