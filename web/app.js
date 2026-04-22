@@ -5247,16 +5247,48 @@ function isSettingsOpen() {
     return !$('#settingsDrawer').hidden;
 }
 
+// Mantenemos el listado de usuarios fresco: mientras el drawer esté
+// abierto refrescamos cada 20s y también al volver a enfocar la pestaña.
+// Así nos enteramos al instante cuando alguien acepta su invitación
+// (pasa de "Pendiente" a "Activo") sin tener que cerrar y reabrir.
+let _settingsRefreshTimer = null;
+let _settingsFocusHandler = null;
+const SETTINGS_REFRESH_MS = 20000;
+
 async function openSettings() {
     const dr = $('#settingsDrawer');
     dr.hidden = false;
     await renderSettings();
+
+    // Intervalo de refresco silencioso (no re-dibuja si no hay cambios
+    // relevantes; el propio renderSettings refresca todo el DOM).
+    if (_settingsRefreshTimer) clearInterval(_settingsRefreshTimer);
+    _settingsRefreshTimer = setInterval(() => {
+        if (!isSettingsOpen()) return;
+        if (document.hidden) return;   // no machacar si la pestaña no está en foco
+        renderSettings().catch(() => {});
+    }, SETTINGS_REFRESH_MS);
+
+    // Cuando el usuario vuelve a la pestaña, refrescar al instante.
+    if (_settingsFocusHandler) window.removeEventListener('focus', _settingsFocusHandler);
+    _settingsFocusHandler = () => {
+        if (isSettingsOpen()) renderSettings().catch(() => {});
+    };
+    window.addEventListener('focus', _settingsFocusHandler);
 }
 
 function closeSettings() {
     const dr = $('#settingsDrawer');
     dr.hidden = true;
     dr.innerHTML = '';
+    if (_settingsRefreshTimer) {
+        clearInterval(_settingsRefreshTimer);
+        _settingsRefreshTimer = null;
+    }
+    if (_settingsFocusHandler) {
+        window.removeEventListener('focus', _settingsFocusHandler);
+        _settingsFocusHandler = null;
+    }
 }
 
 async function renderSettings() {
@@ -5324,7 +5356,13 @@ async function renderSettings() {
     `;
 
     const usersBlock = `
-        <div class="settings-section-title">Usuarios</div>
+        <div class="settings-section-title settings-section-title-row">
+            <span>Usuarios</span>
+            <button class="settings-refresh-btn" id="settingsRefreshBtn" title="Actualizar ahora">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.3-6.9"/><polyline points="21 3 21 8 16 8"/></svg>
+                Actualizar
+            </button>
+        </div>
         <div class="settings-add-user">
             <form id="addUserForm" class="settings-add-form">
                 <input type="email" name="email" placeholder="email@dominio.com" required>
@@ -5377,6 +5415,17 @@ async function renderSettings() {
         </div>
     `;
     $('.settings-loading').outerHTML = usersBlock;
+
+    // Botón manual "Actualizar" en la cabecera de Usuarios.
+    const refreshBtn = $('#settingsRefreshBtn');
+    if (refreshBtn) refreshBtn.addEventListener('click', async () => {
+        refreshBtn.disabled = true;
+        const originalHTML = refreshBtn.innerHTML;
+        refreshBtn.innerHTML = '<span style="opacity:0.7">Actualizando…</span>';
+        await renderSettings();
+        // renderSettings re-crea todo el DOM: el botón queda rehabilitado
+        // porque es un nodo nuevo. No hace falta restaurar HTML aquí.
+    });
 
     const form = $('#addUserForm');
     if (form) form.addEventListener('submit', async e => {

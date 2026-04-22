@@ -424,7 +424,24 @@ const Auth = {
             profiles.map(p => (p.email || '').toLowerCase())
         );
 
-        const pending = ((pendingRes && pendingRes.data) || [])
+        const allPending = (pendingRes && pendingRes.data) || [];
+
+        // Limpieza oportunista: si encontramos filas en `pending_invitations`
+        // cuyo email YA tiene perfil, significa que el usuario ya aceptó la
+        // invitación y la fila es basura. La borramos en background para
+        // que el próximo `listUsers` vuelva limpio. Fire-and-forget — si RLS
+        // no nos deja, no rompemos el flujo.
+        const staleEmails = allPending
+            .map(inv => (inv.email || '').toLowerCase())
+            .filter(e => profileEmails.has(e));
+        if (staleEmails.length) {
+            sb.from('pending_invitations')
+                .delete()
+                .in('email', staleEmails)
+                .then(() => {}, () => {});
+        }
+
+        const pending = allPending
             .filter(inv => !profileEmails.has((inv.email || '').toLowerCase()))
             .map(inv => ({
                 id: 'pending:' + inv.email,   // id sintético, sin fila en profiles aún

@@ -4654,6 +4654,38 @@ body.auth-mode .app-layout { visibility: hidden; }
     margin: 20px 0 10px;
 }
 
+/* Variante con botón "Actualizar" alineado a la derecha */
+.settings-section-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.settings-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid #ffffff14;
+    color: #ffffffbf;
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: none;
+    padding: 4px 9px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+}
+.settings-refresh-btn:hover:not(:disabled) {
+    background: #ffffff08;
+    border-color: #ffffff24;
+    color: white;
+}
+.settings-refresh-btn:disabled { opacity: 0.5; cursor: default; }
+.settings-refresh-btn svg { width: 12px !important; height: 12px !important; }
+
 .settings-self {
     display: flex;
     align-items: center;
