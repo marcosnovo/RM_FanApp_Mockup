@@ -200,18 +200,117 @@ function renderTabBar() {
 }
 
 // ================================================================
+// HOY v2 — login header (flag 'fan.hoy.login-header')
+// ================================================================
+// Pequeño módulo para simular estado de sesión (logado / no logado)
+// y tier (Socio, Madridista, …, Platinum). El valor se persiste en
+// localStorage para que sobreviva a recargas.
+
+const AUTH_MOCK_KEY = 'rm_hoy_auth_mock_v1';
+const AUTH_MOCK_TIERS = [
+    'Visitante',               // índice 0 = no logado
+    'Socio',
+    'Madridista',
+    'Madridista Junior',
+    'Madridista Premium',
+    'Madridista Platinum'
+];
+
+const HoyLoginHeader = {
+    load() {
+        try {
+            const raw = JSON.parse(localStorage.getItem(AUTH_MOCK_KEY) || '{}');
+            return {
+                tierIdx: Number.isInteger(raw.tierIdx) ? raw.tierIdx : 0,
+                name: raw.name || 'Marcos'
+            };
+        } catch { return { tierIdx: 0, name: 'Marcos' }; }
+    },
+    save(next) {
+        try { localStorage.setItem(AUTH_MOCK_KEY, JSON.stringify(next)); } catch {}
+    },
+    hydrate() {
+        const s = this.load();
+        state.hoyAuthMock = { tierIdx: s.tierIdx, name: s.name };
+    },
+    persist() { this.save(state.hoyAuthMock); },
+    /** 0 = no logado; resto son tiers. */
+    isLogged() { return (state.hoyAuthMock?.tierIdx || 0) > 0; },
+    tierLabel() {
+        const idx = state.hoyAuthMock?.tierIdx || 0;
+        return AUTH_MOCK_TIERS[idx] || AUTH_MOCK_TIERS[0];
+    },
+    cycleNext() {
+        const cur = state.hoyAuthMock || { tierIdx: 0, name: 'Marcos' };
+        const next = (cur.tierIdx + 1) % AUTH_MOCK_TIERS.length;
+        state.hoyAuthMock = { ...cur, tierIdx: next };
+        this.persist();
+    },
+    setLogged(logged) {
+        const cur = state.hoyAuthMock || { tierIdx: 0, name: 'Marcos' };
+        state.hoyAuthMock = { ...cur, tierIdx: logged ? Math.max(cur.tierIdx, 1) : 0 };
+        this.persist();
+    },
+    setTier(idx) {
+        const cur = state.hoyAuthMock || { tierIdx: 0, name: 'Marcos' };
+        state.hoyAuthMock = { ...cur, tierIdx: idx };
+        this.persist();
+    }
+};
+
+function hoyLoginGreeting() {
+    const h = new Date().getHours();
+    if (h < 6)  return 'Buenas noches';
+    if (h < 13) return 'Buenos días';
+    if (h < 21) return 'Buenas tardes';
+    return 'Buenas noches';
+}
+
+function renderHoyV2LoginHeader() {
+    const logged = HoyLoginHeader.isLogged();
+    const tier = HoyLoginHeader.tierLabel();
+    const name = state.hoyAuthMock?.name || 'Marcos';
+    const greeting = hoyLoginGreeting();
+
+    return `
+        <section class="hoy2-login ${logged ? 'is-logged' : ''}" data-login-toggle>
+            <div class="hoy2-login-text">
+                <div class="hoy2-login-kicker">${greeting}</div>
+                ${logged
+                    ? `
+                        <div class="hoy2-login-name">${name}</div>
+                        <button class="hoy2-login-tier" data-login-tier aria-label="Cambiar tier">
+                            <span class="hoy2-login-tier-dot"></span>
+                            ${tier}
+                        </button>
+                    `
+                    : `
+                        <div class="hoy2-login-cta">
+                            Iniciar sesión
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                        </div>
+                    `}
+            </div>
+            <div class="hoy2-login-avatar">
+                ${logged
+                    ? `<span class="hoy2-login-initials">${(name[0] || 'M').toUpperCase()}</span>`
+                    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3" fill="currentColor" stroke="none"/><path d="M6 19a6 6 0 0 1 12 0" fill="currentColor" stroke="none"/></svg>`}
+            </div>
+            <span class="hoy2-login-devhint">mock · haz clic para alternar sesión</span>
+        </section>
+    `;
+}
+
+// ================================================================
 // HOY v2 — feature flag 'fan.hoy.v2-structure'
 // Estructura modular: partido compacto + noticias + vídeos + encuesta.
 // Todo sobre un scroll vertical.
 // ================================================================
 function renderHoyV2() {
-    const news = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []).slice(0, 5);
-    const surveys = (typeof SURVEY_ITEMS !== 'undefined' ? SURVEY_ITEMS : []);
-    const survey = surveys[0];
-
     // Pestañas por equipo (flag anidado bajo Hoy v2).
     const teamTabsOn = Flags.isEnabled('fan.hoy.team-tabs');
     const editorOn   = Flags.isEnabled('fan.hoy.team-tabs.editor');
+    const loginOn    = Flags.isEnabled('fan.hoy.login-header');
 
     // Fallback: si la pestaña activa se oculta, volvemos a "Todo".
     if (teamTabsOn
@@ -229,6 +328,18 @@ function renderHoyV2() {
     const showPrediction = Flags.isEnabled('fan.hoy.gamification')
         && (filter === 'all' || filter === 'masc');
 
+    // Noticias: en "Todo" se muestran todas mezcladas; filtrando por un
+    // equipo concreto, se limita a ese equipo (y se mantiene las piezas
+    // neutras del club sólo en "Todo").
+    const allNews = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []);
+    const filteredNews = filter === 'all'
+        ? allNews
+        : allNews.filter(n => n.teamId === filter);
+    const news = filteredNews.slice(0, 5);
+
+    const surveys = (typeof SURVEY_ITEMS !== 'undefined' ? SURVEY_ITEMS : []);
+    const survey = surveys[0];
+
     return `
         <div class="hoy2-wrap">
 
@@ -245,18 +356,21 @@ function renderHoyV2() {
 
             <div class="hoy2-scroll">
 
-                <!-- ── 0. Stories carousel (flag 'fan.hoy.stories') ── -->
+                <!-- ── 0. Cabecera login (flag 'fan.hoy.login-header') ── -->
+                ${loginOn ? renderHoyV2LoginHeader() : ''}
+
+                <!-- ── Stories carousel (flag 'fan.hoy.stories') ── -->
                 ${Flags.isEnabled('fan.hoy.stories') ? renderHoyV2Stories() : ''}
 
-                <!-- ── 1. Próximos partidos ─────────
+                <!-- ── Próximos partidos ─────────
                      En "Todo" se muestran los 3 equipos; filtrando por uno
                      concreto, sólo el partido de ese equipo. -->
                 ${renderHoyV2NextMatches(filter)}
 
-                <!-- ── 1.5 Gamificación: predicciones (flag) ───────── -->
+                <!-- ── Gamificación: predicciones (flag) ───────── -->
                 ${showPrediction ? renderHoyV2Prediction() : ''}
 
-                <!-- ── 2. Noticias ─────────────────────────────────── -->
+                <!-- ── Noticias (con etiqueta de equipo en "Todo") ── -->
                 <section class="hoy2-section">
                     <div class="hoy2-section-head">
                         <h2 class="hoy2-section-title">Noticias</h2>
@@ -265,12 +379,21 @@ function renderHoyV2() {
                         </button>
                     </div>
                     <div class="hoy2-news-list">
-                        ${news.map(item => `
+                        ${news.length === 0 ? `
+                            <div class="hoy2-news-empty">
+                                No hay noticias publicadas de este equipo.
+                            </div>
+                        ` : news.map(item => `
                             <button class="hoy2-news-row" data-news-id="${item.id}">
                                 <div class="hoy2-news-thumb" style="background: ${item.imageColor}">
                                     <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5" fill="#fff"/><polygon points="21,17 14,11 3,19 21,19" fill="#fff" opacity="0.85"/></svg>
                                 </div>
                                 <div class="hoy2-news-body">
+                                    <div class="hoy2-news-kicker">
+                                        ${filter === 'all'
+                                            ? teamTagHTML(item.teamId, item.kind)
+                                            : (item.kind ? `<span class="hoy2-news-kind">${item.kind}</span>` : '')}
+                                    </div>
                                     <div class="hoy2-news-title">${item.title}</div>
                                     <div class="hoy2-news-sub">${(item.subtitle || '').slice(0, 80)}${(item.subtitle || '').length > 80 ? '…' : ''}</div>
                                 </div>
@@ -279,13 +402,13 @@ function renderHoyV2() {
                     </div>
                 </section>
 
-                <!-- ── 3.5 Tras las cámaras (flag 'fan.hoy.stories') ── -->
+                <!-- ── Tras las cámaras (flag 'fan.hoy.stories') ── -->
                 ${Flags.isEnabled('fan.hoy.stories') && filter === 'all' ? renderHoyV2BehindScenes() : ''}
 
-                <!-- ── 4. Highlights (mixto o filtrado por equipo) ──── -->
+                <!-- ── Highlights (mixto o filtrado por equipo) ──── -->
                 ${renderHoyV2Highlights(filter)}
 
-                <!-- ── 5. Trivia del día (se mantiene siempre) ─────── -->
+                <!-- ── Trivia del día (se mantiene siempre) ─────── -->
                 <section class="hoy2-section">
                     <div class="hoy2-section-head">
                         <h2 class="hoy2-section-title">Trivia del día</h2>
@@ -299,6 +422,23 @@ function renderHoyV2() {
 
         ${renderSideMenu()}
         ${state.hoyEditorOpen ? renderHoyTabsEditorSheet() : ''}
+    `;
+}
+
+// Devuelve el HTML de la etiqueta de equipo + tipo de contenido para
+// las noticias en la pestaña "Todo". Si la noticia no tiene teamId
+// (contenido general del club), sólo se muestra el tipo.
+function teamTagHTML(teamId, kind) {
+    const meta = teamId && typeof TEAM_TAG_META !== 'undefined' ? TEAM_TAG_META[teamId] : null;
+    const kindHTML = kind ? `<span class="hoy2-news-kind">${kind}</span>` : '';
+    if (!meta) {
+        return `<span class="team-tag team-tag-neutral">Club</span>${kindHTML}`;
+    }
+    return `
+        <span class="team-tag" style="color: ${meta.color}; background: ${meta.bg};">
+            <span class="team-tag-dot" style="background: ${meta.color};"></span>
+            ${meta.label}
+        </span>${kindHTML}
     `;
 }
 
@@ -368,7 +508,12 @@ function renderHoyV2NextMatches(filter = 'all') {
                             <button class="hoy2-nm-body" data-next-match="${team.id}">
                                 <div class="hoy2-nm-head">
                                     <span class="hoy2-nm-comp">${m.competition}</span>
-                                    <span class="hoy2-nm-sport">${team.sport}</span>
+                                    ${(() => {
+                                        const tag = typeof TEAM_TAG_META !== 'undefined' ? TEAM_TAG_META[team.id] : null;
+                                        return tag
+                                            ? `<span class="team-tag" style="color: ${tag.color}; background: ${tag.bg};"><span class="team-tag-dot" style="background: ${tag.color};"></span>${tag.label}</span>`
+                                            : `<span class="hoy2-nm-sport">${team.sport}</span>`;
+                                    })()}
                                 </div>
                                 <div class="hoy2-nm-teams">
                                     <div class="hoy2-nm-crest">${homeCrest}</div>
@@ -471,17 +616,31 @@ function renderHoyV2Highlights(filter = 'all') {
                 </button>
             </div>
             <div class="hoy2-video-scroll" id="hoy2VideoScroll">
-                ${mixed.map(v => `
-                    <button class="hoy2-video-card" data-highlight-id="${v.id}"
-                        style="background: linear-gradient(145deg, ${v.color1} 0%, ${v.color2} 100%)">
-                        <span class="hoy2-video-cat">${labelForCategory(v.category)}</span>
-                        <span class="hoy2-video-play">${I.playSolid}</span>
-                        <div class="hoy2-video-meta">
-                            <div class="hoy2-video-title">${v.title}</div>
-                            <div class="hoy2-video-duration">${v.duration}</div>
-                        </div>
-                    </button>
-                `).join('')}
+                ${mixed.map(v => {
+                    const tag = (typeof TEAM_TAG_META !== 'undefined' && v.teamId)
+                        ? TEAM_TAG_META[v.teamId]
+                        : null;
+                    // En "Todo" vale la pena mostrar el equipo además de
+                    // la categoría; si estamos ya filtrando por equipo, la
+                    // etiqueta de equipo es redundante y se omite.
+                    const showTeamTag = tag && filter === 'all';
+                    return `
+                        <button class="hoy2-video-card" data-highlight-id="${v.id}"
+                            style="background: linear-gradient(145deg, ${v.color1} 0%, ${v.color2} 100%)">
+                            <span class="hoy2-video-cat">${labelForCategory(v.category)}</span>
+                            ${showTeamTag ? `
+                                <span class="hoy2-video-team" style="background: ${tag.color};">
+                                    ${tag.short}
+                                </span>
+                            ` : ''}
+                            <span class="hoy2-video-play">${I.playSolid}</span>
+                            <div class="hoy2-video-meta">
+                                <div class="hoy2-video-title">${v.title}</div>
+                                <div class="hoy2-video-duration">${v.duration}</div>
+                            </div>
+                        </button>
+                    `;
+                }).join('')}
             </div>
         </section>
     `;
@@ -3350,6 +3509,29 @@ function attachListeners() {
         render();
     });
 
+    // ── Login header (flag 'fan.hoy.login-header') ───────────────
+    //
+    // Click sobre el tier (ya logado) → cicla tiers sin cerrar sesión.
+    // Click en cualquier otra zona de la cabecera → alterna logado/no
+    // logado (si estás logado te desloguea; si no, entras como Socio).
+    $$('[data-login-tier]').forEach(btn => btn.addEventListener('click', e => {
+        e.stopPropagation();
+        // Cicla sólo entre tiers "reales" (1..5), no pasa por Visitante.
+        const cur = state.hoyAuthMock?.tierIdx || 1;
+        const next = cur >= AUTH_MOCK_TIERS.length - 1 ? 1 : cur + 1;
+        HoyLoginHeader.setTier(next);
+        render();
+    }));
+
+    $$('[data-login-toggle]').forEach(card => card.addEventListener('click', () => {
+        if (HoyLoginHeader.isLogged()) {
+            HoyLoginHeader.setLogged(false);
+        } else {
+            HoyLoginHeader.setTier(1); // "Socio" al entrar
+        }
+        render();
+    }));
+
     // ── Side menu v2: buscador + acciones ──────────────────────
     const searchInput = $('#sideMenuSearch');
     if (searchInput) {
@@ -4877,8 +5059,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupTouchSimulation();
 
         // Rehydrate feature-flag state that lives in localStorage
-        if (typeof Gamification !== 'undefined') Gamification.hydrate();
-        if (typeof HoyTeamTabs   !== 'undefined') HoyTeamTabs.hydrate();
+        if (typeof Gamification    !== 'undefined') Gamification.hydrate();
+        if (typeof HoyTeamTabs     !== 'undefined') HoyTeamTabs.hydrate();
+        if (typeof HoyLoginHeader  !== 'undefined') HoyLoginHeader.hydrate();
 
         // Re-render the entire app when a feature flag changes so new UI
         // gated behind the flag appears / disappears instantly.

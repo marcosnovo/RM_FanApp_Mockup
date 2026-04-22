@@ -380,6 +380,15 @@ const TEAMS = [
     { id: 'basket', name: 'Real Madrid Baloncesto',   sport: 'Baloncesto',         short: 'RMB' }
 ];
 
+// Paleta + etiqueta de cada equipo para los "tags" de contenido.
+// Colores distintivos a propósito para que cada tarjeta cante a qué
+// equipo pertenece en la pestaña "Todo".
+const TEAM_TAG_META = {
+    masc:   { label: 'Primer equipo', short: 'MASC',   color: '#2A3FD8', bg: 'rgba(42, 63, 216, 0.12)' },
+    fem:    { label: 'Femenino',      short: 'FEM',    color: '#C4277A', bg: 'rgba(196, 39, 122, 0.12)' },
+    basket: { label: 'Baloncesto',    short: 'BASKET', color: '#E36B1C', bg: 'rgba(227, 107, 28, 0.12)' }
+};
+
 // Next match per team (key = team id).
 // lastResult encapsula el marcador + rival del último partido,
 // para mostrarlo inline dentro de la card del próximo partido.
@@ -698,9 +707,15 @@ const HERO_ITEMS = [
 ];
 
 // ── News ────────────────────────────────────────────────────────
+// Cada noticia lleva `teamId` ('masc'|'fem'|'basket'|null) para permitir
+// el filtrado por pestaña y mostrar la etiqueta de equipo en "Todo".
+// `kind` es el tipo de pieza (Noticia, Reportaje, Galería…) — mostrado
+// en las pestañas de equipo concreto como cabecera contextual de la card.
 const NEWS_ITEMS = [
     {
         id: 1,
+        teamId: 'masc',
+        kind: 'Previa',
         title: 'Bayern-Real Madrid: a por la remontada en Múnich',
         subtitle: 'Nuestro equipo visita el Allianz Arena con la intención de dar la vuelta al 1-2 de la ida y lograr el pase a las semifinales de la Champions (21:00 h; Orange TV y Movistar Liga de Campeones).',
         category: 'NOTICIA',
@@ -715,6 +730,8 @@ El partido se podrá ver en directo a través de Orange TV y Movistar Liga de Ca
     },
     {
         id: 2,
+        teamId: 'masc',
+        kind: 'Entrevista',
         title: 'Arbeloa: "Podemos hacerlo, estamos convencidos de ello"',
         subtitle: 'El entrenador del Castilla habló sobre las posibilidades del primer equipo en Múnich.',
         category: 'NOTICIA', date: '15/04/2026', author: 'Redacción',
@@ -723,6 +740,8 @@ El partido se podrá ver en directo a través de Orange TV y Movistar Liga de Ca
     },
     {
         id: 3,
+        teamId: 'masc',
+        kind: 'Entrenamiento',
         title: 'El Real Madrid se entrenó en el Allianz Arena',
         subtitle: 'El equipo realizó el entrenamiento oficial previo al partido de la Champions League.',
         category: 'NOTICIA', date: '14/04/2026', author: 'Redacción',
@@ -731,6 +750,8 @@ El partido se podrá ver en directo a través de Orange TV y Movistar Liga de Ca
     },
     {
         id: 4,
+        teamId: 'masc',
+        kind: 'Rueda de prensa',
         title: 'Bellingham: "Es una final y vamos a darlo todo para ganar"',
         subtitle: 'El centrocampista inglés habló en la rueda de prensa previa al duelo en Múnich.',
         category: 'NOTICIA', date: '14/04/2026', author: 'Redacción',
@@ -739,6 +760,8 @@ El partido se podrá ver en directo a través de Orange TV y Movistar Liga de Ca
     },
     {
         id: 5,
+        teamId: 'masc',
+        kind: 'Convocatoria',
         title: 'Convocatoria del Real Madrid ante el Bayern',
         subtitle: 'Carlo Ancelotti dio a conocer los 23 jugadores citados para el partido.',
         category: 'NOTICIA', date: '14/04/2026', author: 'Redacción',
@@ -747,6 +770,8 @@ El partido se podrá ver en directo a través de Orange TV y Movistar Liga de Ca
     },
     {
         id: 6,
+        teamId: 'masc',
+        kind: 'Reportaje',
         title: 'Así fue la llegada del Real Madrid a Múnich',
         subtitle: 'El equipo viajó este lunes a la capital bávara para preparar el duelo europeo.',
         category: 'NOTICIA', date: '14/04/2026', author: 'Redacción',
@@ -755,11 +780,33 @@ El partido se podrá ver en directo a través de Orange TV y Movistar Liga de Ca
     },
     {
         id: 7,
+        teamId: null,   // noticia general del club, sin equipo concreto
+        kind: 'Noticia',
         title: 'Horarios y resultados de los partidos de vuelta de los cuartos',
         subtitle: 'Consulta todos los partidos de vuelta de cuartos de final de la Champions League.',
         category: 'NOTICIA', date: '13/04/2026', author: 'Redacción',
         imageColor: '#335999',
         body: 'La UEFA Champions League llega a su fase de cuartos de final con emocionantes duelos de vuelta. Consulta los horarios, resultados y cómo ver los partidos en directo.'
+    },
+    {
+        id: 8,
+        teamId: 'fem',
+        kind: 'Previa',
+        title: 'Clásico decisivo: RM Femenino recibe al Barça',
+        subtitle: 'El equipo de Alberto Toril busca asaltar el liderato de la Liga F ante la mejor defensa del campeonato.',
+        category: 'NOTICIA', date: '18/04/2026', author: 'Redacción',
+        imageColor: '#6c1f58',
+        body: 'El Real Madrid Femenino afronta el domingo un clásico crucial ante el FC Barcelona que puede valer el liderato de la Liga F. Toril recupera a Caicedo y Weir; Hazem sigue siendo duda por un golpe en el tobillo recibido en el último entrenamiento.'
+    },
+    {
+        id: 9,
+        teamId: 'basket',
+        kind: 'Reportaje',
+        title: 'Madrid a cuadros: así se prepara el viaje a Atenas',
+        subtitle: 'La sección de baloncesto ultima su preparación para el tercer partido del playoff de la Euroliga.',
+        category: 'NOTICIA', date: '17/04/2026', author: 'Redacción',
+        imageColor: '#7a3a0f',
+        body: 'El Real Madrid de baloncesto viaja este viernes a Atenas con la plantilla al completo para disputar el tercer partido del playoff ante el Panathinaikos. Chus Mateo destacó la importancia de controlar el ritmo del OAKA en la rueda de prensa previa.'
     }
 ];
 

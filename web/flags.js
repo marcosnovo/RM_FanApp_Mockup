@@ -60,6 +60,15 @@ const FLAGS = [
         default: false,
         requires: 'fan.hoy.v2-structure'
     },
+    {
+        app: 'fan',
+        key: 'fan.hoy.login-header',
+        label: 'Cabecera de bienvenida / login',
+        description: 'Añade arriba del todo en Hoy v2 una cabecera con el saludo: "Inicia sesión" si no hay sesión, o el nombre grande + tier (Socio, Madridista, Madridista Junior/Premium/Platinum) si sí. Se puede simular el estado (logado/no logado y tier) desde la propia cabecera.',
+        category: 'Hoy',
+        default: false,
+        requires: 'fan.hoy.v2-structure'
+    },
 
     // ── Hoy v2 — pestañas por equipo ──────────────────────────────
     // Anidada bajo `fan.hoy.v2-structure`: sólo tiene sentido encima del
