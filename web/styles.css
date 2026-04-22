@@ -4790,6 +4790,17 @@ body.auth-mode .app-layout { visibility: hidden; }
 
 .settings-user-row.is-self { border-color: #4a3de855; background: #4a3de80c; }
 
+/* Invitación pendiente (email enviado pero el usuario no ha
+   completado todavía el setup de contraseña). */
+.settings-user-row.is-pending {
+    border-color: #f5c26b44;
+    background: #f5c26b0a;
+}
+.settings-user-row.is-pending .settings-user-avatar {
+    background: #f5c26b24;
+    color: #f5c26b;
+}
+
 .settings-user-avatar {
     width: 32px;
     height: 32px;

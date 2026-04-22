@@ -388,13 +388,30 @@ const Auth = {
     },
 
     // ── Admin operations ───────────────────────────────────────
+    //
+    // Devuelve un listado fusionado de:
+    //   · Usuarios con perfil creado en `profiles` (status: 'active').
+    //   · Invitaciones pendientes en `pending_invitations` cuyo email
+    //     NO está aún en `profiles` (status: 'pending'). Incluimos
+    //     estos para que el admin sepa que sí ha invitado a alguien
+    //     aunque todavía no haya completado el setup.
     async listUsers() {
-        const { data, error } = await sb
-            .from('profiles')
-            .select('id, email, role, created_at')
-            .order('created_at', { ascending: true });
-        if (error) return [];
-        return data.map(p => ({
+        const [profilesRes, pendingRes] = await Promise.all([
+            sb.from('profiles')
+                .select('id, email, role, created_at')
+                .order('created_at', { ascending: true }),
+            // `pending_invitations` puede no existir en despliegues viejos
+            // o estar vacío — cualquier error se traga para no romper el
+            // listado principal.
+            sb.from('pending_invitations')
+                .select('email, role, created_at')
+                .order('created_at', { ascending: true })
+                .then(r => r, () => ({ data: [], error: null }))
+        ]);
+
+        if (profilesRes.error) return [];
+
+        const profiles = (profilesRes.data || []).map(p => ({
             id: p.id,
             email: p.email,
             name: '',
@@ -402,6 +419,38 @@ const Auth = {
             status: 'active',
             createdAt: new Date(p.created_at).getTime()
         }));
+
+        const profileEmails = new Set(
+            profiles.map(p => (p.email || '').toLowerCase())
+        );
+
+        const pending = ((pendingRes && pendingRes.data) || [])
+            .filter(inv => !profileEmails.has((inv.email || '').toLowerCase()))
+            .map(inv => ({
+                id: 'pending:' + inv.email,   // id sintético, sin fila en profiles aún
+                email: inv.email,
+                name: '',
+                role: inv.role || 'viewer',
+                status: 'pending',
+                createdAt: inv.created_at ? new Date(inv.created_at).getTime() : 0
+            }));
+
+        return [...profiles, ...pending].sort((a, b) => a.createdAt - b.createdAt);
+    },
+
+    /**
+     * Borra una invitación pendiente (fila de `pending_invitations`) para
+     * un email concreto. Úsalo para usuarios en status 'pending' que aún
+     * no tienen fila en `profiles`.
+     */
+    async deletePendingInvitation(email) {
+        if (!email) return { ok: false, error: 'Email vacío' };
+        const { error } = await sb
+            .from('pending_invitations')
+            .delete()
+            .eq('email', email);
+        if (error) return { ok: false, error: translateError(error.message) };
+        return { ok: true };
     },
 
     async inviteUser(email, role = 'viewer') {

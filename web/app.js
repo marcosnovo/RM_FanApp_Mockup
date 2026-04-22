@@ -5339,25 +5339,36 @@ async function renderSettings() {
         <div class="settings-users">
             ${users.map(u => {
                 const tagKey = UserTags.get(u.email);
+                const isPending = u.status === 'pending';
+                const isSelf    = u.id === session.userId;
+                // Dataset para routing del borrado: los pending no tienen
+                // fila en `profiles` — usamos el email para borrarlos de
+                // `pending_invitations`.
+                const delAttrs = isPending
+                    ? `data-del-pending-email="${u.email}"`
+                    : `data-del-user-id="${u.id}"`;
                 return `
-                <div class="settings-user-row ${u.id === session.userId ? 'is-self' : ''}">
+                <div class="settings-user-row ${isSelf ? 'is-self' : ''} ${isPending ? 'is-pending' : ''}">
                     <div class="settings-user-avatar">${(u.name || u.email).slice(0,2).toUpperCase()}</div>
                     <div class="settings-user-meta">
-                        <div class="settings-user-email">${u.email}${u.id === session.userId ? ' <span class="settings-user-self">(tú)</span>' : ''}</div>
+                        <div class="settings-user-email">${u.email}${isSelf ? ' <span class="settings-user-self">(tú)</span>' : ''}</div>
                         <div class="settings-user-sub">
-                            <span class="settings-user-status active">Activo</span>
+                            ${isPending
+                                ? `<span class="settings-user-status pending">Pendiente de aceptar</span>`
+                                : `<span class="settings-user-status active">Activo</span>`}
                             ${renderTagChip(tagKey)}
                         </div>
                     </div>
-                    <select class="settings-user-role" data-user-id="${u.id}" ${u.id === session.userId ? 'disabled' : ''}>
+                    <select class="settings-user-role" data-user-id="${u.id}"
+                            ${isSelf ? 'disabled' : ''} ${isPending ? 'disabled title="El rol se fija al aceptar la invitación"' : ''}>
                         <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>Viewer</option>
                         <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>
                     ${tagSelect(tagKey, `data-user-tag-email="${u.email}"`)}
-                    <button class="settings-user-invite" title="Ver / reenviar invitación" data-invite-email="${u.email}" data-invite-role="${u.role}" ${u.id === session.userId ? 'disabled' : ''}>
+                    <button class="settings-user-invite" title="${isPending ? 'Reenviar invitación' : 'Ver / reenviar invitación'}" data-invite-email="${u.email}" data-invite-role="${u.role}" ${isSelf ? 'disabled' : ''}>
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4 h16 v16 H4z"/><polyline points="4,4 12,13 20,4"/></svg>
                     </button>
-                    <button class="settings-user-del" data-del-user-id="${u.id}" ${u.id === session.userId ? 'disabled' : ''}>
+                    <button class="settings-user-del" ${delAttrs} title="${isPending ? 'Cancelar invitación' : 'Eliminar usuario'}" ${isSelf ? 'disabled' : ''}>
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="4,7 20,7"/><path d="M6 7 v12 a2 2 0 0 0 2 2 h8 a2 2 0 0 0 2-2 V7"/><path d="M9 7 V4 a1 1 0 0 1 1-1 h4 a1 1 0 0 1 1 1 v3"/></svg>
                     </button>
                 </div>
@@ -5419,6 +5430,20 @@ async function renderSettings() {
         btn.disabled = true;
         const r = await Auth.deleteUser(btn.dataset.delUserId);
         if (!r.ok) alert(r.error);
+        await renderSettings();
+    }));
+
+    // Borrar invitación pendiente (no hay fila en `profiles` todavía —
+    // la fila vive en `pending_invitations` y se borra por email).
+    $$('[data-del-pending-email]').forEach(btn => btn.addEventListener('click', async () => {
+        if (btn.disabled) return;
+        if (!confirm('¿Cancelar la invitación? El enlace dejará de ser válido.')) return;
+        btn.disabled = true;
+        const email = btn.dataset.delPendingEmail;
+        const r = await Auth.deletePendingInvitation(email);
+        if (!r.ok) { alert(r.error); btn.disabled = false; return; }
+        // Limpia también la etiqueta local asociada al email.
+        UserTags.set(email, '');
         await renderSettings();
     }));
 }
