@@ -62,12 +62,11 @@ const FLAGS = [
     },
     {
         app: 'fan',
-        key: 'fan.hoy.login-header',
-        label: 'Cabecera de bienvenida / login',
-        description: 'Añade arriba del todo en Hoy v2 una cabecera con el saludo: "Inicia sesión" si no hay sesión, o el nombre grande + tier (Socio, Madridista, Madridista Junior/Premium/Platinum) si sí. Se puede simular el estado (logado/no logado y tier) desde la propia cabecera.',
-        category: 'Hoy',
-        default: false,
-        requires: 'fan.hoy.v2-structure'
+        key: 'fan.app.login-header',
+        label: 'Cabecera de bienvenida / login (global)',
+        description: 'Cabecera persistente arriba del todo en todas las secciones (Hoy, Noticias, Calendario, RMTV/RM Play, Tienda): "Inicia sesión" cuando no hay sesión, o nombre grande + tier (Socio, Madridista, Junior/Premium/Platinum) cuando sí. Click sobre el cluster cicla estados.',
+        category: 'Navegación',
+        default: false
     },
 
     // ── Hoy v2 — pestañas por equipo ──────────────────────────────
@@ -107,6 +106,16 @@ const FLAGS = [
         key: 'fan.sidemenu.v2',
         label: 'Side menu v2 — escalable',
         description: 'Rediseña el menú lateral con header compacto, buscador, accesos rápidos y secciones agrupadas (Tu cuenta · Preferencias · App · Ayuda · Legal) para que escale bien al añadir más opciones.',
+        category: 'Navegación',
+        default: false
+    },
+
+    // ── RM Play (rebrand de la tab RMTV) ──────────────────────────
+    {
+        app: 'fan',
+        key: 'fan.rmtv.play',
+        label: 'RM Play — nueva RMTV',
+        description: 'Rebrand de la pestaña RMTV: se pasa a llamar "RM Play" y se sustituye el contenido por un layout tipo plataforma OTT (hero con "Resumen / Ver más", "Nuestro club" por deporte, canales Realmadrid TV, Tendencias, UEFA Youth League, Partidos 2025-26 y Originals & Films).',
         category: 'Navegación',
         default: false
     }

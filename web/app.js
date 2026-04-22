@@ -179,11 +179,13 @@ function el(html) {
 function renderTabBar() {
     // Icons come from Cibeles Design System navbar/ folder.
     // For "Noticias" there's no dedicated navbar icon — we reuse ui/file-05.
+    const rmtvIsPlay = Flags.isEnabled('fan.rmtv.play');
     const tabs = [
         { key: 'hoy',        label: 'Hoy',        inactive: 'icons/navbar/today.svg',    active: 'icons/navbar/fill-today.svg' },
         { key: 'noticias',   label: 'Noticias',   inactive: 'icons/ui/file-05.svg',      active: 'icons/ui/file-05.svg' },
         { key: 'calendario', label: 'Calendario', inactive: 'icons/navbar/calendar.svg', active: 'icons/navbar/fill-calendar.svg' },
-        { key: 'rmtv',       label: 'RMTV',       inactive: 'icons/navbar/rmtv.svg',     active: 'icons/navbar/fill-rmtv.svg' },
+        // RMTV se muestra como "RM Play" cuando el flag `fan.rmtv.play` está on.
+        { key: 'rmtv',       label: rmtvIsPlay ? 'RM Play' : 'RMTV', inactive: 'icons/navbar/rmtv.svg', active: 'icons/navbar/fill-rmtv.svg' },
         { key: 'tienda',     label: 'Tienda',     inactive: 'icons/navbar/shop.svg',     active: 'icons/navbar/fill-shop.svg' }
     ];
 
@@ -267,37 +269,44 @@ function hoyLoginGreeting() {
 }
 
 /**
- * Cluster compacto para el topbar de Hoy v2. Vive entre el icono de
- * persona (izquierda) y el título "Hoy" (derecha). No incluye avatar:
- * el avatar ya está representado por el icono de persona a la izquierda.
+ * Cabecera global de login/bienvenida (flag `fan.app.login-header`).
+ * Persiste en todas las secciones de la Fan App (Hoy, Noticias, …)
+ * porque se renderiza en un slot fuera del contenido scrolleable.
  *
  * Click sobre el cluster → cicla por los 6 estados (Visitante → Socio
- * → Madridista → Junior → Premium → Platinum → Visitante …). Simple,
- * un único click-target, para que el mockup sea predecible.
+ * → Madridista → Junior → Premium → Platinum → Visitante …).
  */
-function renderHoyV2LoginTopbar() {
+function renderAppLoginBar() {
     const logged = HoyLoginHeader.isLogged();
     const tier = HoyLoginHeader.tierLabel();
     const name = state.hoyAuthMock?.name || 'Marcos';
     const greeting = hoyLoginGreeting();
+    const initials = (name[0] || 'M').toUpperCase();
 
     return `
-        <button class="hoy2-top-login ${logged ? 'is-logged' : ''}"
+        <button class="app-topbar ${logged ? 'is-logged' : ''}"
                 data-login-cycle
                 title="mock · haz clic para cambiar estado">
-            ${logged ? `
-                <span class="hoy2-top-login-kicker">Hola,</span>
-                <span class="hoy2-top-login-name">${name}</span>
-                <span class="hoy2-top-login-tier">
-                    <span class="hoy2-top-login-tier-dot"></span>${tier}
-                </span>
-            ` : `
-                <span class="hoy2-top-login-kicker">${greeting}</span>
-                <span class="hoy2-top-login-cta">
-                    Iniciar sesión
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                </span>
-            `}
+            <div class="app-topbar-text">
+                ${logged ? `
+                    <span class="app-topbar-kicker">Hola,</span>
+                    <span class="app-topbar-name">${name}</span>
+                    <span class="app-topbar-tier">
+                        <span class="app-topbar-tier-dot"></span>${tier}
+                    </span>
+                ` : `
+                    <span class="app-topbar-kicker">${greeting}</span>
+                    <span class="app-topbar-cta">
+                        Iniciar sesión
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </span>
+                `}
+            </div>
+            <div class="app-topbar-avatar">
+                ${logged
+                    ? `<span class="app-topbar-initials">${initials}</span>`
+                    : I.personCircle}
+            </div>
         </button>
     `;
 }
@@ -311,7 +320,6 @@ function renderHoyV2() {
     // Pestañas por equipo (flag anidado bajo Hoy v2).
     const teamTabsOn = Flags.isEnabled('fan.hoy.team-tabs');
     const editorOn   = Flags.isEnabled('fan.hoy.team-tabs.editor');
-    const loginOn    = Flags.isEnabled('fan.hoy.login-header');
 
     // Fallback: si la pestaña activa se oculta, volvemos a "Todo".
     if (teamTabsOn
@@ -344,13 +352,13 @@ function renderHoyV2() {
     return `
         <div class="hoy2-wrap">
 
-            <!-- Top bar: icono de persona + (opcional) cluster de login +
-                 título "Hoy". El login vive AQUÍ — entre icono y título. -->
-            <div class="hoy2-topbar ${loginOn ? 'has-login' : ''}">
+            <!-- Top bar propio de Hoy v2. El cluster de login se renderiza
+                 en el slot global #appTopbarSlot, común a todas las
+                 secciones (flag fan.app.login-header). -->
+            <div class="hoy2-topbar">
                 <button class="hoy2-top-icon" id="btnSideMenu" aria-label="Tu área">
                     ${I.personCircle}
                 </button>
-                ${loginOn ? renderHoyV2LoginTopbar() : ''}
                 <div class="hoy2-top-title">Hoy</div>
                 <div class="hoy2-top-spacer"></div>
             </div>
@@ -2005,6 +2013,236 @@ function renderRMTV() {
     `;
 }
 
+// ================================================================
+// RM PLAY — feature flag 'fan.rmtv.play'
+//
+// Reemplaza la pantalla de RMTV por un layout tipo plataforma OTT
+// similar a las capturas de la app oficial de Real Madrid Play:
+//   · Topbar oscuro con menú, brand "Play" y pill "Directo (2)".
+//   · Hero carrusel con CTA "Resumen" + "Ver más" + dots.
+//   · Secciones horizontales: Nuestro club, Realmadrid TV (canales),
+//     Tendencias, UEFA Youth League, Partidos 2025-26, Originals & Films.
+// ================================================================
+
+const RMPLAY_HERO_SLIDES = [
+    {
+        title: 'Real Madrid 2-1 Alavés',
+        subtitle: 'El mejor contenido de nuestra victoria en el Bernabéu.',
+        color1: '#15203a',
+        color2: '#0a1120'
+    },
+    {
+        title: 'Bayern Múnich 4-3 Real Madrid',
+        subtitle: 'Análisis y resumen del duelo europeo en el Allianz.',
+        color1: '#2b0b0e',
+        color2: '#120304'
+    },
+    {
+        title: '30 Minutos · Cuartos de final',
+        subtitle: 'La eliminatoria contada por sus protagonistas.',
+        color1: '#1a1246',
+        color2: '#0a0822'
+    },
+    {
+        title: 'UEFA Youth League — Entrevista',
+        subtitle: 'El Juvenil A repasa el título conquistado en Nyon.',
+        color1: '#0f2a1a',
+        color2: '#061209'
+    },
+    {
+        title: 'Originals: tras las cámaras',
+        subtitle: 'El Real Madrid en primera persona, fuera del césped.',
+        color1: '#2a1a3f',
+        color2: '#110921'
+    }
+];
+
+const RMPLAY_SECTIONS = {
+    club: [
+        { id: 'masc',   label: 'Fútbol Masculino', c1: '#233a75', c2: '#0d1a3a' },
+        { id: 'basket', label: 'Baloncesto',        c1: '#7a3a0f', c2: '#321408' },
+        { id: 'fem',    label: 'Fútbol Femenino',   c1: '#5d1a3f', c2: '#280a1b' }
+    ],
+    channels: [
+        { flag: '🇪🇸', label: 'Ver en Español', live: true },
+        { flag: '🇬🇧', label: 'Watch in English', live: true }
+    ],
+    trending: [
+        { title: 'Camavinga | 150 victorias con el Real Madrid', duration: '02:18', c1: '#153a5a', c2: '#061528' },
+        { title: 'Carvajal | 300 partidos en el Bernabéu',        duration: '01:55', c1: '#2b0c14', c2: '#110306' },
+        { title: 'Bellingham | Mejores asistencias',              duration: '03:02', c1: '#1f1a4a', c2: '#0a0820' },
+        { title: 'Courtois | Las 10 mejores paradas',             duration: '02:44', c1: '#0f2a1a', c2: '#05140a' }
+    ],
+    youth: [
+        { title: 'El Juvenil A ofrece la Youth League al Bernabéu', duration: '01:37', c1: '#193a4a', c2: '#07141d' },
+        { title: 'Florentino Pérez recibe a los campeones',         duration: '00:45', c1: '#2a1738', c2: '#110821' },
+        { title: 'Arbeloa: "Un título histórico"',                  duration: '02:10', c1: '#1a3a2a', c2: '#071810' }
+    ],
+    matches: [
+        { title: 'Real Madrid 2-1 Alavés', videos: 12, c1: '#0b1a3a', c2: '#050a1f' },
+        { title: 'Bayern 4-3 Real Madrid', videos: 9,  c1: '#3a0b14', c2: '#1a0508' },
+        { title: 'Real Madrid 1-1 Girona', videos: 11, c1: '#3a2a0b', c2: '#1a1305' }
+    ],
+    originals: [
+        { title: 'Hala Madrid',        subtitle: 'Serie documental · T1', c1: '#241650', c2: '#0e0824' },
+        { title: 'Leyendas blancas',   subtitle: 'Película · 2024',       c1: '#1a3a4a', c2: '#07141d' },
+        { title: 'El Bernabéu',        subtitle: 'Serie · T2',            c1: '#3a1a2a', c2: '#1a0810' }
+    ]
+};
+
+function renderRMPlay() {
+    // Estado local simple para el hero (reusa state.heroIndex existente).
+    const slideIdx = state.heroIndex % RMPLAY_HERO_SLIDES.length;
+    const slide = RMPLAY_HERO_SLIDES[slideIdx];
+
+    return `
+        <div class="rmplay-wrap">
+
+            <!-- Topbar estilo RM Play: menú, brand "Play" central, cast + Directo -->
+            <div class="rmplay-topbar">
+                <button class="rmplay-top-btn" id="btnSideMenu" aria-label="Menú">
+                    ${I.line3}
+                </button>
+                <div class="rmplay-brand">
+                    <span class="rmplay-brand-crown">${I.crownSmall}</span>
+                    <span class="rmplay-brand-text">Play</span>
+                </div>
+                <div class="rmplay-top-right">
+                    <button class="rmplay-top-btn" aria-label="Cast">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M2 4v4h2V6h16v12h-5v2h5a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H2z"/><path d="M2 10v2a8 8 0 0 1 8 8h2A10 10 0 0 0 2 10z"/><path d="M2 14v2a4 4 0 0 1 4 4h2a6 6 0 0 0-6-6z"/><circle cx="3" cy="19" r="1.6"/></svg>
+                    </button>
+                    <button class="rmplay-live-pill">Directo (2)</button>
+                </div>
+            </div>
+
+            <div class="rmplay-scroll">
+
+                <!-- Hero carrusel -->
+                <section class="rmplay-hero" style="background: linear-gradient(180deg, ${slide.color1} 0%, ${slide.color2} 100%);">
+                    <div class="rmplay-hero-body">
+                        <h2 class="rmplay-hero-title">${slide.title}</h2>
+                        <p class="rmplay-hero-sub">${slide.subtitle}</p>
+                        <div class="rmplay-hero-ctas">
+                            <button class="rmplay-btn primary">Resumen</button>
+                            <button class="rmplay-btn ghost">Ver más</button>
+                        </div>
+                    </div>
+                    <div class="rmplay-hero-dots">
+                        ${RMPLAY_HERO_SLIDES.map((_, i) => `
+                            <button class="rmplay-hero-dot ${i === slideIdx ? 'active' : ''}" data-rmplay-hero="${i}"></button>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <!-- Nuestro club -->
+                <section class="rmplay-section">
+                    <h3 class="rmplay-section-title">Nuestro club</h3>
+                    <div class="rmplay-hscroll">
+                        ${RMPLAY_SECTIONS.club.map(c => `
+                            <button class="rmplay-club-card"
+                                style="background: linear-gradient(180deg, ${c.c1} 0%, ${c.c2} 100%);">
+                                <span class="rmplay-club-label">${c.label}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <!-- Realmadrid TV (canales) -->
+                <section class="rmplay-section">
+                    <h3 class="rmplay-section-title">Realmadrid TV</h3>
+                    <div class="rmplay-hscroll">
+                        ${RMPLAY_SECTIONS.channels.map(c => `
+                            <div class="rmplay-channel-card">
+                                <div class="rmplay-channel-art">
+                                    <span class="rmplay-channel-flag">${c.flag}</span>
+                                    <div class="rmplay-channel-logo">
+                                        ${I.crownSmall}
+                                        <span class="rmplay-channel-brand">Realmadrid.tv</span>
+                                    </div>
+                                </div>
+                                <div class="rmplay-channel-meta">
+                                    <div class="rmplay-channel-name">${c.label}</div>
+                                    ${c.live ? '<span class="rmplay-channel-live">Directo</span>' : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <!-- Tendencias -->
+                <section class="rmplay-section">
+                    <h3 class="rmplay-section-title">Tendencias</h3>
+                    <div class="rmplay-hscroll">
+                        ${RMPLAY_SECTIONS.trending.map(v => `
+                            <button class="rmplay-video-card"
+                                style="background: linear-gradient(145deg, ${v.c1}, ${v.c2});">
+                                <span class="rmplay-video-play">${I.playSolid}</span>
+                                <div class="rmplay-video-meta">
+                                    <div class="rmplay-video-title">${v.title}</div>
+                                    <div class="rmplay-video-duration">${v.duration}</div>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <!-- UEFA Youth League -->
+                <section class="rmplay-section">
+                    <h3 class="rmplay-section-title">UEFA Youth League</h3>
+                    <div class="rmplay-hscroll">
+                        ${RMPLAY_SECTIONS.youth.map(v => `
+                            <button class="rmplay-video-card"
+                                style="background: linear-gradient(145deg, ${v.c1}, ${v.c2});">
+                                <span class="rmplay-video-play">${I.playSolid}</span>
+                                <div class="rmplay-video-meta">
+                                    <div class="rmplay-video-title">${v.title}</div>
+                                    <div class="rmplay-video-duration">${v.duration}</div>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <!-- Partidos 2025-26 (playlists) -->
+                <section class="rmplay-section">
+                    <h3 class="rmplay-section-title">Partidos 2025-26</h3>
+                    <p class="rmplay-section-sub">La previa, el partido, el post. ¡No te pierdas nada!</p>
+                    <div class="rmplay-hscroll">
+                        ${RMPLAY_SECTIONS.matches.map(m => `
+                            <button class="rmplay-playlist-card"
+                                style="background: linear-gradient(160deg, ${m.c1}, ${m.c2});">
+                                <span class="rmplay-playlist-badge">${m.videos} VIDEOS</span>
+                                <div class="rmplay-playlist-title">${m.title}</div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <!-- Originals & Films -->
+                <section class="rmplay-section">
+                    <h3 class="rmplay-section-title">Originals &amp; Films</h3>
+                    <p class="rmplay-section-sub">La historia y actualidad del club a través de las mejores series y películas.</p>
+                    <div class="rmplay-hscroll">
+                        ${RMPLAY_SECTIONS.originals.map(o => `
+                            <button class="rmplay-video-card tall"
+                                style="background: linear-gradient(170deg, ${o.c1}, ${o.c2});">
+                                <div class="rmplay-video-meta">
+                                    <div class="rmplay-video-title">${o.title}</div>
+                                    <div class="rmplay-video-duration">${o.subtitle}</div>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <div style="height: 32px"></div>
+            </div>
+        </div>
+
+        ${renderSideMenu()}
+    `;
+}
+
 // ── TIENDA ───────────────────────────────────────────────────────
 function renderTienda() {
     return `
@@ -3149,7 +3387,10 @@ function render() {
                 break;
             case 'noticias':   content = renderNoticias();   break;
             case 'calendario': content = renderCalendario(); break;
-            case 'rmtv':       content = renderRMTV();       break;
+            case 'rmtv':       content = Flags.isEnabled('fan.rmtv.play')
+                ? renderRMPlay()
+                : renderRMTV();
+                break;
             case 'tienda':     content = renderTienda();     break;
         }
         tabBarHTML = renderTabBar();
@@ -3157,6 +3398,16 @@ function render() {
 
     body.innerHTML = content;
     $('#tabBarSlot').innerHTML = tabBarHTML;
+
+    // Cabecera global de login (flag `fan.app.login-header`).
+    // Aparece persistente en todas las pestañas de la Fan App.
+    const topbarSlot = $('#appTopbarSlot');
+    if (topbarSlot) {
+        topbarSlot.innerHTML = (state.app === 'fan' && Flags.isEnabled('fan.app.login-header'))
+            ? renderAppLoginBar()
+            : '';
+        topbarSlot.classList.toggle('visible', topbarSlot.innerHTML !== '');
+    }
 
     // Sheets (fan news + vip restaurant/perfil + hoy v2 sheets)
     if (state.app === 'fan' && state.newsId) {
@@ -3509,7 +3760,7 @@ function attachListeners() {
         render();
     });
 
-    // ── Login cluster en topbar (flag 'fan.hoy.login-header') ───
+    // ── Login cluster global (flag 'fan.app.login-header') ───────
     //
     // Click → cicla por los 6 estados (Visitante → Socio → Madridista
     // → Junior → Premium → Platinum → Visitante). Un único click-target
@@ -3517,6 +3768,12 @@ function attachListeners() {
     $$('[data-login-cycle]').forEach(btn => btn.addEventListener('click', e => {
         e.stopPropagation();
         HoyLoginHeader.cycleNext();
+        render();
+    }));
+
+    // ── RM Play: hero carousel dots (flag 'fan.rmtv.play') ───────
+    $$('[data-rmplay-hero]').forEach(d => d.addEventListener('click', () => {
+        state.heroIndex = parseInt(d.dataset.rmplayHero);
         render();
     }));
 

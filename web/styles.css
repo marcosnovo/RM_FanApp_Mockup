@@ -8293,110 +8293,139 @@ body.auth-mode .app-layout { visibility: hidden; }
 }
 
 /* ================================================================
-   Hoy v2 — Login cluster en el topbar (flag 'fan.hoy.login-header')
-   Vive entre el icono de persona (izq.) y el título "Hoy" (der.).
-   Click → cicla estados (Visitante → Socio → … → Platinum → Visitante).
+   CABECERA GLOBAL DE LOGIN (flag 'fan.app.login-header')
+   Slot persistente `#appTopbarSlot` entre status-bar y screen-body.
+   Se muestra en todas las secciones de la Fan App.
    ================================================================ */
 
-/* Cuando el login está activo, el topbar se adapta: no hay
-   centrado absoluto del título (la alineación se maneja con flex).  */
-.hoy2-topbar.has-login {
-    gap: 10px;
-}
-.hoy2-topbar.has-login .hoy2-top-title {
-    flex: 0 0 auto;
-    margin-left: auto;    /* empuja "Hoy" a la derecha */
-}
-.hoy2-topbar.has-login .hoy2-top-spacer {
+/* El phone-screen tiene los hijos en position:absolute (status-bar y
+   screen-body se solapan sobre el área completa). Para insertar una
+   franja entre el status-bar y el contenido hay que: (1) posicionar
+   absolutamente el slot justo bajo el status-bar y (2) empujar el
+   screen-body hacia abajo para dejar hueco. */
+.app-topbar-slot {
+    position: absolute;
+    top: 52px;                 /* altura del status-bar */
+    left: 0;
+    right: 0;
+    z-index: 8;
     display: none;
 }
+.app-topbar-slot.visible { display: block; }
 
-/* El cluster propiamente dicho */
-.hoy2-top-login {
-    flex: 0 1 auto;
-    min-width: 0;
-    display: inline-flex;
+/* Cuando el login bar es visible, empujamos screen-body ~68px abajo
+   (altura aproximada del cluster, ligeramente mayor para el padding). */
+.app-topbar-slot.visible ~ .screen-body {
+    top: 120px;                /* 52 (status) + 68 (topbar) */
+}
+
+.app-topbar {
+    width: 100%;
+    display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    column-gap: 8px;
-    row-gap: 2px;
-    padding: 4px 10px;
-    border-radius: 10px;
-    background: transparent;
-    border: 0;
-    font-family: inherit;
-    text-align: left;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #f2f5fb;
+    border-bottom: 1px solid var(--rm-separator);
     cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    border: 0;
+    border-bottom: 1px solid var(--rm-separator);
     transition: background 0.14s;
-    color: var(--rm-dark);
 }
 
-.hoy2-top-login:hover {
-    background: rgba(15, 33, 69, 0.05);
+.app-topbar:hover { background: #e8ecf5; }
+
+.app-topbar.is-logged {
+    background: linear-gradient(135deg, var(--rm-dark) 0%, var(--rm-primary-dark, #2115AB) 100%);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+.app-topbar.is-logged:hover {
+    background: linear-gradient(135deg, #13264e 0%, #2518bc 100%);
 }
 
-.hoy2-top-login-kicker {
-    font-size: 11px;
+.app-topbar-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.15;
+}
+
+.app-topbar-kicker {
+    font-size: 12px;
     font-weight: 500;
     color: var(--color-grayscale-placeholder, #8990a6);
-    letter-spacing: 0;
-    line-height: 1.1;
-    flex: 1 0 100%;          /* fuerza salto antes del nombre/cta */
+}
+.app-topbar.is-logged .app-topbar-kicker {
+    color: rgba(255, 255, 255, 0.72);
 }
 
-.hoy2-top-login-cta {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--rm-dark);
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    line-height: 1.1;
-    letter-spacing: -0.2px;
-}
-
-.hoy2-top-login-cta > svg {
-    width: 13px !important;
-    height: 13px !important;
-    margin-top: 1px;
-}
-
-/* Logado */
-.hoy2-top-login.is-logged {
-    /* el fondo lo pintamos un poco para resaltar */
-    background: rgba(62, 49, 250, 0.08);
-}
-.hoy2-top-login.is-logged:hover {
-    background: rgba(62, 49, 250, 0.14);
-}
-
-.hoy2-top-login-name {
-    font-size: 15px;
+.app-topbar-name,
+.app-topbar-cta {
+    font-size: 17px;
     font-weight: 800;
-    color: var(--rm-dark);
     letter-spacing: -0.2px;
-    line-height: 1.1;
-}
-
-.hoy2-top-login-tier {
-    flex: 1 0 100%;          /* tier en su propia línea, bajo el nombre */
+    color: var(--rm-dark);
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 10.5px;
+    gap: 6px;
+}
+.app-topbar.is-logged .app-topbar-name,
+.app-topbar.is-logged .app-topbar-cta {
+    color: #fff;
+}
+.app-topbar-cta > svg { width: 14px !important; height: 14px !important; margin-top: 1px; }
+
+.app-topbar-tier {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
     font-weight: 600;
-    color: var(--rm-primary-dark, #2115AB);
-    line-height: 1.15;
-    letter-spacing: 0.1px;
+    color: rgba(255, 255, 255, 0.88);
+    margin-top: 2px;
 }
 
-.hoy2-top-login-tier-dot {
+.app-topbar-tier-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #f5cf7c;     /* dorado — madridista */
+    background: #f5cf7c;      /* dorado madridista */
     box-shadow: 0 0 0 2px rgba(245, 207, 124, 0.22);
     flex-shrink: 0;
+}
+
+.app-topbar-avatar {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--rm-separator);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--rm-dark);
+    overflow: hidden;
+}
+.app-topbar-avatar > svg { width: 26px !important; height: 26px !important; }
+
+.app-topbar.is-logged .app-topbar-avatar {
+    background: #fff;
+    border: 0;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+}
+
+.app-topbar-initials {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--rm-primary-dark, #2115AB);
+    letter-spacing: -0.2px;
 }
 
 /* ================================================================
@@ -8863,4 +8892,435 @@ body.auth-mode .app-layout { visibility: hidden; }
 .sm2-footer-version {
     font-size: 11px;
     color: var(--color-grayscale-placeholder, #8990a6);
+}
+
+/* ================================================================
+   RM PLAY — flag 'fan.rmtv.play'
+   Reemplaza la pantalla de RMTV por un layout tipo plataforma OTT.
+   Fondo oscuro, hero carrusel, secciones horizontales por bloques.
+   ================================================================ */
+
+.rmplay-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    color: #fff;
+    padding-bottom: 83px;
+}
+
+/* Topbar oscuro */
+.rmplay-topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 52px 12px 10px;
+    background: #000;
+    flex-shrink: 0;
+}
+
+.rmplay-top-btn {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.rmplay-top-btn > svg { width: 22px !important; height: 22px !important; }
+
+.rmplay-brand {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: #fff;
+    font-weight: 800;
+}
+.rmplay-brand-crown > svg { width: 18px !important; height: 18px !important; }
+.rmplay-brand-text {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    position: relative;
+    top: 6px;
+}
+
+.rmplay-top-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.rmplay-live-pill {
+    background: #e11d2e;
+    color: #fff;
+    border: 0;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.1px;
+    box-shadow: 0 2px 6px rgba(225, 29, 46, 0.35);
+}
+
+/* Scroll */
+.rmplay-scroll {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 0 20px;
+}
+
+/* Secciones */
+.rmplay-section {
+    margin-top: 24px;
+}
+
+.rmplay-section-title {
+    margin: 0 0 10px;
+    padding: 0 16px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.2px;
+}
+
+.rmplay-section-sub {
+    margin: -4px 0 12px;
+    padding: 0 16px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.72);
+    line-height: 1.35;
+}
+
+/* Hero */
+.rmplay-hero {
+    position: relative;
+    height: 360px;
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.rmplay-hero::after {
+    /* sutil viñeta para legibilidad */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0) 45%,
+        rgba(0, 0, 0, 0.55) 100%);
+    pointer-events: none;
+}
+
+.rmplay-hero-body {
+    position: relative;
+    padding: 0 18px 14px;
+    z-index: 1;
+}
+
+.rmplay-hero-title {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: #fff;
+}
+.rmplay-hero-sub {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.82);
+    line-height: 1.35;
+}
+
+.rmplay-hero-ctas {
+    display: flex;
+    gap: 10px;
+}
+
+.rmplay-btn {
+    padding: 11px 22px;
+    border: 0;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: -0.1px;
+}
+
+.rmplay-btn.primary {
+    background: var(--rm-primary, #4a3de8);
+    color: #fff;
+}
+.rmplay-btn.primary:hover { background: var(--rm-primary-dark, #2115AB); }
+
+.rmplay-btn.ghost {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    backdrop-filter: blur(6px);
+}
+.rmplay-btn.ghost:hover { background: rgba(255, 255, 255, 0.22); }
+
+.rmplay-hero-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    z-index: 2;
+}
+
+.rmplay-hero-dot {
+    width: 6px;
+    height: 6px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.14s, width 0.14s;
+}
+.rmplay-hero-dot.active {
+    background: var(--rm-primary, #4a3de8);
+    width: 22px;
+    border-radius: 4px;
+}
+
+/* Horizontal scroll shared */
+.rmplay-hscroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 16px 2px;
+}
+.rmplay-hscroll::-webkit-scrollbar { display: none; }
+
+/* Nuestro club: cards cuadradas con label */
+.rmplay-club-card {
+    flex: 0 0 auto;
+    width: 152px;
+    height: 152px;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 14px;
+    overflow: hidden;
+    color: #fff;
+    font-family: inherit;
+}
+
+.rmplay-club-card::before {
+    /* overlay para contraste del texto */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.55) 100%);
+    border-radius: inherit;
+}
+
+.rmplay-club-label {
+    position: relative;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+}
+
+/* Realmadrid TV (canales) */
+.rmplay-channel-card {
+    flex: 0 0 auto;
+    width: 250px;
+}
+
+.rmplay-channel-art {
+    position: relative;
+    width: 100%;
+    height: 150px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #1c2a70 0%, #0a0f3a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.rmplay-channel-flag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.rmplay-channel-logo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+    font-weight: 800;
+}
+.rmplay-channel-logo > svg { width: 30px !important; height: 30px !important; }
+.rmplay-channel-brand {
+    font-size: 20px;
+    letter-spacing: -0.3px;
+}
+
+.rmplay-channel-meta {
+    margin-top: 8px;
+    padding: 0 2px;
+}
+.rmplay-channel-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+}
+.rmplay-channel-live {
+    display: inline-block;
+    background: #e11d2e;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 5px;
+}
+
+/* Video cards (Tendencias / Youth / Originals) */
+.rmplay-video-card {
+    flex: 0 0 auto;
+    width: 220px;
+    height: 148px;
+    border: 0;
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    padding: 0;
+    overflow: hidden;
+    color: #fff;
+    font-family: inherit;
+    text-align: left;
+    display: flex;
+    align-items: flex-end;
+}
+.rmplay-video-card.tall { height: 220px; width: 156px; }
+
+.rmplay-video-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.72) 100%);
+    border-radius: inherit;
+}
+
+.rmplay-video-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+.rmplay-video-play > svg { width: 16px !important; height: 16px !important; }
+
+.rmplay-video-meta {
+    position: relative;
+    z-index: 1;
+    padding: 0 10px 10px;
+    width: 100%;
+}
+.rmplay-video-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.rmplay-video-duration {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.75);
+    margin-top: 4px;
+}
+
+/* Playlist cards (Partidos 2025-26) */
+.rmplay-playlist-card {
+    flex: 0 0 auto;
+    width: 240px;
+    height: 150px;
+    border: 0;
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    padding: 0;
+    overflow: hidden;
+    font-family: inherit;
+    display: flex;
+    align-items: flex-end;
+    color: #fff;
+}
+
+.rmplay-playlist-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.65) 100%);
+}
+
+.rmplay-playlist-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 9px;
+    border-radius: 5px;
+    letter-spacing: 0.6px;
+    backdrop-filter: blur(4px);
+    z-index: 1;
+}
+
+.rmplay-playlist-title {
+    position: relative;
+    padding: 0 14px 14px;
+    z-index: 1;
+    font-size: 14px;
+    font-weight: 800;
 }

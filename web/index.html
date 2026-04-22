@@ -16,7 +16,7 @@
 
     <!-- Cibeles Design System tokens (Madridistas) -->
     <link rel="stylesheet" href="tokens/cibeles-tokens.css">
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=9">
 
     <!-- RM Neue is the brand font; fall back to Inter (Cibeles uses near-identical metrics) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -103,6 +103,11 @@
                             </span>
                         </div>
 
+                        <!-- Cabecera global de login (flag `fan.app.login-header`).
+                             Aparece entre el status-bar y el contenido y persiste
+                             al cambiar de pestaña. JS la puebla / vacía. -->
+                        <div class="app-topbar-slot" id="appTopbarSlot"></div>
+
                         <!-- Scrollable content -->
                         <div class="screen-body" id="screenBody"></div>
 
@@ -165,9 +170,9 @@
          don't keep a stale copy (Python http.server and GH Pages both respect
          a different query string as a different cache entry). -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script defer src="auth.js?v=7"></script>
-    <script defer src="flags.js?v=7"></script>
-    <script defer src="data.js?v=7"></script>
-    <script defer src="app.js?v=7"></script>
+    <script defer src="auth.js?v=9"></script>
+    <script defer src="flags.js?v=9"></script>
+    <script defer src="data.js?v=9"></script>
+    <script defer src="app.js?v=9"></script>
 </body>
 </html>
