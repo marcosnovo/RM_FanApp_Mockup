@@ -266,38 +266,39 @@ function hoyLoginGreeting() {
     return 'Buenas noches';
 }
 
-function renderHoyV2LoginHeader() {
+/**
+ * Cluster compacto para el topbar de Hoy v2. Vive entre el icono de
+ * persona (izquierda) y el título "Hoy" (derecha). No incluye avatar:
+ * el avatar ya está representado por el icono de persona a la izquierda.
+ *
+ * Click sobre el cluster → cicla por los 6 estados (Visitante → Socio
+ * → Madridista → Junior → Premium → Platinum → Visitante …). Simple,
+ * un único click-target, para que el mockup sea predecible.
+ */
+function renderHoyV2LoginTopbar() {
     const logged = HoyLoginHeader.isLogged();
     const tier = HoyLoginHeader.tierLabel();
     const name = state.hoyAuthMock?.name || 'Marcos';
     const greeting = hoyLoginGreeting();
 
     return `
-        <section class="hoy2-login ${logged ? 'is-logged' : ''}" data-login-toggle>
-            <div class="hoy2-login-text">
-                <div class="hoy2-login-kicker">${greeting}</div>
-                ${logged
-                    ? `
-                        <div class="hoy2-login-name">${name}</div>
-                        <button class="hoy2-login-tier" data-login-tier aria-label="Cambiar tier">
-                            <span class="hoy2-login-tier-dot"></span>
-                            ${tier}
-                        </button>
-                    `
-                    : `
-                        <div class="hoy2-login-cta">
-                            Iniciar sesión
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                        </div>
-                    `}
-            </div>
-            <div class="hoy2-login-avatar">
-                ${logged
-                    ? `<span class="hoy2-login-initials">${(name[0] || 'M').toUpperCase()}</span>`
-                    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3" fill="currentColor" stroke="none"/><path d="M6 19a6 6 0 0 1 12 0" fill="currentColor" stroke="none"/></svg>`}
-            </div>
-            <span class="hoy2-login-devhint">mock · haz clic para alternar sesión</span>
-        </section>
+        <button class="hoy2-top-login ${logged ? 'is-logged' : ''}"
+                data-login-cycle
+                title="mock · haz clic para cambiar estado">
+            ${logged ? `
+                <span class="hoy2-top-login-kicker">Hola,</span>
+                <span class="hoy2-top-login-name">${name}</span>
+                <span class="hoy2-top-login-tier">
+                    <span class="hoy2-top-login-tier-dot"></span>${tier}
+                </span>
+            ` : `
+                <span class="hoy2-top-login-kicker">${greeting}</span>
+                <span class="hoy2-top-login-cta">
+                    Iniciar sesión
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </span>
+            `}
+        </button>
     `;
 }
 
@@ -343,11 +344,13 @@ function renderHoyV2() {
     return `
         <div class="hoy2-wrap">
 
-            <!-- Simple top bar with title + profile (Radio moved into each match card) -->
-            <div class="hoy2-topbar">
+            <!-- Top bar: icono de persona + (opcional) cluster de login +
+                 título "Hoy". El login vive AQUÍ — entre icono y título. -->
+            <div class="hoy2-topbar ${loginOn ? 'has-login' : ''}">
                 <button class="hoy2-top-icon" id="btnSideMenu" aria-label="Tu área">
                     ${I.personCircle}
                 </button>
+                ${loginOn ? renderHoyV2LoginTopbar() : ''}
                 <div class="hoy2-top-title">Hoy</div>
                 <div class="hoy2-top-spacer"></div>
             </div>
@@ -355,9 +358,6 @@ function renderHoyV2() {
             ${teamTabsOn ? renderHoyV2TeamTabsBar(editorOn) : ''}
 
             <div class="hoy2-scroll">
-
-                <!-- ── 0. Cabecera login (flag 'fan.hoy.login-header') ── -->
-                ${loginOn ? renderHoyV2LoginHeader() : ''}
 
                 <!-- ── Stories carousel (flag 'fan.hoy.stories') ── -->
                 ${Flags.isEnabled('fan.hoy.stories') ? renderHoyV2Stories() : ''}
@@ -3509,26 +3509,14 @@ function attachListeners() {
         render();
     });
 
-    // ── Login header (flag 'fan.hoy.login-header') ───────────────
+    // ── Login cluster en topbar (flag 'fan.hoy.login-header') ───
     //
-    // Click sobre el tier (ya logado) → cicla tiers sin cerrar sesión.
-    // Click en cualquier otra zona de la cabecera → alterna logado/no
-    // logado (si estás logado te desloguea; si no, entras como Socio).
-    $$('[data-login-tier]').forEach(btn => btn.addEventListener('click', e => {
+    // Click → cicla por los 6 estados (Visitante → Socio → Madridista
+    // → Junior → Premium → Platinum → Visitante). Un único click-target
+    // mantiene el mockup predecible.
+    $$('[data-login-cycle]').forEach(btn => btn.addEventListener('click', e => {
         e.stopPropagation();
-        // Cicla sólo entre tiers "reales" (1..5), no pasa por Visitante.
-        const cur = state.hoyAuthMock?.tierIdx || 1;
-        const next = cur >= AUTH_MOCK_TIERS.length - 1 ? 1 : cur + 1;
-        HoyLoginHeader.setTier(next);
-        render();
-    }));
-
-    $$('[data-login-toggle]').forEach(card => card.addEventListener('click', () => {
-        if (HoyLoginHeader.isLogged()) {
-            HoyLoginHeader.setLogged(false);
-        } else {
-            HoyLoginHeader.setTier(1); // "Socio" al entrar
-        }
+        HoyLoginHeader.cycleNext();
         render();
     }));
 

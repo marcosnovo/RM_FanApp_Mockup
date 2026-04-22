@@ -8293,162 +8293,110 @@ body.auth-mode .app-layout { visibility: hidden; }
 }
 
 /* ================================================================
-   Hoy v2 — Login header (flag 'fan.hoy.login-header')
+   Hoy v2 — Login cluster en el topbar (flag 'fan.hoy.login-header')
+   Vive entre el icono de persona (izq.) y el título "Hoy" (der.).
+   Click → cicla estados (Visitante → Socio → … → Platinum → Visitante).
    ================================================================ */
 
-.hoy2-login {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 18px 18px;
-    background: linear-gradient(135deg, #dbe8f7 0%, #c8d7ef 100%);
-    color: var(--rm-dark);
-    cursor: pointer;
-    overflow: hidden;
+/* Cuando el login está activo, el topbar se adapta: no hay
+   centrado absoluto del título (la alineación se maneja con flex).  */
+.hoy2-topbar.has-login {
+    gap: 10px;
+}
+.hoy2-topbar.has-login .hoy2-top-title {
+    flex: 0 0 auto;
+    margin-left: auto;    /* empuja "Hoy" a la derecha */
+}
+.hoy2-topbar.has-login .hoy2-top-spacer {
+    display: none;
 }
 
-.hoy2-login::after {
-    /* Sutil realce diagonal similar al header de Manchester City */
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(115deg,
-        rgba(255, 255, 255, 0.15) 0%,
-        rgba(255, 255, 255, 0) 40%,
-        rgba(255, 255, 255, 0) 60%,
-        rgba(255, 255, 255, 0.12) 100%);
-    pointer-events: none;
-}
-
-.hoy2-login.is-logged {
-    background: linear-gradient(135deg,
-        var(--rm-dark) 0%,
-        var(--rm-primary-dark, #2115AB) 100%);
-    color: #fff;
-}
-
-.hoy2-login-text {
-    flex: 1;
+/* El cluster propiamente dicho */
+.hoy2-top-login {
+    flex: 0 1 auto;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.hoy2-login-kicker {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--rm-dark-2);
-    opacity: 0.88;
-}
-
-.hoy2-login.is-logged .hoy2-login-kicker {
-    color: #fff;
-    opacity: 0.72;
-}
-
-.hoy2-login-name {
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: -0.3px;
-    line-height: 1.15;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    column-gap: 8px;
+    row-gap: 2px;
+    padding: 4px 10px;
+    border-radius: 10px;
+    background: transparent;
+    border: 0;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.14s;
     color: var(--rm-dark);
 }
 
-.hoy2-login.is-logged .hoy2-login-name {
-    color: #fff;
+.hoy2-top-login:hover {
+    background: rgba(15, 33, 69, 0.05);
 }
 
-.hoy2-login-cta {
-    font-size: 20px;
-    font-weight: 800;
+.hoy2-top-login-kicker {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-grayscale-placeholder, #8990a6);
+    letter-spacing: 0;
+    line-height: 1.1;
+    flex: 1 0 100%;          /* fuerza salto antes del nombre/cta */
+}
+
+.hoy2-top-login-cta {
+    font-size: 15px;
+    font-weight: 700;
     color: var(--rm-dark);
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    line-height: 1.15;
+    gap: 5px;
+    line-height: 1.1;
+    letter-spacing: -0.2px;
 }
 
-.hoy2-login-cta > svg {
-    width: 16px !important;
-    height: 16px !important;
+.hoy2-top-login-cta > svg {
+    width: 13px !important;
+    height: 13px !important;
     margin-top: 1px;
 }
 
-.hoy2-login-tier {
-    align-self: flex-start;
+/* Logado */
+.hoy2-top-login.is-logged {
+    /* el fondo lo pintamos un poco para resaltar */
+    background: rgba(62, 49, 250, 0.08);
+}
+.hoy2-top-login.is-logged:hover {
+    background: rgba(62, 49, 250, 0.14);
+}
+
+.hoy2-top-login-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--rm-dark);
+    letter-spacing: -0.2px;
+    line-height: 1.1;
+}
+
+.hoy2-top-login-tier {
+    flex: 1 0 100%;          /* tier en su propia línea, bajo el nombre */
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.14);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 999px;
-    padding: 3px 10px 3px 8px;
-    font-size: 11.5px;
+    gap: 5px;
+    font-size: 10.5px;
     font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    margin-top: 4px;
-    transition: background 0.14s;
+    color: var(--rm-primary-dark, #2115AB);
+    line-height: 1.15;
+    letter-spacing: 0.1px;
 }
 
-.hoy2-login-tier:hover {
-    background: rgba(255, 255, 255, 0.22);
-}
-
-.hoy2-login-tier-dot {
+.hoy2-top-login-tier-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #f5cf7c; /* dorado — tono Madridista */
+    background: #f5cf7c;     /* dorado — madridista */
     box-shadow: 0 0 0 2px rgba(245, 207, 124, 0.22);
-}
-
-.hoy2-login-avatar {
     flex-shrink: 0;
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--rm-dark);
-    box-shadow: 0 4px 10px rgba(15, 33, 69, 0.18);
-}
-
-.hoy2-login-avatar > svg {
-    width: 28px !important;
-    height: 28px !important;
-}
-
-.hoy2-login-initials {
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--rm-primary-dark, #2115AB);
-    font-family: inherit;
-    letter-spacing: -0.3px;
-}
-
-/* Mini hint textual para el modo mock */
-.hoy2-login-devhint {
-    position: absolute;
-    bottom: 4px;
-    right: 10px;
-    font-size: 9px;
-    font-weight: 500;
-    letter-spacing: 0.2px;
-    color: var(--rm-dark-2);
-    opacity: 0.4;
-    pointer-events: none;
-    text-transform: uppercase;
-}
-
-.hoy2-login.is-logged .hoy2-login-devhint {
-    color: #fff;
-    opacity: 0.38;
 }
 
 /* ================================================================
