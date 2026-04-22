@@ -55,6 +55,19 @@ let _authStateListeners = [];
 // PASSWORD_RECOVERY event (that event is async; bootApp() may run first).
 let _recoveryTriggered = (_initialUrlType === 'recovery');
 
+// Seed the "invite setup" flag from the URL (magic-link / invite / signup).
+// Mutable so `completeSetup` puede limpiarlo tras guardar la contraseña —
+// si no, bootApp volvería a enrutar a /setup infinitamente porque
+// `_initialUrlHasTokens` es una constante capturada al cargar el módulo.
+let _inviteActive = (() => {
+    if (!_initialUrlHasTokens) return false;
+    if (_initialUrlType === 'recovery') return false;
+    return _initialUrlType === 'signup'
+        || _initialUrlType === 'invite'
+        || _initialUrlType === 'magiclink'
+        || _initialUrlType === '';
+})();
+
 // Profile cache in localStorage — so a slow network never makes the user
 // re-login: we have their role/name available instantly from last time.
 const PROFILE_STORAGE_KEY = 'rm_profile_v1';
@@ -236,14 +249,15 @@ const Auth = {
 
     // True when the URL hash indicates the user just arrived from an invite /
     // signup / magic-link email (tokens present AND type != 'recovery').
-    // Used at boot to pick the right initial screen without waiting for events.
+    // Se consume desde `needsPasswordSetup()` y `bootApp()`. Se limpia en
+    // `completeSetup()` para no reenrutar a /setup tras crear la contraseña.
     urlIndicatesInvite() {
-        if (!_initialUrlHasTokens) return false;
-        if (_initialUrlType === 'recovery') return false;
-        return _initialUrlType === 'signup'
-            || _initialUrlType === 'invite'
-            || _initialUrlType === 'magiclink'
-            || _initialUrlType === '';
+        return _inviteActive;
+    },
+
+    // Limpia el flag de invitación tras completar el setup.
+    clearInvite() {
+        _inviteActive = false;
     },
 
     urlIndicatesRecovery() {
@@ -348,6 +362,16 @@ const Auth = {
         const updates = { password: newPassword, data: { name, password_set: true } };
         const { error } = await sb.auth.updateUser(updates);
         if (error) return { ok: false, error: translateError(error.message) };
+        // Marca que el flujo de invitación ha terminado para que el próximo
+        // bootApp() no vuelva a enrutar a /setup.
+        _inviteActive = false;
+        // Limpia también el hash de la URL para que un reload manual no
+        // reactive la ruta de setup vía `_initialHashRaw`.
+        try {
+            if (window.location.hash) {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+        } catch {}
         await syncCache();
         return { ok: true };
     },

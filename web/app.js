@@ -5195,6 +5195,54 @@ function renderUserBox() {
     });
 }
 
+// ================================================================
+// User tags — etiqueta de perfil (Product / Design / Dev / Stakeholder)
+// ================================================================
+//
+// Complemento al `role` (admin/viewer, que controla permisos). El tag es
+// un metadato organizativo: desde qué equipo mira el usuario la app.
+// Persistimos por email en localStorage — no hay migración en Supabase
+// por ahora, así que cada admin verá las etiquetas que él mismo haya
+// puesto en su navegador. Es un tradeoff consciente para el mockup.
+
+const USER_TAGS_STORAGE_KEY = 'rm_user_tags_v1';
+
+const USER_TAG_OPTIONS = [
+    { key: '',            label: 'Sin etiqueta',      color: 'transparent' },
+    { key: 'product',     label: 'Product',           color: '#4a3de8' },  // morado brand
+    { key: 'design',      label: 'Design',            color: '#e11d74' },  // rosa
+    { key: 'dev',         label: 'Dev',               color: '#18a452' },  // verde
+    { key: 'stakeholder', label: 'Stakeholder',       color: '#e8881d' }   // naranja
+];
+
+const UserTags = {
+    _load() {
+        try {
+            const raw = localStorage.getItem(USER_TAGS_STORAGE_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch { return {}; }
+    },
+    _save(map) {
+        try { localStorage.setItem(USER_TAGS_STORAGE_KEY, JSON.stringify(map)); }
+        catch {}
+    },
+    get(email) {
+        if (!email) return '';
+        return this._load()[email.toLowerCase()] || '';
+    },
+    set(email, tag) {
+        if (!email) return;
+        const key = email.toLowerCase();
+        const map = this._load();
+        if (tag) map[key] = tag;
+        else     delete map[key];
+        this._save(map);
+    },
+    meta(key) {
+        return USER_TAG_OPTIONS.find(o => o.key === key) || USER_TAG_OPTIONS[0];
+    }
+};
+
 function isSettingsOpen() {
     return !$('#settingsDrawer').hidden;
 }
@@ -5258,6 +5306,23 @@ async function renderSettings() {
     }
 
     const users = await Auth.listUsers();
+
+    // Renderiza un chip visual a partir de la key del tag.
+    const renderTagChip = (tagKey) => {
+        const m = UserTags.meta(tagKey);
+        if (!tagKey) return `<span class="settings-user-tag empty">Sin etiqueta</span>`;
+        return `<span class="settings-user-tag" style="background: ${m.color}1a; color: ${m.color}; border-color: ${m.color}44;">${m.label}</span>`;
+    };
+
+    // Select HTML reutilizable para tag
+    const tagSelect = (currentKey, extraAttrs = '') => `
+        <select class="settings-user-tag-select" ${extraAttrs}>
+            ${USER_TAG_OPTIONS.map(o => `
+                <option value="${o.key}" ${o.key === currentKey ? 'selected' : ''}>${o.label}</option>
+            `).join('')}
+        </select>
+    `;
+
     const usersBlock = `
         <div class="settings-section-title">Usuarios</div>
         <div class="settings-add-user">
@@ -5267,21 +5332,28 @@ async function renderSettings() {
                     <option value="viewer">Viewer</option>
                     <option value="admin">Admin</option>
                 </select>
+                ${tagSelect('', 'name="tag"')}
                 <button type="submit">Invitar</button>
             </form>
         </div>
         <div class="settings-users">
-            ${users.map(u => `
+            ${users.map(u => {
+                const tagKey = UserTags.get(u.email);
+                return `
                 <div class="settings-user-row ${u.id === session.userId ? 'is-self' : ''}">
                     <div class="settings-user-avatar">${(u.name || u.email).slice(0,2).toUpperCase()}</div>
                     <div class="settings-user-meta">
                         <div class="settings-user-email">${u.email}${u.id === session.userId ? ' <span class="settings-user-self">(tú)</span>' : ''}</div>
-                        <div class="settings-user-status active">Activo</div>
+                        <div class="settings-user-sub">
+                            <span class="settings-user-status active">Activo</span>
+                            ${renderTagChip(tagKey)}
+                        </div>
                     </div>
                     <select class="settings-user-role" data-user-id="${u.id}" ${u.id === session.userId ? 'disabled' : ''}>
                         <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>Viewer</option>
                         <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>
+                    ${tagSelect(tagKey, `data-user-tag-email="${u.email}"`)}
                     <button class="settings-user-invite" title="Ver / reenviar invitación" data-invite-email="${u.email}" data-invite-role="${u.role}" ${u.id === session.userId ? 'disabled' : ''}>
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4 h16 v16 H4z"/><polyline points="4,4 12,13 20,4"/></svg>
                     </button>
@@ -5289,7 +5361,8 @@ async function renderSettings() {
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="4,7 20,7"/><path d="M6 7 v12 a2 2 0 0 0 2 2 h8 a2 2 0 0 0 2-2 V7"/><path d="M9 7 V4 a1 1 0 0 1 1-1 h4 a1 1 0 0 1 1 1 v3"/></svg>
                     </button>
                 </div>
-            `).join('')}
+            `;
+            }).join('')}
         </div>
     `;
     $('.settings-loading').outerHTML = usersBlock;
@@ -5300,14 +5373,17 @@ async function renderSettings() {
         const submitBtn = form.querySelector('button[type="submit"]');
         const fd = new FormData(form);
         if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Enviando…'; }
-        const r = await Auth.inviteUser(fd.get('email'), fd.get('role'));
+        const invitedEmail = fd.get('email');
+        const invitedRole  = fd.get('role') || 'viewer';
+        const invitedTag   = fd.get('tag')  || '';
+        const r = await Auth.inviteUser(invitedEmail, invitedRole);
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Invitar'; }
         if (!r.ok) {
             alert(r.error);
             return;
         }
-        const invitedEmail = fd.get('email');
-        const invitedRole = fd.get('role') || 'viewer';
+        // Guarda la etiqueta asociada al email (persiste por navegador).
+        UserTags.set(invitedEmail, invitedTag);
         form.reset();
         await renderSettings();
         openAuthOverlay('invite-link', { email: invitedEmail, role: invitedRole });
@@ -5319,6 +5395,14 @@ async function renderSettings() {
         if (!r.ok) alert(r.error);
         await renderSettings();
     }));
+
+    // Cambiar etiqueta de un usuario existente — inmediato, sin round-trip.
+    $$('.settings-user-tag-select[data-user-tag-email]').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            UserTags.set(sel.dataset.userTagEmail, sel.value);
+            await renderSettings();
+        });
+    });
 
     // Reopen the invitation preview (doesn't auto-resend; admin chooses)
     $$('[data-invite-email]').forEach(btn => btn.addEventListener('click', () => {
