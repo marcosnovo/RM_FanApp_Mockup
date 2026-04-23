@@ -12,14 +12,77 @@ struct HomeView: View {
     @State private var selectedHomeTab: Int = 0
     @State private var heroIndex: Int = 0
     @State private var selectedMatchIndex: Int = 0
+    @State private var showTabsEditor: Bool = false
+
+    // Persistencia — sólo usado cuando `FeatureFlags.enableHoyTeamTabs` está
+    // activo. Se leen igual incluso si el flag está apagado: el overhead es
+    // despreciable y simplifica la lógica.
+    @AppStorage(HoyTeamSelection.storageKey) private var teamSelectionRaw: String = "all"
+    @AppStorage(HoyTabsPrefs.showMensKey)    private var showMensTab: Bool   = true
+    @AppStorage(HoyTabsPrefs.showWomensKey)  private var showWomensTab: Bool = true
+    @AppStorage(HoyTabsPrefs.showBasketKey)  private var showBasketTab: Bool = true
+    @AppStorage(HoyTabsPrefs.emojiModeKey)   private var emojiTabMode: Bool  = FeatureFlags.useEmojiTeamTabsByDefault
 
     // 0 = fully expanded  /  1 = fully collapsed
     @State private var collapseProgress: CGFloat = 0
     @State private var anchorY: CGFloat? = nil
     @State private var expandedExtraHeight: CGFloat = 210
 
+    // MARK: Filtrado por pestaña de equipo
+
+    private var teamSelection: HoyTeamSelection {
+        HoyTeamSelection(storageValue: teamSelectionRaw)
+    }
+
+    private var visibleTeamTabs: [TeamCategory] {
+        var teams: [TeamCategory] = []
+        if showMensTab   { teams.append(.mensFootball) }
+        if showWomensTab { teams.append(.womensFootball) }
+        if showBasketTab { teams.append(.basketball) }
+        return teams
+    }
+
+    private var filteredMatches: [MatchHeaderData] {
+        switch teamSelection {
+        case .all:
+            return MockHeaderMatches.all
+        case .team(let cat):
+            return MockHeaderMatches.all.filter { $0.category == cat }
+        }
+    }
+
+    /// Partido "principal" mostrado cuando hay un equipo concreto seleccionado:
+    /// primero el próximo, si no hay, el último finalizado.
+    private var primaryTeamMatch: MatchHeaderData? {
+        let matches = filteredMatches
+        if let upcoming = matches.first(where: { $0.status == .upcoming || $0.status == .live }) {
+            return upcoming
+        }
+        return matches.first
+    }
+
     private var currentMatch: MatchHeaderData {
-        MockHeaderMatches.all[selectedMatchIndex]
+        switch teamSelection {
+        case .all:
+            let idx = min(selectedMatchIndex, max(0, filteredMatches.count - 1))
+            return filteredMatches[idx]
+        case .team:
+            return primaryTeamMatch ?? MockHeaderMatches.all[0]
+        }
+    }
+
+    private var teamTabsEnabled: Bool {
+        FeatureFlags.enableHoyTeamTabs
+    }
+
+    private var teamTabsSelectionBinding: Binding<HoyTeamSelection> {
+        Binding(
+            get: { HoyTeamSelection(storageValue: teamSelectionRaw) },
+            set: { newValue in
+                teamSelectionRaw = newValue.storageValue
+                selectedMatchIndex = 0
+            }
+        )
     }
 
     var body: some View {
@@ -30,17 +93,31 @@ struct HomeView: View {
                     progress: collapseProgress,
                     showSideMenu: $showSideMenu,
                     selectedMatchIndex: selectedMatchIndex,
-                    totalMatches: MockHeaderMatches.all.count,
+                    totalMatches: teamTabsEnabled && teamSelection != .all
+                        ? 1
+                        : MockHeaderMatches.all.count,
                     selectedMatch: currentMatch
                 )
+
+                // ── Pestañas de equipo (Hoy v2) ─────────────────────
+                if teamTabsEnabled {
+                    HoyTeamTabsBar(
+                        selection: teamTabsSelectionBinding,
+                        visibleTeams: visibleTeamTabs,
+                        useEmoji: emojiTabMode,
+                        onEditTabs: FeatureFlags.enableTeamTabsEditor
+                            ? { showTabsEditor = true }
+                            : nil
+                    )
+                }
 
                 // ── Scrollable area ──────────────────────────────────
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
 
-                        // Section 1: match carousel — scrolls away naturally
+                        // Section 1: header del partido — scrolls away naturally
                         Section {
-                            ExpandedMatchExtra(selectedIndex: $selectedMatchIndex)
+                            matchHeader
                                 .background(
                                     GeometryReader { geo in
                                         Color.clear
@@ -88,6 +165,31 @@ struct HomeView: View {
             }
             .ignoresSafeArea(edges: .top)
             .navigationBarHidden(true)
+            .sheet(isPresented: $showTabsEditor) {
+                TeamTabsEditorSheet()
+            }
+            .onChange(of: visibleTeamTabs) { _, newValue in
+                // Si se oculta la pestaña actualmente seleccionada, volvemos a "Todo".
+                if case .team(let cat) = teamSelection, !newValue.contains(cat) {
+                    teamSelectionRaw = "all"
+                    selectedMatchIndex = 0
+                }
+            }
+        }
+    }
+
+    // MARK: - Cabecera de partido (carrusel en Todo, card única por equipo)
+
+    @ViewBuilder
+    private var matchHeader: some View {
+        if teamTabsEnabled, case .team(let cat) = teamSelection {
+            if let match = primaryTeamMatch {
+                SingleMatchCard(match: match)
+            } else {
+                TeamEmptyState(category: cat)
+            }
+        } else {
+            ExpandedMatchExtra(selectedIndex: $selectedMatchIndex)
         }
     }
 }

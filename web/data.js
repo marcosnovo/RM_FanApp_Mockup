@@ -1020,6 +1020,65 @@ const VIP_EVENTS = [
     }
 ];
 
+// ── VIP Contacts (mock phone address book) ──────────────────────
+const VIP_CONTACTS = [
+    { id: 'c01', name: 'María González',     phone: '+34 612 345 678', initial: 'MG', hue: 12 },
+    { id: 'c02', name: 'Javier Santos',       phone: '+34 667 223 910', initial: 'JS', hue: 210 },
+    { id: 'c03', name: 'Carla Ruiz',          phone: '+34 611 902 345', initial: 'CR', hue: 330 },
+    { id: 'c04', name: 'Álvaro Fernández',    phone: '+34 654 321 987', initial: 'AF', hue: 45 },
+    { id: 'c05', name: 'Lucía Martín',        phone: '+34 699 112 233', initial: 'LM', hue: 170 },
+    { id: 'c06', name: 'Diego Pérez',         phone: '+34 644 556 778', initial: 'DP', hue: 280 },
+    { id: 'c07', name: 'Sofía Romero',        phone: '+34 633 998 112', initial: 'SR', hue: 90 },
+    { id: 'c08', name: 'Pablo Navarro',       phone: '+34 688 441 223', initial: 'PN', hue: 15 },
+    { id: 'c09', name: 'Elena Castro',        phone: '+34 622 113 445', initial: 'EC', hue: 255 },
+    { id: 'c10', name: 'Hugo Torres',         phone: '+34 677 889 001', initial: 'HT', hue: 190 },
+    { id: 'c11', name: 'Marta Jiménez',       phone: '+34 655 234 112', initial: 'MJ', hue: 340 },
+    { id: 'c12', name: 'Rafael Vidal',        phone: '+34 611 553 224', initial: 'RV', hue: 60 },
+    { id: 'c13', name: 'Nuria Ortega',        phone: '+34 699 334 556', initial: 'NO', hue: 150 },
+    { id: 'c14', name: 'Sergio Molina',       phone: '+34 644 667 889', initial: 'SM', hue: 300 },
+    { id: 'c15', name: 'Ana Herrera',         phone: '+34 633 778 990', initial: 'AH', hue: 30 },
+    { id: 'c16', name: 'Iván Delgado',        phone: '+34 688 112 334', initial: 'ID', hue: 220 },
+    { id: 'c17', name: 'Clara Rubio',         phone: '+34 622 445 667', initial: 'CR', hue: 110 },
+    { id: 'c18', name: 'Tomás Blanco',        phone: '+34 677 556 778', initial: 'TB', hue: 355 },
+    { id: 'c19', name: 'Beatriz Serrano',     phone: '+34 655 889 001', initial: 'BS', hue: 75 },
+    { id: 'c20', name: 'Óscar Vega',          phone: '+34 611 223 445', initial: 'OV', hue: 240 },
+    { id: 'c21', name: 'Laura Campos',        phone: '+34 699 556 778', initial: 'LC', hue: 130 },
+    { id: 'c22', name: 'Adrián Gómez',        phone: '+34 644 223 334', initial: 'AG', hue: 20 }
+];
+
+// ── VIP Tickets per event (mock seed) ───────────────────────────
+// Each VIP event has up to 19 tickets. The first ticket is always
+// pre-assigned to "Yo" (the current user) so it falls straight into
+// the user's own Wallet. The rest start as "Sin asignar".
+//
+// Status lifecycle: unassigned → assigned → sent → accepted → bound
+function _seedVipTickets() {
+    const seed = {};
+    for (const ev of VIP_EVENTS) {
+        const count = 19;
+        const tickets = [];
+        for (let i = 0; i < count; i++) {
+            const row = String(Math.floor(i / 4) + 3).padStart(4, '0');
+            const seat = String((i % 4) * 2 + 4).padStart(4, '0');
+            tickets.push({
+                id: `${ev.id}-${i + 1}`,
+                fila: row,
+                asiento: seat,
+                status: i === 0 ? 'mine' : 'unassigned',
+                contactId: null,
+                sentAt: null,
+                channel: null
+            });
+        }
+        seed[ev.id] = tickets;
+    }
+    return seed;
+}
+let VIP_TICKETS_BY_EVENT = _seedVipTickets();
+
+// Memory of the last group the user shared with — enables "Repartir como la última vez"
+let VIP_LAST_GROUP = null; // { eventLabel, contactIds: [] }
+
 // ── Upcoming event (the "Próximo evento" in between) ────────────
 const VIP_NEXT_EVENT = {
     home: 'Bayern Múnich',

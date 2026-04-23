@@ -13,11 +13,18 @@ struct ContentView: View {
                     }
                     .tag(0)
 
+                // Noticias — el filtro por categoría se controla desde
+                // `FeatureFlags.enableNewsFilter` (ver FeatureFlags.swift).
+                // Cambia ese flag a `true` para habilitar la barra de filtros.
                 NewsListView()
                     .tabItem {
                         Label("Noticias", systemImage: selectedTab == 1 ? "newspaper.fill" : "newspaper")
                     }
                     .tag(1)
+                    // Ejemplo de uso alternativo del flag: un badge en el tab
+                    // cuando la feature está activa (descomentar si se quiere
+                    // destacar el tab mientras el experimento está encendido).
+                    // .badge(FeatureFlags.enableNewsFilter ? "β" : nil)
 
                 CalendarView()
                     .tabItem {

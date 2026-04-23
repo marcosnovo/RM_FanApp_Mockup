@@ -166,7 +166,14 @@ const FLAGS = [
     }
 
     // ── VIP App flags ─────────────────────────────────────────────
-    // { app: 'vip', key: 'eventos.upgrade', label: 'Upgrade de palco', ... },
+    ,{
+        app: 'vip',
+        key: 'vip.tickets.multi-share',
+        label: 'Reparto múltiple de tickets',
+        description: 'Gestión de hasta 19 tickets por evento con asignación por contacto, envío en batch y disclaimer de account binding. Sustituye la pantalla de "Detalle de entradas".',
+        category: 'Tickets',
+        default: true
+    }
 ];
 
 // ── Internal state ──────────────────────────────────────────────

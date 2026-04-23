@@ -48,6 +48,42 @@ enum MatchStatus {
     case finished   // ended
 }
 
+/// Categoría de equipo para el filtrado por pestañas en "Hoy v2".
+enum TeamCategory: String, CaseIterable, Identifiable {
+    case mensFootball   = "mens_football"
+    case womensFootball = "womens_football"
+    case basketball     = "basketball"
+
+    var id: String { rawValue }
+
+    /// Nombre corto — prioriza caber en 4 pestañas.
+    var textLabel: String {
+        switch self {
+        case .mensFootball:   return "Fútbol masc."
+        case .womensFootball: return "Fútbol fem."
+        case .basketball:     return "Baloncesto"
+        }
+    }
+
+    /// Variante con emoji — más descriptiva, ocupa más ancho.
+    var emojiLabel: String {
+        switch self {
+        case .mensFootball:   return "⚽️ Masculino"
+        case .womensFootball: return "⚽️ Femenino"
+        case .basketball:     return "🏀 1er equipo"
+        }
+    }
+
+    /// Subtítulo que se muestra bajo el marcador en la tarjeta del partido.
+    var sectionTitle: String {
+        switch self {
+        case .mensFootball:   return "Fútbol · Primer Equipo"
+        case .womensFootball: return "Fútbol Femenino"
+        case .basketball:     return "Baloncesto · Primer Equipo"
+        }
+    }
+}
+
 struct MatchHeaderData: Identifiable {
     let id = UUID()
     let competition: String         // "LA LIGA" / "CHAMPIONS LEAGUE"
@@ -66,6 +102,9 @@ struct MatchHeaderData: Identifiable {
     let status: MatchStatus
     // Stats (for Estadísticas tab)
     let stats: [MatchStat]
+    /// Categoría del partido — usado por el filtro de pestañas de "Hoy v2".
+    /// Por defecto masculino para no romper los mocks existentes.
+    var category: TeamCategory = .mensFootball
 }
 
 struct MatchStat: Identifiable {

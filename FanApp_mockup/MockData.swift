@@ -285,7 +285,99 @@ enum MockHeaderMatches {
                 MatchStat(label: "Faltas", home: 8, away: 15, isPercent: false),
                 MatchStat(label: "Fuera de juego", home: 4, away: 0, isPercent: false),
                 MatchStat(label: "Tarjetas amarillas", home: 1, away: 3, isPercent: false)
-            ]
+            ],
+            category: .mensFootball
+        ),
+
+        // 6 — RM Femenino vs Barça Femení · Liga F (próximo)
+        MatchHeaderData(
+            competition: "LIGA F",
+            dateString: "Dom 19 abr · 12:00",
+            homeTeam: "Real Madrid",
+            homeTeamColor: Color(red: 0.29, green: 0.24, blue: 0.91),
+            homeTeamSymbol: "crown.fill",
+            homeScore: nil,
+            homeScorers: "",
+            awayTeam: "FC Barcelona",
+            awayTeamColor: Color(red: 0.60, green: 0.0, blue: 0.2),
+            awayTeamSymbol: "shield.fill",
+            awayScore: nil,
+            awayScorers: "",
+            matchInfo: "Fútbol Femenino\nJornada 28 · Alfredo Di Stéfano",
+            status: .upcoming,
+            stats: [],
+            category: .womensFootball
+        ),
+
+        // 7 — RM Femenino 2-1 At. Madrid (finalizado)
+        MatchHeaderData(
+            competition: "LIGA F",
+            dateString: "Sáb 5 abr · 18:30",
+            homeTeam: "Real Madrid",
+            homeTeamColor: Color(red: 0.29, green: 0.24, blue: 0.91),
+            homeTeamSymbol: "crown.fill",
+            homeScore: 2,
+            homeScorers: "Caroline Weir 22' · Linda Caicedo 67'",
+            awayTeam: "At. Madrid",
+            awayTeamColor: Color(red: 0.85, green: 0.15, blue: 0.15),
+            awayTeamSymbol: "shield.fill",
+            awayScore: 1,
+            awayScorers: "Eva Navarro 54'",
+            matchInfo: "Fútbol Femenino\nJornada 27 · Alfredo Di Stéfano",
+            status: .finished,
+            stats: [
+                MatchStat(label: "Posesión", home: 57, away: 43, isPercent: true),
+                MatchStat(label: "Tiros totales", home: 13, away: 8, isPercent: false),
+                MatchStat(label: "Tiros a puerta", home: 5, away: 3, isPercent: false),
+                MatchStat(label: "Córners", home: 6, away: 2, isPercent: false)
+            ],
+            category: .womensFootball
+        ),
+
+        // 8 — RM Baloncesto vs Panathinaikos · Euroliga (próximo)
+        MatchHeaderData(
+            competition: "EUROLIGA",
+            dateString: "Jue 23 abr · 21:00",
+            homeTeam: "Real Madrid",
+            homeTeamColor: Color(red: 0.29, green: 0.24, blue: 0.91),
+            homeTeamSymbol: "crown.fill",
+            homeScore: nil,
+            homeScorers: "",
+            awayTeam: "Panathinaikos",
+            awayTeamColor: Color(red: 0.0, green: 0.50, blue: 0.20),
+            awayTeamSymbol: "shield.fill",
+            awayScore: nil,
+            awayScorers: "",
+            matchInfo: "Baloncesto · Primer Equipo\nPlayoff (Partido 3) · WiZink Center",
+            status: .upcoming,
+            stats: [],
+            category: .basketball
+        ),
+
+        // 9 — RM Baloncesto 89-77 Barça · Liga Endesa (finalizado)
+        MatchHeaderData(
+            competition: "LIGA ENDESA",
+            dateString: "Dom 13 abr · 19:00",
+            homeTeam: "Real Madrid",
+            homeTeamColor: Color(red: 0.29, green: 0.24, blue: 0.91),
+            homeTeamSymbol: "crown.fill",
+            homeScore: 89,
+            homeScorers: "Campazzo 21 pts · Tavares 14 pts",
+            awayTeam: "FC Barcelona",
+            awayTeamColor: Color(red: 0.60, green: 0.0, blue: 0.2),
+            awayTeamSymbol: "shield.fill",
+            awayScore: 77,
+            awayScorers: "Vesely 18 pts · Laprovíttola 15 pts",
+            matchInfo: "Baloncesto · Primer Equipo\nJornada 30 · Palau Blaugrana",
+            status: .finished,
+            stats: [
+                MatchStat(label: "Tiros de 2", home: 58, away: 49, isPercent: true),
+                MatchStat(label: "Triples", home: 42, away: 33, isPercent: true),
+                MatchStat(label: "Tiros libres", home: 82, away: 74, isPercent: true),
+                MatchStat(label: "Rebotes", home: 38, away: 31, isPercent: false),
+                MatchStat(label: "Asistencias", home: 22, away: 16, isPercent: false)
+            ],
+            category: .basketball
         )
     ]
 }
