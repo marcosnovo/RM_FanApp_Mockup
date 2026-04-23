@@ -10428,3 +10428,326 @@ body.auth-mode .app-layout { visibility: hidden; }
     color: var(--vip-text-secondary);
     margin-bottom: 20px;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   VIP Multi-Ticket Share · v2 (preview + swap + keep-mine toggle)
+   ════════════════════════════════════════════════════════════════ */
+
+.vip-ticket-item.static { cursor: default; }
+.vip-ticket-list-label {
+    padding: 14px 20px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--vip-text-tertiary);
+    text-transform: uppercase;
+}
+
+/* ── Keep-mine toggle row in picker ─────────────────────────── */
+.vip-keep-mine-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    gap: 12px;
+    border-bottom: 1px solid var(--vip-separator);
+}
+.vip-keep-mine-row > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.vip-keep-mine-row strong {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--vip-text);
+}
+.vip-keep-mine-row span {
+    font-size: 11.5px;
+    color: var(--vip-text-secondary);
+}
+.vip-toggle-sm {
+    width: 44px;
+    height: 26px;
+    border-radius: 13px;
+    background: var(--vip-bg-3);
+    border: 1px solid var(--vip-card-border);
+    position: relative;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.vip-toggle-sm::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--vip-text-secondary);
+    transition: transform 0.18s ease, background 0.18s ease;
+}
+.vip-toggle-sm.on {
+    background: var(--vip-gradient-gold);
+    border-color: var(--vip-gold-dark);
+}
+.vip-toggle-sm.on::after {
+    transform: translateX(18px);
+    background: var(--vip-gold-text);
+}
+
+.vip-picker-limit {
+    margin-left: 8px;
+    font-size: 10px;
+    color: var(--vip-text-tertiary);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.vip-picker-counter {
+    padding: 10px 20px 8px;
+    font-size: 12.5px;
+    color: var(--vip-text-secondary);
+    border-bottom: 1px solid var(--vip-separator);
+}
+
+/* ── Preview sheet (full-screen review) ─────────────────────── */
+.vip-preview-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 44px;      /* clear iOS status bar */
+    bottom: 0;
+    background: var(--vip-bg);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+}
+.vip-preview-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--vip-separator);
+    flex-shrink: 0;
+}
+.vip-preview-head .vip-back-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+}
+.vip-preview-head > div:nth-child(2) {
+    flex: 1;
+    min-width: 0;
+}
+.vip-preview-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--vip-text);
+    letter-spacing: -0.1px;
+}
+.vip-preview-sub {
+    font-size: 12px;
+    color: var(--vip-text-secondary);
+    margin-top: 2px;
+}
+
+.vip-preview-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 0 130px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.vip-preview-mine {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 16px 8px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(201, 163, 110, 0.16), rgba(201, 163, 110, 0.03));
+    border: 1px solid var(--vip-gold-dark);
+}
+.vip-preview-mine-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.vip-preview-mine-info strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vip-text);
+}
+.vip-preview-mine-info span {
+    font-size: 12px;
+    color: var(--vip-text-secondary);
+}
+.vip-preview-mine-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--vip-gold-text);
+    background: var(--vip-gradient-gold);
+    padding: 4px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+.vip-preview-mine-badge > svg {
+    width: 12px !important;
+    height: 12px !important;
+}
+
+.vip-preview-list-label {
+    padding: 14px 20px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--vip-text-tertiary);
+    text-transform: uppercase;
+}
+.vip-preview-list {
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.vip-preview-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--vip-card-border);
+    background: var(--vip-card);
+    color: var(--vip-text);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.vip-preview-row:active { background: var(--vip-bg-3); }
+.vip-preview-row-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.vip-preview-row-info .name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vip-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vip-preview-row-info .phone {
+    font-size: 11.5px;
+    color: var(--vip-text-secondary);
+}
+.vip-preview-row-seat {
+    text-align: right;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.vip-preview-row-seat .fila {
+    font-size: 10px;
+    color: var(--vip-text-tertiary);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+.vip-preview-row-seat .asiento {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vip-text);
+}
+.vip-preview-row > svg {
+    width: 14px !important;
+    height: 14px !important;
+    color: var(--vip-text-tertiary);
+    flex-shrink: 0;
+}
+
+.vip-preview-tip {
+    margin: 16px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--vip-bg-3);
+    color: var(--vip-text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.vip-preview-tip > svg {
+    width: 14px !important;
+    height: 14px !important;
+    color: var(--vip-gold);
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.vip-sticky-cta-wrap.inside-sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, var(--vip-bg) 70%, rgba(10, 11, 20, 0));
+    padding-bottom: 20px;
+    z-index: 2;
+}
+
+/* ── Swap seat sheet hint ───────────────────────────────────── */
+.vip-swap-hint {
+    padding: 10px 20px 12px;
+    font-size: 12px;
+    color: var(--vip-text-secondary);
+    border-bottom: 1px solid var(--vip-separator);
+    line-height: 1.4;
+}
+.vip-swap-hint strong { color: var(--vip-text); font-weight: 600; }
+.vip-picker-swap-ico {
+    font-size: 20px;
+    color: var(--vip-gold);
+    flex-shrink: 0;
+    padding: 0 4px;
+}
+
+/* ── Disclaimer secondary action ────────────────────────────── */
+.vip-disclaimer-secondary {
+    width: 100%;
+    margin-top: 10px;
+    height: 44px;
+    border-radius: 22px;
+    border: none;
+    background: transparent;
+    color: var(--vip-text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Overlays that appear on top of the preview sheet need a higher stack */
+.vip-preview-sheet ~ .vip-sheet-backdrop,
+.vip-preview-sheet ~ .vip-actions-sheet,
+.vip-preview-sheet ~ .vip-picker-sheet,
+.vip-preview-sheet ~ .vip-disclaimer-sheet,
+.vip-preview-sheet ~ .vip-share-sheet,
+.vip-preview-sheet ~ .vip-sending-sheet,
+.vip-preview-sheet ~ .vip-sent-sheet {
+    z-index: 40;
+}
+.vip-preview-sheet ~ .vip-sheet-backdrop { z-index: 35; }

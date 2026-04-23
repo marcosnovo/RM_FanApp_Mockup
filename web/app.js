@@ -64,15 +64,23 @@ const state = {
 
     // Multi-ticket share flow (flag 'vip.tickets.multi-share')
     vipShare: {
-        sheet: null,                // null | 'picker' | 'disclaimer' | 'share' | 'actions' | 'sending' | 'sent'
-        pickerSelection: [],
-        pickerQuery: '',
-        pickerMode: 'bulk',         // 'bulk' | 'single'
-        actionsTicketId: null,
-        reassignTicketId: null,
-        disclaimerSeen: false,
+        step: null,                 // null | 'picker' | 'preview' | 'disclaimer' | 'share' | 'sending' | 'sent'
+                                    //        | 'row-actions' | 'replace-contact' | 'main-actions'
+        // Picker
+        selection: [],              // contact ids selected in picker
+        query: '',                  // search query
+        keepMine: true,             // reserve 1 ticket for the user
+        // Preview
+        activeIdx: null,            // index of ticket being operated on in preview
+        swapMode: false,            // if true, next preview-row tap swaps with activeIdx
+        // Replace contact (mini single-select picker from preview)
+        // uses `activeIdx` + `query`
+        // Main-actions (for already-sent tickets in the main list)
+        mainTicketId: null,
+        // Send
         channel: null,
-        sendingProgress: 0
+        progress: 0,
+        disclaimerSeen: false
     },
 
     // Per-tab scroll memory for the VIP app. The scroll container
@@ -2902,29 +2910,33 @@ function renderVipTicketsV2() {
     const ev = VIP_EVENTS.find(e => e.id === state.vipEventId) || VIP_EVENTS[0];
     const tickets = vipTicketsForCurrentEvent();
 
-    const total = tickets.length;
-    const mine  = tickets.filter(t => t.status === 'mine').length;
-    const sent  = tickets.filter(t => ['sent', 'accepted', 'bound'].includes(t.status)).length;
-    const ready = tickets.filter(t => t.status === 'assigned').length;
-    const pending = tickets.filter(t => t.status === 'unassigned').length;
+    const total     = tickets.length;
+    const mineCount = tickets.filter(t => t.status === 'mine').length;
+    const sent      = tickets.filter(t => ['sent', 'accepted', 'bound'].includes(t.status)).length;
+    const draft     = tickets.filter(t => t.status === 'assigned').length;
+    const pending   = tickets.filter(t => t.status === 'unassigned').length;
 
-    const showRepeat = !!VIP_LAST_GROUP
-        && tickets.every(t => t.status === 'unassigned' || t.status === 'mine');
-
-    let ctaLabel = null;
-    let ctaAction = null;
-    let ctaVariant = 'primary';
-    if (ready > 0) {
-        ctaLabel = `Enviar ${ready} ticket${ready === 1 ? '' : 's'}`;
-        ctaAction = 'send';
+    // Main CTA logic
+    let ctaLabel = null, ctaAction = null, ctaVariant = 'primary';
+    if (draft > 0) {
+        ctaLabel = `Revisar y enviar (${draft})`;
+        ctaAction = 'open-preview';
     } else if (pending > 0) {
         ctaLabel = 'Compartir tickets';
-        ctaAction = 'pick-bulk';
-    } else if (sent === total - mine && total > mine) {
+        ctaAction = 'open-picker';
+    } else if (sent > 0 && sent === total - mineCount) {
         ctaLabel = 'Todo repartido';
-        ctaAction = null;
         ctaVariant = 'done';
     }
+
+    const showRepeat = !!VIP_LAST_GROUP && pending > 0 && draft === 0 && sent === 0;
+
+    // Build compact status list (read-only reference)
+    const mineTicket = tickets.find(t => t.status === 'mine');
+    const recipientRows = tickets
+        .filter(t => t.status !== 'mine')
+        .map(renderVipTicketRow)
+        .join('');
 
     return `
         <div class="vip-event-detail-head">
@@ -2959,13 +2971,13 @@ function renderVipTicketsV2() {
                 <div class="label">Enviados</div>
             </div>
             <div class="vip-share-summary-item">
-                <div class="num">${pending}</div>
+                <div class="num">${pending + draft}</div>
                 <div class="label">Pendientes</div>
             </div>
         </div>
 
         ${showRepeat ? `
-            <button class="vip-repeat-banner" data-vip-repeat>
+            <button class="vip-repeat-banner" data-vip-action="repeat-last">
                 <div class="vip-repeat-icon">${VIP_I.history}</div>
                 <div class="vip-repeat-body">
                     <strong>Repartir como la última vez</strong>
@@ -2975,17 +2987,25 @@ function renderVipTicketsV2() {
             </button>
         ` : ''}
 
+        ${mineTicket ? `
+            <div class="vip-ticket-list" style="padding-bottom:4px">
+                ${renderVipTicketRow(mineTicket)}
+            </div>
+        ` : ''}
+
+        <div class="vip-ticket-list-label">DESTINATARIOS</div>
         <div class="vip-ticket-list">
-            ${tickets.map((t, idx) => renderVipTicketRow(t, idx)).join('')}
+            ${recipientRows}
         </div>
 
         ${ctaLabel ? `
             <div class="vip-sticky-cta-wrap">
-                <button class="vip-sticky-cta ${ctaVariant}" ${ctaAction ? `data-vip-cta="${ctaAction}"` : 'disabled'}>
+                <button class="vip-sticky-cta ${ctaVariant}"
+                        ${ctaAction ? `data-vip-action="${ctaAction}"` : 'disabled'}>
                     ${ctaVariant === 'done' ? `${VIP_I.walletPass} ${ctaLabel}` : ctaLabel}
                 </button>
-                ${ctaAction === 'send' ? `
-                    <div class="vip-sticky-cta-sub">Se enviará un ticket personalizado a cada persona</div>
+                ${ctaAction === 'open-picker' ? `
+                    <div class="vip-sticky-cta-sub">Elige contactos y se asignará un asiento a cada uno</div>
                 ` : ''}
             </div>
             <div style="height: 120px"></div>
@@ -2993,17 +3013,27 @@ function renderVipTicketsV2() {
     `;
 }
 
-function renderVipTicketRow(t, idx) {
+function renderVipTicketRow(t) {
     const isMine = t.status === 'mine';
     const contact = t.contactId ? vipContactById(t.contactId) : null;
     const seatLabel = `Fila ${t.fila} · Asiento ${t.asiento}`;
     const statusClass = `st-${t.status}`;
     const statusLabel = vipTicketStatusLabel(t);
     const avatar = isMine ? vipAvatarHTML('self', 36) : vipAvatarHTML(contact, 36);
-    const title = isMine ? 'Para mí' : (contact ? contact.name : 'Sin asignar');
+    const title = isMine
+        ? 'Para mí'
+        : (contact ? contact.name : 'Sin asignar');
+
+    // Only sent/accepted/bound tickets are interactive from the main list.
+    // Draft/unassigned/mine are managed through the picker/preview flow.
+    const interactive = ['sent', 'accepted', 'bound'].includes(t.status);
+    const tag = interactive ? 'button' : 'div';
+    const attrs = interactive
+        ? `data-vip-action="main-actions" data-vip-ticket-id="${t.id}"`
+        : '';
 
     return `
-        <button class="vip-ticket-item ${statusClass}" data-vip-ticket="${t.id}">
+        <${tag} class="vip-ticket-item ${statusClass} ${interactive ? '' : 'static'}" ${attrs}>
             <div class="vip-ticket-avatar">${avatar}</div>
             <div class="vip-ticket-main">
                 <div class="vip-ticket-top">
@@ -3012,71 +3042,300 @@ function renderVipTicketRow(t, idx) {
                 </div>
                 <div class="vip-ticket-sub">${seatLabel}</div>
             </div>
-            <div class="vip-ticket-more">${VIP_I.moreVert}</div>
-        </button>
+            ${interactive ? `<div class="vip-ticket-more">${VIP_I.moreVert}</div>` : ''}
+        </${tag}>
     `;
 }
 
 function renderVipShareSheets() {
     const s = state.vipShare;
-    if (!s.sheet) return '';
+    if (!s.step) return '';
 
-    if (s.sheet === 'picker')     return renderVipPickerSheet();
-    if (s.sheet === 'disclaimer') return renderVipDisclaimerSheet();
-    if (s.sheet === 'share')      return renderVipShareChannelSheet();
-    if (s.sheet === 'actions')    return renderVipTicketActionsSheet();
-    if (s.sheet === 'sending')    return renderVipSendingSheet();
-    if (s.sheet === 'sent')       return renderVipSentSheet();
+    // Steps that overlay the preview (keep preview visible beneath)
+    const overPreview = ['row-actions', 'swap-seat', 'replace-contact',
+                         'disclaimer', 'share', 'sending', 'sent'];
+
+    if (s.step === 'picker')       return renderVipPickerSheet();
+    if (s.step === 'main-actions') return renderVipMainActionsSheet();
+    if (s.step === 'preview')      return renderVipPreviewSheet();
+
+    if (overPreview.includes(s.step)) {
+        let overlay = '';
+        if (s.step === 'row-actions')     overlay = renderVipRowActionsSheet();
+        else if (s.step === 'swap-seat')  overlay = renderVipSwapSeatSheet();
+        else if (s.step === 'replace-contact') overlay = renderVipReplaceContactSheet();
+        else if (s.step === 'disclaimer') overlay = renderVipDisclaimerSheet();
+        else if (s.step === 'share')      overlay = renderVipShareChannelSheet();
+        else if (s.step === 'sending')    overlay = renderVipSendingSheet();
+        else if (s.step === 'sent')       overlay = renderVipSentSheet();
+        return renderVipPreviewSheet() + overlay;
+    }
     return '';
 }
 
+// ── STEP 1 · Picker ─────────────────────────────────────────────
 function renderVipPickerSheet() {
     const s = state.vipShare;
     const tickets = vipTicketsForCurrentEvent();
-    const emptySlots = tickets.filter(t => t.status === 'unassigned').length;
-    const q = (s.pickerQuery || '').trim().toLowerCase();
+    const mutableCount = tickets.filter(t => ['unassigned', 'mine'].includes(t.status)).length;
+    const q = (s.query || '').trim().toLowerCase();
 
-    const maxSelect = s.pickerMode === 'single' ? 1 : emptySlots;
-    const selected = s.pickerSelection;
+    const maxSelect = s.keepMine ? Math.max(0, mutableCount - 1) : mutableCount;
+    const selected = s.selection;
 
-    const list = VIP_CONTACTS.filter(c => !q || c.name.toLowerCase().includes(q) || c.phone.includes(q));
+    const list = VIP_CONTACTS.filter(c => !q
+        || c.name.toLowerCase().includes(q)
+        || c.phone.includes(q));
+
+    const doneLabel = selected.length > 0
+        ? `Siguiente (${selected.length})`
+        : 'Siguiente';
 
     return `
-        <div class="vip-sheet-backdrop" data-vip-picker-close></div>
+        <div class="vip-sheet-backdrop" data-vip-action="close-sheet"></div>
         <div class="vip-picker-sheet">
             <div class="vip-picker-grabber"></div>
             <div class="vip-picker-head">
-                <button class="vip-picker-cancel" data-vip-picker-close>Cancelar</button>
-                <div class="vip-picker-title">
-                    ${s.pickerMode === 'single' ? 'Elegir destinatario' : 'Repartir tickets'}
-                </div>
+                <button class="vip-picker-cancel" data-vip-action="close-sheet">Cancelar</button>
+                <div class="vip-picker-title">Elige destinatarios</div>
                 <button class="vip-picker-done ${selected.length > 0 ? 'active' : ''}"
                         ${selected.length === 0 ? 'disabled' : ''}
-                        data-vip-picker-done>Listo</button>
+                        data-vip-action="commit-picker">${doneLabel}</button>
             </div>
-            ${s.pickerMode === 'bulk' ? `
-                <div class="vip-picker-counter">
-                    <strong>${selected.length}</strong> / ${maxSelect} contactos
+
+            <div class="vip-keep-mine-row">
+                <div>
+                    <strong>Reservarme un ticket</strong>
+                    <span>Se añadirá automáticamente a tu Wallet</span>
                 </div>
-            ` : ''}
+                <button class="vip-toggle-sm ${s.keepMine ? 'on' : ''}"
+                        data-vip-action="toggle-keep-mine"></button>
+            </div>
+
+            <div class="vip-picker-counter">
+                <strong>${selected.length}</strong> / ${maxSelect} contactos
+                ${selected.length >= maxSelect && maxSelect > 0
+                    ? '<span class="vip-picker-limit">límite alcanzado</span>' : ''}
+            </div>
+
             <div class="vip-picker-search">
                 <input type="text" placeholder="Buscar contacto"
-                       value="${s.pickerQuery || ''}" data-vip-picker-search>
+                       value="${escapeHtml(s.query || '')}"
+                       data-vip-search>
+            </div>
+
+            <div class="vip-picker-list" id="vipPickerList">
+                ${list.map(c => renderVipPickerRow(c, selected, maxSelect)).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderVipPickerRow(c, selected, maxSelect) {
+    const isSel = selected.includes(c.id);
+    const disabled = !isSel && selected.length >= maxSelect;
+    return `
+        <div class="vip-picker-row ${isSel ? 'selected' : ''} ${disabled ? 'disabled' : ''}"
+             data-vip-action="toggle-contact" data-vip-contact="${c.id}">
+            ${vipAvatarHTML(c, 40)}
+            <div class="vip-picker-info">
+                <div class="name">${c.name}</div>
+                <div class="phone">${c.phone}</div>
+            </div>
+            <div class="vip-picker-check ${isSel ? 'on' : ''}">
+                ${isSel ? '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="4,10 9,15 16,6"/></svg>' : ''}
+            </div>
+        </div>
+    `;
+}
+
+// ── STEP 2 · Preview (review assignments) ───────────────────────
+function renderVipPreviewSheet() {
+    const tickets = vipTicketsForCurrentEvent();
+    const draft = tickets.filter(t => t.status === 'assigned');
+    const mineTicket = tickets.find(t => t.status === 'mine');
+
+    return `
+        <div class="vip-sheet-backdrop" data-vip-action="cancel-preview"></div>
+        <div class="vip-preview-sheet">
+            <div class="vip-preview-head">
+                <button class="vip-back-btn" data-vip-action="cancel-preview">${I.chevronLeft}</button>
+                <div>
+                    <div class="vip-preview-title">Revisar reparto</div>
+                    <div class="vip-preview-sub">${draft.length} ticket${draft.length === 1 ? '' : 's'} asignado${draft.length === 1 ? '' : 's'} · pulsa para editar</div>
+                </div>
+                <div style="width:36px"></div>
+            </div>
+
+            <div class="vip-preview-body">
+                ${mineTicket ? `
+                    <div class="vip-preview-mine">
+                        ${vipAvatarHTML('self', 40)}
+                        <div class="vip-preview-mine-info">
+                            <strong>Para ti</strong>
+                            <span>Fila ${mineTicket.fila} · Asiento ${mineTicket.asiento}</span>
+                        </div>
+                        <div class="vip-preview-mine-badge">${VIP_I.walletPass} Wallet</div>
+                    </div>
+                ` : ''}
+
+                <div class="vip-preview-list-label">DESTINATARIOS</div>
+                <div class="vip-preview-list">
+                    ${draft.map((t, idx) => renderVipPreviewRow(t, idx)).join('')}
+                </div>
+
+                <div class="vip-preview-tip">
+                    ${VIP_I.ticket} Pulsa en cualquier fila para cambiar su asiento, sustituir al destinatario o quitarlo.
+                </div>
+            </div>
+
+            <div class="vip-sticky-cta-wrap inside-sheet">
+                <button class="vip-sticky-cta primary" data-vip-action="confirm-send">
+                    Enviar ${draft.length} ticket${draft.length === 1 ? '' : 's'}
+                </button>
+                <div class="vip-sticky-cta-sub">Se envía un ticket personalizado a cada persona</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderVipPreviewRow(t, idx) {
+    const contact = vipContactById(t.contactId);
+    if (!contact) return '';
+    return `
+        <button class="vip-preview-row" data-vip-action="open-row-actions" data-vip-idx="${idx}">
+            ${vipAvatarHTML(contact, 40)}
+            <div class="vip-preview-row-info">
+                <div class="name">${contact.name}</div>
+                <div class="phone">${contact.phone}</div>
+            </div>
+            <div class="vip-preview-row-seat">
+                <div class="fila">Fila ${t.fila}</div>
+                <div class="asiento">Asiento ${t.asiento}</div>
+            </div>
+            ${VIP_I.chevronRight}
+        </button>
+    `;
+}
+
+// ── STEP 2.1 · Row actions (tapping a preview row) ───────────────
+function renderVipRowActionsSheet() {
+    const s = state.vipShare;
+    const tickets = vipTicketsForCurrentEvent();
+    const draft = tickets.filter(t => t.status === 'assigned');
+    const t = draft[s.activeIdx];
+    if (!t) return '';
+    const contact = vipContactById(t.contactId);
+
+    return `
+        <div class="vip-sheet-backdrop" data-vip-action="back-to-preview"></div>
+        <div class="vip-actions-sheet">
+            <div class="vip-picker-grabber"></div>
+            <div class="vip-actions-head">
+                <div class="vip-actions-seat">Fila ${t.fila} · Asiento ${t.asiento}</div>
+                <div class="vip-actions-recipient">${contact ? contact.name : '—'}</div>
+            </div>
+            <div class="vip-actions-list">
+                <button class="vip-actions-row" data-vip-action="start-swap">
+                    ${VIP_I.ticket}<span>Cambiar de asiento</span>
+                </button>
+                <button class="vip-actions-row" data-vip-action="start-replace">
+                    ${VIP_I.person}<span>Cambiar destinatario</span>
+                </button>
+                <button class="vip-actions-row destructive" data-vip-action="remove-row">
+                    ${VIP_I.trash}<span>Quitar de la lista</span>
+                </button>
+            </div>
+            <button class="vip-share-cancel" data-vip-action="back-to-preview">Cancelar</button>
+        </div>
+    `;
+}
+
+// ── STEP 2.2 · Swap seat (pick another assigned row to swap with) ─
+function renderVipSwapSeatSheet() {
+    const s = state.vipShare;
+    const tickets = vipTicketsForCurrentEvent();
+    const draft = tickets.filter(t => t.status === 'assigned');
+    const me = draft[s.activeIdx];
+    const meContact = me ? vipContactById(me.contactId) : null;
+
+    const others = draft.map((t, i) => ({ t, i })).filter(x => x.i !== s.activeIdx);
+
+    return `
+        <div class="vip-sheet-backdrop" data-vip-action="back-to-preview"></div>
+        <div class="vip-picker-sheet">
+            <div class="vip-picker-grabber"></div>
+            <div class="vip-picker-head">
+                <button class="vip-picker-cancel" data-vip-action="back-to-preview">Atrás</button>
+                <div class="vip-picker-title">Elegir asiento</div>
+                <div style="width:64px"></div>
+            </div>
+            <div class="vip-swap-hint">
+                ${meContact ? `Elige con quién intercambias el asiento de <strong>${meContact.name}</strong> (Fila ${me.fila} · Asiento ${me.asiento})` : ''}
             </div>
             <div class="vip-picker-list">
-                ${list.map(c => {
-                    const isSel = selected.includes(c.id);
-                    const disabled = !isSel && selected.length >= maxSelect;
+                ${others.map(({ t, i }) => {
+                    const c = vipContactById(t.contactId);
+                    if (!c) return '';
                     return `
-                        <div class="vip-picker-row ${isSel ? 'selected' : ''} ${disabled ? 'disabled' : ''}"
-                             data-vip-picker-contact="${c.id}">
+                        <div class="vip-picker-row" data-vip-action="do-swap" data-vip-idx="${i}">
                             ${vipAvatarHTML(c, 40)}
                             <div class="vip-picker-info">
                                 <div class="name">${c.name}</div>
-                                <div class="phone">${c.phone}</div>
+                                <div class="phone">Fila ${t.fila} · Asiento ${t.asiento}</div>
                             </div>
-                            <div class="vip-picker-check ${isSel ? 'on' : ''}">
-                                ${isSel ? '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="4,10 9,15 16,6"/></svg>' : ''}
+                            <div class="vip-picker-swap-ico">↔</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// ── STEP 2.3 · Replace contact (single-select picker) ────────────
+function renderVipReplaceContactSheet() {
+    const s = state.vipShare;
+    const tickets = vipTicketsForCurrentEvent();
+    const draft = tickets.filter(t => t.status === 'assigned');
+    const t = draft[s.activeIdx];
+    if (!t) return '';
+    const currentContact = vipContactById(t.contactId);
+    const usedIds = new Set(tickets
+        .filter(tt => tt.contactId && tt.id !== t.id)
+        .map(tt => tt.contactId));
+    const q = (s.query || '').trim().toLowerCase();
+    const list = VIP_CONTACTS.filter(c => !q
+        || c.name.toLowerCase().includes(q)
+        || c.phone.includes(q));
+
+    return `
+        <div class="vip-sheet-backdrop" data-vip-action="back-to-preview"></div>
+        <div class="vip-picker-sheet">
+            <div class="vip-picker-grabber"></div>
+            <div class="vip-picker-head">
+                <button class="vip-picker-cancel" data-vip-action="back-to-preview">Atrás</button>
+                <div class="vip-picker-title">Cambiar destinatario</div>
+                <div style="width:64px"></div>
+            </div>
+            <div class="vip-swap-hint">
+                Sustituir a <strong>${currentContact ? currentContact.name : '—'}</strong> (Fila ${t.fila} · Asiento ${t.asiento})
+            </div>
+            <div class="vip-picker-search">
+                <input type="text" placeholder="Buscar contacto"
+                       value="${escapeHtml(s.query || '')}"
+                       data-vip-search>
+            </div>
+            <div class="vip-picker-list">
+                ${list.map(c => {
+                    const isUsed = usedIds.has(c.id);
+                    return `
+                        <div class="vip-picker-row ${isUsed ? 'disabled' : ''}"
+                             ${isUsed ? '' : `data-vip-action="do-replace" data-vip-contact="${c.id}"`}>
+                            ${vipAvatarHTML(c, 40)}
+                            <div class="vip-picker-info">
+                                <div class="name">${c.name}</div>
+                                <div class="phone">${isUsed ? 'Ya tiene un ticket' : c.phone}</div>
                             </div>
                         </div>
                     `;
@@ -3086,9 +3345,48 @@ function renderVipPickerSheet() {
     `;
 }
 
+// ── Main-list actions (for sent/bound tickets) ──────────────────
+function renderVipMainActionsSheet() {
+    const s = state.vipShare;
+    const tickets = vipTicketsForCurrentEvent();
+    const t = tickets.find(x => x.id === s.mainTicketId);
+    if (!t) return '';
+    const contact = t.contactId ? vipContactById(t.contactId) : null;
+
+    const actions = [];
+    if (t.status === 'sent' || t.status === 'accepted') {
+        actions.push({ key: 'resend',   label: 'Reenviar ticket', icon: VIP_I.mail });
+        actions.push({ key: 'revoke',   label: 'Revocar ticket',  icon: VIP_I.trash, destructive: true });
+    } else if (t.status === 'bound') {
+        actions.push({ key: 'info',     label: 'Vinculado a ' + (contact ? contact.name : '—'), disabled: true });
+    }
+
+    return `
+        <div class="vip-sheet-backdrop" data-vip-action="close-sheet"></div>
+        <div class="vip-actions-sheet">
+            <div class="vip-picker-grabber"></div>
+            <div class="vip-actions-head">
+                <div class="vip-actions-seat">Fila ${t.fila} · Asiento ${t.asiento}</div>
+                ${contact ? `<div class="vip-actions-recipient">${contact.name} · ${contact.phone}</div>` : ''}
+            </div>
+            <div class="vip-actions-list">
+                ${actions.map(a => `
+                    <button class="vip-actions-row ${a.destructive ? 'destructive' : ''} ${a.disabled ? 'disabled' : ''}"
+                            ${a.disabled ? 'disabled' : `data-vip-action="main-${a.key}"`}>
+                        ${a.icon || ''}
+                        <span>${a.label}</span>
+                    </button>
+                `).join('')}
+            </div>
+            <button class="vip-share-cancel" data-vip-action="close-sheet">Cancelar</button>
+        </div>
+    `;
+}
+
+// ── Disclaimer / Share / Sending / Sent ─────────────────────────
 function renderVipDisclaimerSheet() {
     return `
-        <div class="vip-sheet-backdrop" data-vip-disclaimer-close></div>
+        <div class="vip-sheet-backdrop" data-vip-action="back-to-preview"></div>
         <div class="vip-disclaimer-sheet">
             <div class="vip-disclaimer-icon">${VIP_I.ticket}</div>
             <div class="vip-disclaimer-title">Una persona, un ticket</div>
@@ -3097,7 +3395,8 @@ function renderVipDisclaimerSheet() {
                 <br><br>
                 Envía un ticket a cada asistente desde su propio iPhone para que lo añada a su Wallet.
             </div>
-            <button class="vip-disclaimer-cta" data-vip-disclaimer-ok>Entendido, continuar</button>
+            <button class="vip-disclaimer-cta" data-vip-action="accept-disclaimer">Entendido, enviar</button>
+            <button class="vip-disclaimer-secondary" data-vip-action="back-to-preview">Atrás</button>
         </div>
     `;
 }
@@ -3106,85 +3405,38 @@ function renderVipShareChannelSheet() {
     const tickets = vipTicketsForCurrentEvent();
     const ready = tickets.filter(t => t.status === 'assigned');
     const channels = [
-        { key: 'imessage', label: 'Mensajes', color: '#4cd964', icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.8 2 11.5c0 2.4 1.2 4.6 3.1 6.1-.1.8-.5 2.3-1.6 3.4 1.7-.1 3.6-.7 4.9-1.6 1.1.4 2.3.6 3.6.6 5.5 0 10-3.8 10-8.5S17.5 3 12 3z"/></svg>` },
-        { key: 'whatsapp', label: 'WhatsApp', color: '#25d366', icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4C16 0 10 0 6 4c-3.5 3.5-3.8 9-.7 12.9L4 22l5.3-1.3c3.9 2.6 9 2.1 12.2-1.1C25.5 15.8 25.5 9 20 4zm-3.2 12c-.3.9-1.6 1.6-2.5 1.7-.6.1-1.5.2-4.5-.9-3.7-1.6-6.1-5.4-6.3-5.6-.2-.2-1.5-2-1.5-3.8s.9-2.7 1.3-3.1c.3-.3.7-.5 1-.5h.7c.2 0 .5 0 .8.6.3.7 1 2.5 1.1 2.7.1.2.1.4 0 .6-.3.7-.6.7-.9 1-.2.2-.4.4-.2.8.2.3 1 1.6 2.1 2.6 1.4 1.3 2.7 1.7 3 1.8.3.2.6.1.8-.1.3-.3.8-.9 1-1.2.2-.3.5-.3.8-.2.3.1 2 1 2.3 1.1.3.2.5.2.6.3.1.2.1.9-.2 1.8z"/></svg>` },
-        { key: 'mail',     label: 'Mail',     color: '#58b0f8', icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16c1 0 2 1 2 2v8c0 1-1 2-2 2H4c-1 0-2-1-2-2V8c0-1 1-2 2-2zm0 2l8 6 8-6H4zm16 2.2L12 16 4 10.2V16h16v-5.8z"/></svg>` },
+        { key: 'imessage', label: 'Mensajes',    color: '#4cd964', icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.8 2 11.5c0 2.4 1.2 4.6 3.1 6.1-.1.8-.5 2.3-1.6 3.4 1.7-.1 3.6-.7 4.9-1.6 1.1.4 2.3.6 3.6.6 5.5 0 10-3.8 10-8.5S17.5 3 12 3z"/></svg>` },
+        { key: 'whatsapp', label: 'WhatsApp',    color: '#25d366', icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4C16 0 10 0 6 4c-3.5 3.5-3.8 9-.7 12.9L4 22l5.3-1.3c3.9 2.6 9 2.1 12.2-1.1C25.5 15.8 25.5 9 20 4zm-3.2 12c-.3.9-1.6 1.6-2.5 1.7-.6.1-1.5.2-4.5-.9-3.7-1.6-6.1-5.4-6.3-5.6-.2-.2-1.5-2-1.5-3.8s.9-2.7 1.3-3.1c.3-.3.7-.5 1-.5h.7c.2 0 .5 0 .8.6.3.7 1 2.5 1.1 2.7.1.2.1.4 0 .6-.3.7-.6.7-.9 1-.2.2-.4.4-.2.8.2.3 1 1.6 2.1 2.6 1.4 1.3 2.7 1.7 3 1.8.3.2.6.1.8-.1.3-.3.8-.9 1-1.2.2-.3.5-.3.8-.2.3.1 2 1 2.3 1.1.3.2.5.2.6.3.1.2.1.9-.2 1.8z"/></svg>` },
+        { key: 'mail',     label: 'Mail',        color: '#58b0f8', icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16c1 0 2 1 2 2v8c0 1-1 2-2 2H4c-1 0-2-1-2-2V8c0-1 1-2 2-2zm0 2l8 6 8-6H4zm16 2.2L12 16 4 10.2V16h16v-5.8z"/></svg>` },
         { key: 'link',     label: 'Copiar link', color: '#666a76', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>` }
     ];
     return `
-        <div class="vip-sheet-backdrop" data-vip-share-close></div>
+        <div class="vip-sheet-backdrop" data-vip-action="back-to-preview"></div>
         <div class="vip-share-sheet">
             <div class="vip-picker-grabber"></div>
             <div class="vip-share-head">
-                <div class="vip-share-title">Enviar ${ready.length} tickets</div>
+                <div class="vip-share-title">Enviar ${ready.length} ticket${ready.length === 1 ? '' : 's'}</div>
                 <div class="vip-share-sub">Cada contacto recibirá su ticket personalizado con el asiento asignado.</div>
             </div>
             <div class="vip-share-channels">
                 ${channels.map(ch => `
-                    <button class="vip-share-channel" data-vip-channel="${ch.key}">
+                    <button class="vip-share-channel" data-vip-action="pick-channel" data-vip-channel="${ch.key}">
                         <div class="icon" style="background:${ch.color}">${ch.icon}</div>
                         <span>${ch.label}</span>
                     </button>
                 `).join('')}
             </div>
-            <button class="vip-share-cancel" data-vip-share-close>Cancelar</button>
-        </div>
-    `;
-}
-
-function renderVipTicketActionsSheet() {
-    const s = state.vipShare;
-    const tickets = vipTicketsForCurrentEvent();
-    const t = tickets.find(x => x.id === s.actionsTicketId);
-    if (!t) return '';
-    const contact = t.contactId ? vipContactById(t.contactId) : null;
-    const seatLabel = `Fila ${t.fila} · Asiento ${t.asiento}`;
-
-    const actions = [];
-    if (t.status === 'mine') {
-        actions.push({ key: 'wallet', label: 'Añadir a mi Wallet', icon: VIP_I.walletPass });
-        actions.push({ key: 'give-up', label: 'Dejar de reservarlo para mí' });
-    } else if (t.status === 'unassigned') {
-        actions.push({ key: 'assign', label: 'Asignar destinatario', icon: VIP_I.plus });
-        actions.push({ key: 'mine',   label: 'Reservarlo para mí',  icon: VIP_I.walletPass });
-    } else if (t.status === 'assigned') {
-        actions.push({ key: 'reassign', label: 'Cambiar destinatario' });
-        actions.push({ key: 'unassign', label: 'Quitar destinatario' });
-    } else if (t.status === 'sent' || t.status === 'accepted') {
-        actions.push({ key: 'resend',   label: 'Reenviar' });
-        actions.push({ key: 'reassign', label: 'Reasignar a otra persona' });
-        actions.push({ key: 'revoke',   label: 'Revocar ticket', destructive: true });
-    } else if (t.status === 'bound') {
-        actions.push({ key: 'info', label: 'Ticket vinculado · no se puede cambiar', disabled: true });
-    }
-
-    return `
-        <div class="vip-sheet-backdrop" data-vip-actions-close></div>
-        <div class="vip-actions-sheet">
-            <div class="vip-picker-grabber"></div>
-            <div class="vip-actions-head">
-                <div class="vip-actions-seat">${seatLabel}</div>
-                ${contact ? `<div class="vip-actions-recipient">${contact.name} · ${contact.phone}</div>` : ''}
-                ${t.status === 'mine' ? `<div class="vip-actions-recipient">Reservado para ti</div>` : ''}
-            </div>
-            <div class="vip-actions-list">
-                ${actions.map(a => `
-                    <button class="vip-actions-row ${a.destructive ? 'destructive' : ''} ${a.disabled ? 'disabled' : ''}"
-                            ${a.disabled ? 'disabled' : `data-vip-action="${a.key}"`}>
-                        ${a.icon || ''}
-                        <span>${a.label}</span>
-                    </button>
-                `).join('')}
-            </div>
-            <button class="vip-share-cancel" data-vip-actions-close>Cancelar</button>
+            <button class="vip-share-cancel" data-vip-action="back-to-preview">Cancelar</button>
         </div>
     `;
 }
 
 function renderVipSendingSheet() {
+    const s = state.vipShare;
     const tickets = vipTicketsForCurrentEvent();
-    const total = tickets.filter(t => t.status === 'assigned' || t.status === 'sent').length;
-    const done = Math.min(state.vipShare.sendingProgress, total);
+    const total = tickets.filter(t => t.status === 'assigned' || (t.status === 'sent' && t._justSent)).length
+        || Math.max(1, s.progress);
+    const done = Math.min(s.progress, total);
     const pct = total ? Math.round((done / total) * 100) : 100;
     return `
         <div class="vip-sheet-backdrop"></div>
@@ -3201,16 +3453,22 @@ function renderVipSentSheet() {
     const tickets = vipTicketsForCurrentEvent();
     const sent = tickets.filter(t => ['sent', 'accepted', 'bound'].includes(t.status)).length;
     return `
-        <div class="vip-sheet-backdrop" data-vip-sent-close></div>
+        <div class="vip-sheet-backdrop" data-vip-action="close-sheet"></div>
         <div class="vip-sent-sheet">
             <div class="vip-sent-check">
                 <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="7,17 14,24 26,10"/></svg>
             </div>
             <div class="vip-sent-title">¡Tickets enviados!</div>
             <div class="vip-sent-body">Hemos enviado ${sent} tickets. Recibirás una notificación cuando cada persona añada el suyo a su Wallet.</div>
-            <button class="vip-disclaimer-cta" data-vip-sent-close>Volver a mis tickets</button>
+            <button class="vip-disclaimer-cta" data-vip-action="close-sheet">Volver a mis tickets</button>
         </div>
     `;
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
 }
 
 function renderVipGestor() {
@@ -3554,212 +3812,294 @@ function attachVipListeners() {
     attachVipShareListeners();
 }
 
+// ── VIP multi-ticket share: single delegated click handler ───────
+// Installed once on document. Every interactive element in the share
+// flow declares `data-vip-action="…"` (plus optional data attributes).
+let _vipShareDelegateInstalled = false;
+
 function attachVipShareListeners() {
     if (!Flags.isEnabled('vip.tickets.multi-share')) return;
 
-    const s = state.vipShare;
-
-    $$('[data-vip-ticket]').forEach(el => el.addEventListener('click', () => {
-        s.actionsTicketId = el.dataset.vipTicket;
-        s.sheet = 'actions';
-        render();
-    }));
-
-    $$('[data-vip-cta]').forEach(btn => btn.addEventListener('click', () => {
-        const action = btn.dataset.vipCta;
-        if (action === 'pick-bulk') {
-            s.pickerMode = 'bulk';
-            s.pickerSelection = [];
-            s.pickerQuery = '';
-            s.reassignTicketId = null;
-            s.sheet = 'picker';
-            render();
-        } else if (action === 'send') {
-            s.sheet = s.disclaimerSeen ? 'share' : 'disclaimer';
-            render();
-        }
-    }));
-
-    $$('[data-vip-repeat]').forEach(el => el.addEventListener('click', () => {
-        if (!VIP_LAST_GROUP) return;
-        const tickets = vipTicketsForCurrentEvent();
-        const empty = tickets.filter(t => t.status === 'unassigned');
-        VIP_LAST_GROUP.contactIds.slice(0, empty.length).forEach((cid, idx) => {
-            empty[idx].contactId = cid;
-            empty[idx].status = 'assigned';
-        });
-        s.sheet = s.disclaimerSeen ? 'share' : 'disclaimer';
-        render();
-    }));
-
-    $$('[data-vip-picker-close]').forEach(el => el.addEventListener('click', () => {
-        s.sheet = null;
-        s.pickerSelection = [];
-        s.pickerQuery = '';
-        s.reassignTicketId = null;
-        render();
-    }));
-
-    const searchInput = document.querySelector('[data-vip-picker-search]');
-    if (searchInput) {
-        searchInput.addEventListener('input', e => {
-            s.pickerQuery = e.target.value;
-            render();
-            const again = document.querySelector('[data-vip-picker-search]');
-            if (again) {
-                again.focus();
-                const v = again.value;
-                again.value = '';
-                again.value = v;
-            }
-        });
+    // Install the delegated handlers once on document. They survive
+    // every re-render because they are not attached to inner DOM.
+    if (!_vipShareDelegateInstalled) {
+        document.addEventListener('click', handleVipShareClick);
+        document.addEventListener('input', handleVipShareInput);
+        _vipShareDelegateInstalled = true;
     }
+}
 
-    $$('[data-vip-picker-contact]').forEach(row => row.addEventListener('click', () => {
-        if (row.classList.contains('disabled')) return;
-        const cid = row.dataset.vipPickerContact;
-        const tickets = vipTicketsForCurrentEvent();
-        const emptySlots = tickets.filter(t => t.status === 'unassigned').length;
-        const max = s.pickerMode === 'single' ? 1 : emptySlots;
-        const idx = s.pickerSelection.indexOf(cid);
-        if (idx >= 0) {
-            s.pickerSelection.splice(idx, 1);
-        } else {
-            if (s.pickerMode === 'single') {
-                s.pickerSelection = [cid];
-            } else if (s.pickerSelection.length < max) {
-                s.pickerSelection.push(cid);
-            }
-        }
-        render();
-    }));
+function handleVipShareClick(e) {
+    const target = e.target.closest('[data-vip-action]');
+    if (!target) return;
+    // Ignore clicks on disabled elements
+    if (target.classList.contains('disabled') || target.disabled) return;
+    const action = target.dataset.vipAction;
+    if (!action) return;
 
-    $$('[data-vip-picker-done]').forEach(btn => btn.addEventListener('click', () => {
-        const tickets = vipTicketsForCurrentEvent();
-        if (s.pickerMode === 'single' && s.reassignTicketId) {
-            const t = tickets.find(x => x.id === s.reassignTicketId);
-            if (t) {
-                t.contactId = s.pickerSelection[0];
-                t.status = 'assigned';
-                t.sentAt = null;
-            }
-        } else {
-            const empty = tickets.filter(t => t.status === 'unassigned');
-            s.pickerSelection.forEach((cid, i) => {
-                if (!empty[i]) return;
-                empty[i].contactId = cid;
-                empty[i].status = 'assigned';
-            });
-        }
-        s.sheet = null;
-        s.pickerSelection = [];
-        s.pickerQuery = '';
-        s.reassignTicketId = null;
-        render();
-    }));
+    const s = state.vipShare;
+    const tickets = vipTicketsForCurrentEvent();
 
-    $$('[data-vip-disclaimer-close]').forEach(el => el.addEventListener('click', () => {
-        s.sheet = null;
-        render();
-    }));
-    $$('[data-vip-disclaimer-ok]').forEach(btn => btn.addEventListener('click', () => {
-        s.disclaimerSeen = true;
-        s.sheet = 'share';
-        render();
-    }));
-
-    $$('[data-vip-share-close]').forEach(el => el.addEventListener('click', () => {
-        s.sheet = null;
-        render();
-    }));
-    $$('[data-vip-channel]').forEach(btn => btn.addEventListener('click', () => {
-        s.channel = btn.dataset.vipChannel;
-        s.sheet = 'sending';
-        s.sendingProgress = 0;
-        render();
-
-        const tickets = vipTicketsForCurrentEvent();
-        const assigned = tickets.filter(t => t.status === 'assigned');
-        const total = assigned.length;
-        let i = 0;
-        const tick = () => {
-            if (i >= total) {
-                VIP_LAST_GROUP = {
-                    eventLabel: (VIP_EVENTS.find(e => e.id === state.vipEventId) || VIP_EVENTS[0]).away,
-                    contactIds: assigned.map(t => t.contactId).filter(Boolean)
-                };
-                s.sheet = 'sent';
-                render();
-                return;
-            }
-            assigned[i].status = 'sent';
-            assigned[i].sentAt = Date.now();
-            assigned[i].channel = s.channel;
-            i++;
-            s.sendingProgress = i;
+    switch (action) {
+        // ── Entry points from the main tickets screen ─────────────
+        case 'open-picker': {
+            s.step = 'picker';
+            s.selection = [];
+            s.query = '';
+            s.keepMine = !tickets.some(t => t.status === 'mine' && t.contactId)
+                ? (tickets.find(t => t.status === 'mine') ? true : true)
+                : true;
             render();
-            setTimeout(tick, 180);
-        };
-        setTimeout(tick, 260);
-    }));
-
-    $$('[data-vip-sent-close]').forEach(el => el.addEventListener('click', () => {
-        s.sheet = null;
-        s.sendingProgress = 0;
-        s.channel = null;
-        render();
-    }));
-
-    $$('[data-vip-actions-close]').forEach(el => el.addEventListener('click', () => {
-        s.sheet = null;
-        s.actionsTicketId = null;
-        render();
-    }));
-
-    $$('[data-vip-action]').forEach(btn => btn.addEventListener('click', () => {
-        const tickets = vipTicketsForCurrentEvent();
-        const t = tickets.find(x => x.id === s.actionsTicketId);
-        if (!t) return;
-        const action = btn.dataset.vipAction;
-
-        if (action === 'assign' || action === 'reassign') {
-            s.pickerMode = 'single';
-            s.reassignTicketId = t.id;
-            s.pickerSelection = t.contactId ? [t.contactId] : [];
-            s.pickerQuery = '';
-            s.sheet = 'picker';
-        } else if (action === 'unassign') {
-            t.contactId = null;
-            t.status = 'unassigned';
-            t.sentAt = null;
-            s.sheet = null;
-            s.actionsTicketId = null;
-        } else if (action === 'mine') {
-            t.status = 'mine';
-            t.contactId = null;
-            s.sheet = null;
-            s.actionsTicketId = null;
-        } else if (action === 'give-up') {
-            t.status = 'unassigned';
-            s.sheet = null;
-            s.actionsTicketId = null;
-        } else if (action === 'wallet') {
-            t.status = 'bound';
-            s.sheet = null;
-            s.actionsTicketId = null;
-        } else if (action === 'resend') {
-            t.sentAt = Date.now();
-            s.sheet = null;
-            s.actionsTicketId = null;
-        } else if (action === 'revoke') {
-            t.contactId = null;
-            t.status = 'unassigned';
-            t.sentAt = null;
-            s.sheet = null;
-            s.actionsTicketId = null;
+            return;
         }
+        case 'open-preview': {
+            s.step = 'preview';
+            render();
+            return;
+        }
+        case 'repeat-last': {
+            if (!VIP_LAST_GROUP) return;
+            const mutable = tickets.filter(t => ['unassigned', 'mine'].includes(t.status));
+            mutable.forEach(t => { t.status = 'unassigned'; t.contactId = null; t.sentAt = null; });
+            let offset = 0;
+            if (mutable.length > VIP_LAST_GROUP.contactIds.length) {
+                mutable[0].status = 'mine';
+                offset = 1;
+            }
+            VIP_LAST_GROUP.contactIds.forEach((cid, i) => {
+                const t = mutable[offset + i];
+                if (t) { t.status = 'assigned'; t.contactId = cid; }
+            });
+            s.step = 'preview';
+            render();
+            return;
+        }
+        case 'main-actions': {
+            s.mainTicketId = target.dataset.vipTicketId;
+            s.step = 'main-actions';
+            render();
+            return;
+        }
+        case 'main-resend': {
+            const t = tickets.find(x => x.id === s.mainTicketId);
+            if (t) t.sentAt = Date.now();
+            closeSheet();
+            return;
+        }
+        case 'main-revoke': {
+            const t = tickets.find(x => x.id === s.mainTicketId);
+            if (t) { t.contactId = null; t.status = 'unassigned'; t.sentAt = null; }
+            closeSheet();
+            return;
+        }
+
+        // ── Picker ───────────────────────────────────────────────
+        case 'toggle-contact': {
+            const cid = target.dataset.vipContact;
+            const mutableCount = tickets.filter(t => ['unassigned', 'mine'].includes(t.status)).length;
+            const max = s.keepMine ? Math.max(0, mutableCount - 1) : mutableCount;
+            const idx = s.selection.indexOf(cid);
+            if (idx >= 0) {
+                s.selection.splice(idx, 1);
+            } else if (s.selection.length < max) {
+                s.selection.push(cid);
+            }
+            render();
+            return;
+        }
+        case 'toggle-keep-mine': {
+            s.keepMine = !s.keepMine;
+            // Trim selection if it now exceeds the cap
+            const mutableCount = tickets.filter(t => ['unassigned', 'mine'].includes(t.status)).length;
+            const max = s.keepMine ? Math.max(0, mutableCount - 1) : mutableCount;
+            if (s.selection.length > max) s.selection = s.selection.slice(0, max);
+            render();
+            return;
+        }
+        case 'commit-picker': {
+            commitPickerAssignment();
+            s.step = 'preview';
+            s.selection = [];
+            s.query = '';
+            render();
+            return;
+        }
+
+        // ── Preview / row actions ────────────────────────────────
+        case 'cancel-preview': {
+            // Undo the draft: any 'assigned' tickets go back to unassigned
+            tickets.forEach(t => {
+                if (t.status === 'assigned') {
+                    t.status = 'unassigned';
+                    t.contactId = null;
+                    t.sentAt = null;
+                }
+            });
+            closeSheet();
+            return;
+        }
+        case 'open-row-actions': {
+            s.activeIdx = parseInt(target.dataset.vipIdx, 10);
+            s.step = 'row-actions';
+            render();
+            return;
+        }
+        case 'start-swap': {
+            s.step = 'swap-seat';
+            render();
+            return;
+        }
+        case 'do-swap': {
+            const draft = tickets.filter(t => t.status === 'assigned');
+            const a = draft[s.activeIdx];
+            const b = draft[parseInt(target.dataset.vipIdx, 10)];
+            if (a && b) {
+                const tmp = a.contactId;
+                a.contactId = b.contactId;
+                b.contactId = tmp;
+            }
+            s.step = 'preview';
+            s.activeIdx = null;
+            render();
+            return;
+        }
+        case 'start-replace': {
+            s.step = 'replace-contact';
+            s.query = '';
+            render();
+            return;
+        }
+        case 'do-replace': {
+            const draft = tickets.filter(t => t.status === 'assigned');
+            const t = draft[s.activeIdx];
+            const cid = target.dataset.vipContact;
+            if (t && cid) t.contactId = cid;
+            s.step = 'preview';
+            s.activeIdx = null;
+            render();
+            return;
+        }
+        case 'remove-row': {
+            const draft = tickets.filter(t => t.status === 'assigned');
+            const t = draft[s.activeIdx];
+            if (t) { t.status = 'unassigned'; t.contactId = null; }
+            s.step = 'preview';
+            s.activeIdx = null;
+            render();
+            return;
+        }
+        case 'back-to-preview': {
+            s.step = 'preview';
+            s.activeIdx = null;
+            s.query = '';
+            render();
+            return;
+        }
+
+        // ── Send pipeline ────────────────────────────────────────
+        case 'confirm-send': {
+            s.step = s.disclaimerSeen ? 'share' : 'disclaimer';
+            render();
+            return;
+        }
+        case 'accept-disclaimer': {
+            s.disclaimerSeen = true;
+            s.step = 'share';
+            render();
+            return;
+        }
+        case 'pick-channel': {
+            const channel = target.dataset.vipChannel;
+            startBatchSend(channel);
+            return;
+        }
+
+        // ── Generic close ────────────────────────────────────────
+        case 'close-sheet': {
+            closeSheet();
+            return;
+        }
+    }
+}
+
+function handleVipShareInput(e) {
+    if (!e.target.matches || !e.target.matches('[data-vip-search]')) return;
+    state.vipShare.query = e.target.value;
+    // Filter list in place without re-render (keeps caret/focus)
+    const list = e.target.closest('.vip-picker-sheet')?.querySelector('.vip-picker-list');
+    if (!list) return;
+    const q = state.vipShare.query.trim().toLowerCase();
+    list.querySelectorAll('.vip-picker-row').forEach(row => {
+        const name = row.querySelector('.name')?.textContent?.toLowerCase() || '';
+        const phone = row.querySelector('.phone')?.textContent?.toLowerCase() || '';
+        const match = !q || name.includes(q) || phone.includes(q);
+        row.style.display = match ? '' : 'none';
+    });
+}
+
+function commitPickerAssignment() {
+    const s = state.vipShare;
+    const tickets = vipTicketsForCurrentEvent();
+    // Mutable slots are current 'mine' + 'unassigned' tickets
+    const mutable = tickets.filter(t => ['unassigned', 'mine'].includes(t.status));
+    mutable.forEach(t => { t.status = 'unassigned'; t.contactId = null; t.sentAt = null; });
+
+    let offset = 0;
+    if (s.keepMine && mutable.length > 0) {
+        mutable[0].status = 'mine';
+        offset = 1;
+    }
+    s.selection.forEach((cid, i) => {
+        const t = mutable[offset + i];
+        if (t) { t.status = 'assigned'; t.contactId = cid; }
+    });
+}
+
+function closeSheet() {
+    const s = state.vipShare;
+    s.step = null;
+    s.selection = [];
+    s.query = '';
+    s.activeIdx = null;
+    s.mainTicketId = null;
+    s.channel = null;
+    s.progress = 0;
+    render();
+}
+
+function startBatchSend(channel) {
+    const s = state.vipShare;
+    s.channel = channel;
+    s.step = 'sending';
+    s.progress = 0;
+    render();
+
+    const tickets = vipTicketsForCurrentEvent();
+    const assigned = tickets.filter(t => t.status === 'assigned');
+    const total = assigned.length;
+    let i = 0;
+
+    const tick = () => {
+        if (state.vipShare.step !== 'sending') return; // user navigated away
+        if (i >= total) {
+            // Remember group
+            VIP_LAST_GROUP = {
+                eventLabel: (VIP_EVENTS.find(e => e.id === state.vipEventId) || VIP_EVENTS[0]).away,
+                contactIds: assigned.map(t => t.contactId).filter(Boolean)
+            };
+            s.step = 'sent';
+            render();
+            return;
+        }
+        assigned[i].status = 'sent';
+        assigned[i].sentAt = Date.now();
+        assigned[i].channel = channel;
+        i++;
+        s.progress = i;
         render();
-    }));
+        setTimeout(tick, 160);
+    };
+    setTimeout(tick, 240);
 }
 
 // ── SIDE MENU (¡Hola!) ──────────────────────────────────────────
