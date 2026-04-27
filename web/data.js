@@ -1182,3 +1182,36 @@ const VIP_PROFILE = {
     asientos: '1 Asiento',
     email: 'areavipLAP@corp.realmadrid.com'
 };
+
+// ── VIP Payment Methods (mock wallet) ───────────────────────────
+// Each method has a stable id, type, the user-facing identifier,
+// the holder, and an optional `default` flag (only one can be true
+// at any time — the UI enforces it).
+const VIP_PAYMENT_METHODS = [
+    {
+        id: 'pm-001',
+        type: 'card',
+        brand: 'Visa',
+        holder: 'Marcos Novo Acuses',
+        last4: '4242',
+        expiry: '08/27',
+        billingAddress: 'C/ Concha Espina 1, 28036 Madrid',
+        default: true
+    },
+    {
+        id: 'pm-002',
+        type: 'paypal',
+        holder: 'Marcos Novo Acuses',
+        email: 'marcos.novo@gmail.com',
+        default: false
+    },
+    {
+        id: 'pm-003',
+        type: 'bank',
+        holder: 'Marcos Novo Acuses',
+        ibanLast4: '7821',
+        bic: 'BSCHESMM',
+        bankName: 'Banco Santander',
+        default: false
+    }
+];

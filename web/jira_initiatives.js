@@ -890,6 +890,98 @@ register('fan.rmtv.play', {
 
 // ── VIP App ─────────────────────────────────────────────────────
 
+register('vip.payments.management', {
+    title: 'Gestión de métodos de pago en la App VIP',
+    epic: 'VIP App · Pagos',
+    estimate: 'L (3-4 sprints)',
+    priority: 'Alta',
+    context: 'Hoy en día, cada compra dentro de la App VIP (catering, experiencias, productos extra) obliga al usuario a introducir sus datos de pago de cero. No hay un wallet propio que recuerde tarjetas, PayPal o cuentas bancarias. Esto provoca abandono en checkout, especialmente en compras impulsivas el día de partido.',
+    problem: 'La fricción de introducir 16 dígitos + caducidad + CVV cada vez es la principal causa de carrito abandonado dentro de la app VIP. Además no aprovechamos Apple Pay / Google Pay, que son el método preferido de la mayoría de palquistas.',
+    objective: 'Permitir al usuario VIP gestionar sus métodos de pago (alta, edición, eliminación, predeterminado) desde su Perfil, y consumirlos en cualquier checkout de la app, con detección dinámica de Apple Pay / Google Pay.',
+    inScope: [
+        // 1. Acceso a la Gestión de Pagos
+        'Entrada "Payment methods" en la sección Profile que abre la pantalla de gestión',
+        'Pantalla con lista de métodos guardados, opción de añadir, y editar / eliminar existentes',
+        // 2. Pantalla de métodos
+        'Para cada método: tipo (VISA, PayPal, Cuenta bancaria…), información identificativa (últimos 4, titular), botón Edit',
+        'Indicador visual claro del método predeterminado',
+        'Botón persistente "Add payment method"',
+        'Métodos soportados: tarjeta de débito/crédito, PayPal y cuenta bancaria',
+        // 3. Añadir
+        'Selector de tipo al pulsar "Add payment method"',
+        'Formulario adaptado al método elegido (campos: titular, número de tarjeta, MM/YY, CVV, dirección de facturación; equivalentes para PayPal y banco)',
+        'Checkbox "Make it the default payment method"',
+        'Botones "Add" (valida y guarda) y "Cancel" (descarta)',
+        // 4. Editar / eliminar
+        'Vista de edición con los mismos campos que el alta',
+        'Marcar como predeterminado desde la edición',
+        'Eliminar el método con botón "Remove"',
+        // 5. Checkout
+        'Selector de métodos de pago en el checkout de la app VIP',
+        'Detección dinámica en frontend de Apple Pay (iOS) y Google Pay (Android) usando las APIs nativas',
+        'Si están disponibles y configurados, se muestran como opción destacada',
+        'El método predeterminado del usuario se preselecciona, salvo que Apple/Google Pay estén disponibles, en cuyo caso se priorizan'
+    ],
+    outOfScope: [
+        'Métodos no listados (Bizum, criptomonedas, etc.) en v1',
+        'Tokenización propia: usaremos PSP (Stripe/Adyen) que ya gestiona la PCI-DSS',
+        'Cobros recurrentes / suscripciones (potencial v2)',
+        'Wallet compartido entre titulares del mismo palco (potencial v2)'
+    ],
+    userStories: [
+        'Como palquista, quiero guardar mis métodos de pago para no introducirlos cada vez que compro.',
+        'Como palquista, quiero marcar uno como predeterminado para que se seleccione solo en el checkout.',
+        'Como palquista en iPhone, quiero pagar con Apple Pay para confirmar en un toque.',
+        'Como palquista, quiero eliminar un método antiguo cuando cambie de banco.',
+        'Como palquista, quiero ver claramente cuál es mi método predeterminado en la lista.'
+    ],
+    acceptanceCriteria: [
+        'Existe una entrada "Payment methods" en la sección Profile que abre la pantalla de métodos.',
+        'La pantalla muestra todos los métodos guardados con tipo, información identificativa y botón Edit.',
+        'El método predeterminado lleva una marca visual diferenciada (badge "Por defecto" en gold).',
+        'El botón "Add payment method" siempre está visible al final de la lista.',
+        'Se pueden añadir métodos de tipo: tarjeta de débito/crédito, PayPal y cuenta bancaria.',
+        'El formulario de tarjeta pide nombre del titular, número, MM/YY, CVV y dirección de facturación.',
+        'El formulario incluye un checkbox "Make it the default payment method".',
+        'Al pulsar "Add" se valida el formulario; si pasa, el método se guarda y se vuelve a la lista.',
+        'Al pulsar "Cancel" se descarta la operación sin guardar.',
+        'Desde la lista, "Edit" abre la misma vista del formulario con los datos rellenados.',
+        'Desde la edición se puede marcar el método como predeterminado y eliminarlo con "Remove".',
+        'En el checkout de la App VIP se muestra un selector con los métodos guardados.',
+        'Si el dispositivo soporta Apple Pay o Google Pay, se muestran como opción destacada al inicio del selector.',
+        'La disponibilidad de Apple/Google Pay se evalúa en runtime usando ApplePaySession.canMakePayments() y la Payment Request API.',
+        'El método predeterminado del usuario se preselecciona, salvo que Apple/Google Pay estén disponibles, en cuyo caso se priorizan en la UI.'
+    ],
+    uxNotes: [
+        'Validación en cliente del formato de tarjeta (Luhn) y de la caducidad antes de pulsar Add.',
+        'Los CVV nunca se persisten ni se muestran después de guardar (solo se usan para tokenizar).',
+        'El número de tarjeta se enmascara como "•••• •••• •••• 4242" en la lista y al volver a editar.',
+        'Apple Pay debe usar el botón oficial provisto por PassKit (estilo y aspecto reglado por Apple).',
+        'El badge "Por defecto" usa el color gold del sistema VIP.',
+        'En modo edición, el botón "Remove" lleva confirmación destructiva (action sheet de iOS).'
+    ],
+    metrics: [
+        'Conversión de checkout en la App VIP (objetivo: +20% sobre baseline)',
+        '% de checkouts realizados con Apple/Google Pay (objetivo: 40% en iOS, 30% en Android)',
+        'Tiempo medio para completar un pago (objetivo: <10s con método guardado, <5s con Apple Pay)',
+        '% de usuarios VIP con al menos un método guardado a los 30 días (objetivo: 70%)'
+    ],
+    dependencies: [
+        'PSP (Stripe o Adyen) configurado con las cuentas mercantes del club',
+        'Tokenización PCI-DSS gestionada por el PSP — la app NO almacena PANs en claro',
+        'Apple Merchant ID para Apple Pay y certificado de Google Pay',
+        'Backend con endpoints CRUD para métodos del usuario, autenticados por JWT',
+        'Backend de checkout que acepte token de PSP + método del usuario'
+    ],
+    risks: [
+        'PCI-DSS: cualquier código que toque PANs en claro entra en scope; usar siempre Stripe Elements / Adyen Drop-in en iframe.',
+        'Apple Pay requiere domain verification y certificados — preparar con tiempo (8+ semanas en peor caso).',
+        'Si el PSP cambia los precios, todo el proyecto se ve afectado — negociar contrato a 24 meses.',
+        'Algunos bancos no soportan IBAN europeo via SEPA Direct Debit — validar antes del lanzamiento.',
+        'GDPR: datos de pago se consideran sensibles; documentar correctamente la política de retención y borrado.'
+    ]
+});
+
 register('vip.tickets.multi-share', {
     title: 'Reparto múltiple de tickets a contactos del palco',
     epic: 'VIP App · Gestión de palco',

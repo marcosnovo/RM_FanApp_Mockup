@@ -174,6 +174,14 @@ const FLAGS = [
         category: 'Tickets',
         default: true
     }
+    ,{
+        app: 'vip',
+        key: 'vip.payments.management',
+        label: 'Gestión de métodos de pago',
+        description: 'Acceso desde Perfil a "Payment methods": listar, añadir, editar y eliminar tarjetas, PayPal y cuentas bancarias, marcar uno como predeterminado, y selector de pago en checkout con detección de Apple Pay.',
+        category: 'Pagos',
+        default: false
+    }
 ];
 
 // ── Internal state ──────────────────────────────────────────────

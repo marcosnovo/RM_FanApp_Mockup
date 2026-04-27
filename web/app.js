@@ -63,6 +63,16 @@ const state = {
     vipPerfilSub: 'main',         // 'main' | 'pedidos' | 'autorizados'
     vipPalcoSheetOpen: false,     // toggled by the PALCO 4101 ▾ pill in the top bar
 
+    // Payment methods (flag 'vip.payments.management')
+    vipPayments: {
+        screen: null,         // null | 'list' | 'add-type' | 'add-form' | 'edit' | 'checkout'
+        methods: null,        // populated lazily from VIP_PAYMENT_METHODS (deep clone)
+        editingId: null,      // id of the method being edited
+        addType: null,        // 'card' | 'paypal' | 'bank' — picked in 'add-type'
+        draft: {},            // form draft for the current add/edit
+        applePayMock: true    // simulated availability of Apple Pay in the checkout demo
+    },
+
     // Multi-ticket share flow (flag 'vip.tickets.multi-share')
     vipShare: {
         step: null,                 // null | 'permission' | 'picker' | 'preview' | 'disclaimer'
@@ -2549,7 +2559,14 @@ const VIP_I = {
     walletPass: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 11h18"/><rect x="14" y="14" width="5" height="3" rx="0.5" fill="currentColor"/></svg>`,
     moreVert: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>`,
     sms: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>`,
-    addressBook: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="11" r="3"/><path d="M7 18a5 5 0 0 1 10 0"/><path d="M3 7h2M3 12h2M3 17h2"/></svg>`
+    addressBook: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="11" r="3"/><path d="M7 18a5 5 0 0 1 10 0"/><path d="M3 7h2M3 12h2M3 17h2"/></svg>`,
+    creditCard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10h19"/><path d="M6 15h4"/></svg>`,
+    bank: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 10 L12 4 L21 10"/><path d="M5 10v8M9 10v8M15 10v8M19 10v8"/><path d="M3 18h18"/><path d="M3 21h18"/></svg>`,
+    paypal: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.4 21h2.4l.5-3h2.5c3.1 0 5.4-1.6 6-4.4.5-2.6-1-4.6-4.1-4.6H9.5c-.4 0-.8.3-.9.7L6.5 20.4c-.1.3.2.6.5.6zm3.4-5.5l.7-4.4h2.5c1.5 0 2.4.7 2.1 2.2-.3 1.5-1.5 2.2-3 2.2h-2.3z"/><path d="M5.5 17h2.4l.5-3h2.5c3.1 0 5.4-1.6 6-4.4.5-2.6-1-4.6-4.1-4.6H7.6c-.4 0-.8.3-.9.7L4.6 16.4c-.1.3.2.6.5.6h.4z" opacity="0.55"/></svg>`,
+    applePay: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 11.6c0-2 1.6-2.9 1.7-3-1-1.4-2.4-1.6-2.9-1.6-1.3-.1-2.5.7-3.2.7-.7 0-1.7-.7-2.8-.7-1.4 0-2.7.8-3.5 2.1-1.5 2.6-.4 6.4 1.1 8.6.7 1 1.6 2.2 2.7 2.2 1.1 0 1.5-.7 2.8-.7 1.3 0 1.7.7 2.8.7 1.2 0 1.9-1 2.6-2 .7-1 1-2 1-2.1-.1 0-2.3-.9-2.3-3.2zm-2-5.6c.6-.7.9-1.7.8-2.7-.8 0-1.8.6-2.4 1.3-.5.6-1 1.6-.8 2.6.9.1 1.8-.5 2.4-1.2z"/></svg>`,
+    googlePay: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.6 13.4v3h4.2c-.2 1-.7 1.9-1.6 2.5l2.6 2c1.5-1.4 2.4-3.5 2.4-6 0-.6 0-1.1-.1-1.6h-7.5z"/><path d="M5.7 13.5l-.6.5-2 1.5c1.3 2.5 3.9 4.3 6.9 4.3 2.1 0 3.9-.7 5.2-1.9l-2.6-2c-.7.5-1.6.8-2.6.8-2 0-3.7-1.3-4.3-3.2z" opacity="0.85"/><path d="M3.1 8c-.6 1.2-.9 2.5-.9 4 0 1.5.3 2.8.9 4l2.6-2c-.2-.6-.3-1.3-.3-2 0-.7.1-1.4.3-2L3.1 8z" opacity="0.7"/><path d="M11.6 5.7c1.1 0 2.2.4 3 1.1l2.3-2.2C15.6 3.3 13.7 2.5 11.6 2.5 8.6 2.5 6 4.3 4.7 6.8L7.3 8.8c.6-1.9 2.3-3.1 4.3-3.1z" opacity="0.55"/></svg>`,
+    pencil: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M13 5l6 6"/></svg>`,
+    check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,12 10,17 19,7"/></svg>`
 };
 
 function renderVipApp() {
@@ -3746,7 +3763,21 @@ function renderVipSheets() {
 }
 
 function renderVipPerfil() {
+    // If the user navigated into a payments sub-screen, render that
+    // instead of the main Profile content. Keeps the same sheet
+    // chrome (palco bar, header, close button).
+    if (Flags.isEnabled('vip.payments.management') && state.vipPayments.screen) {
+        return renderVipPaymentsScreen();
+    }
+
     const p = VIP_PROFILE;
+    const paymentsRow = Flags.isEnabled('vip.payments.management') ? `
+        <div class="vip-perfil-menu-row" data-vip-action="open-payments">
+            <div class="ico-left">${VIP_I.creditCard}<span>Métodos de pago</span></div>
+            ${VIP_I.chevronRight}
+        </div>
+    ` : '';
+
     return `
         <div class="vip-resto-sheet" style="top: 0; border-radius: 0; background: var(--vip-bg)">
             <div class="vip-resto-scroll" style="padding: 0 0 40px">
@@ -3774,6 +3805,7 @@ function renderVipPerfil() {
                         <div class="ico-left">${VIP_I.plus}<span>Gestión de autorizados</span></div>
                         ${VIP_I.chevronRight}
                     </div>
+                    ${paymentsRow}
                 </div>
 
                 <div class="vip-perfil-toggle-row">
@@ -3802,6 +3834,318 @@ function renderVipPerfil() {
                 </div>
                 <div style="padding: 20px; font-size: 11px; color: var(--vip-text-tertiary); text-align: right">1.0.19 (76)</div>
             </div>
+        </div>
+    `;
+}
+
+// ════════════════════════════════════════════════════════════════
+// VIP Payment Methods (flag 'vip.payments.management')
+// ════════════════════════════════════════════════════════════════
+
+// Lazy-init: keep state.vipPayments.methods as a deep clone of the
+// seed data so the user can mutate (add / edit / remove / reorder
+// default) without touching the canonical mock.
+function vipPayments() {
+    const s = state.vipPayments;
+    if (!s.methods) s.methods = JSON.parse(JSON.stringify(VIP_PAYMENT_METHODS));
+    return s;
+}
+
+function vipPaymentTypeMeta(type) {
+    return ({
+        card:   { label: 'Tarjeta de crédito / débito', icon: VIP_I.creditCard, brand: 'Tarjeta' },
+        paypal: { label: 'PayPal',                       icon: VIP_I.paypal,     brand: 'PayPal' },
+        bank:   { label: 'Cuenta bancaria',              icon: VIP_I.bank,       brand: 'Cuenta bancaria' }
+    })[type] || { label: type, icon: VIP_I.creditCard, brand: type };
+}
+
+function vipPaymentTitle(m) {
+    if (m.type === 'card')   return `${m.brand || 'Tarjeta'} •••• ${m.last4 || '0000'}`;
+    if (m.type === 'paypal') return `PayPal · ${m.email || ''}`;
+    if (m.type === 'bank')   return `${m.bankName || 'Cuenta bancaria'} •••• ${m.ibanLast4 || '0000'}`;
+    return m.type;
+}
+
+function vipPaymentSubtitle(m) {
+    if (m.type === 'card')   return `${m.holder || ''} · Caduca ${m.expiry || ''}`;
+    if (m.type === 'paypal') return `${m.holder || ''}`;
+    if (m.type === 'bank')   return `${m.holder || ''} · BIC ${m.bic || ''}`;
+    return '';
+}
+
+function renderVipPaymentsScreen() {
+    const s = vipPayments();
+    const sheet = (() => {
+        if (s.screen === 'list')      return renderVipPaymentsList();
+        if (s.screen === 'add-type')  return renderVipPaymentsTypeSelector();
+        if (s.screen === 'add-form')  return renderVipPaymentsForm({ mode: 'add' });
+        if (s.screen === 'edit')      return renderVipPaymentsForm({ mode: 'edit' });
+        if (s.screen === 'checkout')  return renderVipPaymentsCheckoutMock();
+        return renderVipPaymentsList();
+    })();
+
+    // Reuse the same chrome as the profile sheet so back/close behave
+    // consistently. Header back button returns to the previous screen
+    // (or to the main profile if we're already at 'list').
+    const headerTitle = ({
+        list:       'Métodos de pago',
+        'add-type': 'Añadir método',
+        'add-form': 'Nuevo método',
+        edit:       'Editar método',
+        checkout:   'Confirmar pago'
+    })[s.screen] || 'Métodos de pago';
+
+    return `
+        <div class="vip-resto-sheet" style="top: 0; border-radius: 0; background: var(--vip-bg)">
+            <div class="vip-resto-scroll" style="padding: 0 0 40px">
+                <div class="vip-palco-bar" style="position: static">
+                    <div class="vip-palco-label">PALCO 4101 ${VIP_I.chevronDown}</div>
+                </div>
+                <div class="vip-perfil-head">
+                    <button class="vip-back-btn" data-vip-action="payments-back">${I.chevronLeft}</button>
+                    <div class="vip-perfil-title" style="flex:1; text-align:center">${headerTitle}</div>
+                    <button class="vip-perfil-close" data-vip-perfil-close>${VIP_I.xmark}</button>
+                </div>
+                ${sheet}
+            </div>
+        </div>
+    `;
+}
+
+function renderVipPaymentsList() {
+    const s = vipPayments();
+    const rows = s.methods.map(m => {
+        const meta = vipPaymentTypeMeta(m.type);
+        return `
+            <div class="vip-pm-card ${m.default ? 'is-default' : ''}">
+                <div class="vip-pm-icon ${'pm-' + m.type}">${meta.icon}</div>
+                <div class="vip-pm-info">
+                    <div class="vip-pm-title">${vipPaymentTitle(m)}</div>
+                    <div class="vip-pm-sub">${vipPaymentSubtitle(m)}</div>
+                    ${m.default ? '<div class="vip-pm-default-badge">Por defecto</div>' : ''}
+                </div>
+                <button class="vip-pm-edit" data-vip-action="pm-edit" data-vip-pm="${m.id}">
+                    ${VIP_I.pencil}<span>Edit</span>
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    const checkoutDemoRow = `
+        <button class="vip-pm-checkout-demo" data-vip-action="pm-open-checkout">
+            ${VIP_I.walletPass}<span>Ver checkout con estos métodos</span>${VIP_I.chevronRight}
+        </button>
+    `;
+
+    return `
+        <div class="vip-pm-body">
+            <div class="vip-pm-intro">Métodos guardados (${s.methods.length})</div>
+            <div class="vip-pm-list">${rows}</div>
+            <button class="vip-pm-add-btn" data-vip-action="pm-add">
+                ${VIP_I.plus}<span>Add payment method</span>
+            </button>
+            ${checkoutDemoRow}
+        </div>
+    `;
+}
+
+function renderVipPaymentsTypeSelector() {
+    const types = [
+        { key: 'card',   ...vipPaymentTypeMeta('card'),   sub: 'Visa, Mastercard, Amex…' },
+        { key: 'paypal', ...vipPaymentTypeMeta('paypal'), sub: 'Conecta tu cuenta PayPal' },
+        { key: 'bank',   ...vipPaymentTypeMeta('bank'),   sub: 'IBAN europeo (SEPA)' }
+    ];
+    return `
+        <div class="vip-pm-body">
+            <div class="vip-pm-intro">Elige el tipo de método</div>
+            <div class="vip-pm-types">
+                ${types.map(t => `
+                    <button class="vip-pm-type-row" data-vip-action="pm-pick-type" data-vip-pm-type="${t.key}">
+                        <div class="vip-pm-icon pm-${t.key}">${t.icon}</div>
+                        <div class="vip-pm-info">
+                            <div class="vip-pm-title">${t.label}</div>
+                            <div class="vip-pm-sub">${t.sub}</div>
+                        </div>
+                        ${VIP_I.chevronRight}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderVipPaymentsForm({ mode }) {
+    const s = vipPayments();
+    const isEdit = mode === 'edit';
+    const m = isEdit ? s.methods.find(x => x.id === s.editingId) : null;
+    const type = isEdit ? m?.type : s.addType;
+    const meta = vipPaymentTypeMeta(type);
+    const draft = s.draft || {};
+
+    const isDefault = draft.default !== undefined ? draft.default : (m ? m.default : false);
+
+    const fields = (() => {
+        if (type === 'card') {
+            return `
+                <div class="vip-pm-field">
+                    <label>Nombre del titular</label>
+                    <input type="text" data-vip-pm-field="holder"
+                           value="${escapeHtml(draft.holder ?? m?.holder ?? '')}"
+                           placeholder="Tal y como aparece en la tarjeta">
+                </div>
+                <div class="vip-pm-field">
+                    <label>Número de tarjeta</label>
+                    <input type="text" inputmode="numeric" data-vip-pm-field="number"
+                           value="${escapeHtml(draft.number ?? (m ? '•••• •••• •••• ' + m.last4 : ''))}"
+                           placeholder="1234 5678 9012 3456">
+                </div>
+                <div class="vip-pm-field-row">
+                    <div class="vip-pm-field">
+                        <label>Caducidad (MM/YY)</label>
+                        <input type="text" inputmode="numeric" data-vip-pm-field="expiry"
+                               value="${escapeHtml(draft.expiry ?? m?.expiry ?? '')}"
+                               placeholder="MM/YY">
+                    </div>
+                    <div class="vip-pm-field">
+                        <label>CVV</label>
+                        <input type="text" inputmode="numeric" data-vip-pm-field="cvv"
+                               value="${escapeHtml(draft.cvv ?? '')}"
+                               placeholder="•••">
+                    </div>
+                </div>
+                <div class="vip-pm-field">
+                    <label>Dirección de facturación</label>
+                    <input type="text" data-vip-pm-field="billingAddress"
+                           value="${escapeHtml(draft.billingAddress ?? m?.billingAddress ?? '')}"
+                           placeholder="Calle, número, ciudad, CP">
+                </div>
+            `;
+        }
+        if (type === 'paypal') {
+            return `
+                <div class="vip-pm-field">
+                    <label>Nombre del titular</label>
+                    <input type="text" data-vip-pm-field="holder"
+                           value="${escapeHtml(draft.holder ?? m?.holder ?? '')}"
+                           placeholder="Tu nombre">
+                </div>
+                <div class="vip-pm-field">
+                    <label>Email de PayPal</label>
+                    <input type="email" data-vip-pm-field="email"
+                           value="${escapeHtml(draft.email ?? m?.email ?? '')}"
+                           placeholder="tu-cuenta@email.com">
+                </div>
+                <div class="vip-pm-paypal-note">Te redirigiremos a PayPal para autorizar la conexión cuando guardes.</div>
+            `;
+        }
+        if (type === 'bank') {
+            return `
+                <div class="vip-pm-field">
+                    <label>Nombre del titular</label>
+                    <input type="text" data-vip-pm-field="holder"
+                           value="${escapeHtml(draft.holder ?? m?.holder ?? '')}"
+                           placeholder="Como aparece en la cuenta">
+                </div>
+                <div class="vip-pm-field">
+                    <label>IBAN</label>
+                    <input type="text" data-vip-pm-field="iban"
+                           value="${escapeHtml(draft.iban ?? (m ? 'ES•• •••• •••• •••• •••• ' + m.ibanLast4 : ''))}"
+                           placeholder="ES00 0000 0000 0000 0000 0000">
+                </div>
+                <div class="vip-pm-field">
+                    <label>BIC / SWIFT</label>
+                    <input type="text" data-vip-pm-field="bic"
+                           value="${escapeHtml(draft.bic ?? m?.bic ?? '')}"
+                           placeholder="BSCHESMM">
+                </div>
+                <div class="vip-pm-field">
+                    <label>Banco</label>
+                    <input type="text" data-vip-pm-field="bankName"
+                           value="${escapeHtml(draft.bankName ?? m?.bankName ?? '')}"
+                           placeholder="Nombre del banco">
+                </div>
+            `;
+        }
+        return '<div class="vip-pm-empty">Tipo de método no soportado.</div>';
+    })();
+
+    return `
+        <div class="vip-pm-body">
+            <div class="vip-pm-form-head">
+                <div class="vip-pm-icon pm-${type} large">${meta.icon}</div>
+                <div>
+                    <div class="vip-pm-title">${meta.label}</div>
+                    <div class="vip-pm-sub">${isEdit ? 'Modifica los datos guardados.' : 'Rellena los datos para añadir el método.'}</div>
+                </div>
+            </div>
+            <div class="vip-pm-form">${fields}</div>
+
+            <button class="vip-pm-toggle-row" data-vip-action="pm-toggle-default">
+                <div class="vip-pm-checkbox ${isDefault ? 'on' : ''}">${isDefault ? VIP_I.check : ''}</div>
+                <span>Make it the default payment method</span>
+            </button>
+
+            <div class="vip-pm-form-actions">
+                ${isEdit ? `
+                    <button class="vip-pm-action danger" data-vip-action="pm-remove">
+                        ${VIP_I.trash}<span>Remove</span>
+                    </button>
+                ` : ''}
+                <button class="vip-pm-action ghost" data-vip-action="pm-cancel">Cancel</button>
+                <button class="vip-pm-action primary" data-vip-action="pm-save">
+                    ${isEdit ? 'Guardar cambios' : 'Add'}
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function renderVipPaymentsCheckoutMock() {
+    const s = vipPayments();
+    const def = s.methods.find(m => m.default) || s.methods[0];
+    const orderTotal = '€ 240,00';
+
+    return `
+        <div class="vip-pm-body">
+            <div class="vip-pm-checkout-summary">
+                <div class="vip-pm-checkout-line"><span>Catering palco 4101</span><span>€ 180,00</span></div>
+                <div class="vip-pm-checkout-line"><span>Bebidas extra</span><span>€ 60,00</span></div>
+                <div class="vip-pm-checkout-line total"><span>Total</span><span>${orderTotal}</span></div>
+            </div>
+
+            <div class="vip-pm-intro">Selecciona método de pago</div>
+
+            ${state.vipPayments.applePayMock ? `
+                <button class="vip-pm-card vip-pm-applepay">
+                    <div class="vip-pm-icon pm-apple">${VIP_I.applePay}</div>
+                    <div class="vip-pm-info">
+                        <div class="vip-pm-title">Apple Pay</div>
+                        <div class="vip-pm-sub">Disponible en este dispositivo · 1 toque</div>
+                    </div>
+                    <div class="vip-pm-default-badge gold">Recomendado</div>
+                </button>
+            ` : ''}
+
+            ${s.methods.map(m => {
+                const meta = vipPaymentTypeMeta(m.type);
+                const selected = m.id === def.id && !state.vipPayments.applePayMock;
+                return `
+                    <button class="vip-pm-card ${selected ? 'is-selected' : ''}">
+                        <div class="vip-pm-icon pm-${m.type}">${meta.icon}</div>
+                        <div class="vip-pm-info">
+                            <div class="vip-pm-title">${vipPaymentTitle(m)}</div>
+                            <div class="vip-pm-sub">${vipPaymentSubtitle(m)}</div>
+                            ${m.default ? '<div class="vip-pm-default-badge">Por defecto</div>' : ''}
+                        </div>
+                        <div class="vip-pm-radio ${selected ? 'on' : ''}">${selected ? VIP_I.check : ''}</div>
+                    </button>
+                `;
+            }).join('')}
+
+            <button class="vip-pm-action primary full" style="margin-top: 16px">
+                Pagar ${orderTotal}
+            </button>
+            <div class="vip-pm-checkout-foot">Demo de checkout — el método pre-seleccionado es el predeterminado, salvo que Apple Pay esté disponible.</div>
         </div>
     `;
 }
@@ -3994,6 +4338,9 @@ function attachVipListeners() {
 
     // ── Multi-ticket share (flag: vip.tickets.multi-share) ────────
     attachVipShareListeners();
+
+    // ── Payment methods (flag: vip.payments.management) ───────────
+    attachVipPaymentsListeners();
 }
 
 // ── VIP multi-ticket share: single delegated click handler ───────
@@ -4260,6 +4607,203 @@ function handleVipShareInput(e) {
         const match = !q || name.includes(q) || phone.includes(q);
         row.style.display = match ? '' : 'none';
     });
+}
+
+// ── VIP payment methods: delegated click + input handlers ────────
+let _vipPaymentsDelegateInstalled = false;
+
+function attachVipPaymentsListeners() {
+    if (!Flags.isEnabled('vip.payments.management')) return;
+    if (_vipPaymentsDelegateInstalled) return;
+    document.addEventListener('click', handleVipPaymentsClick);
+    document.addEventListener('input', handleVipPaymentsInput);
+    _vipPaymentsDelegateInstalled = true;
+}
+
+function handleVipPaymentsClick(e) {
+    const target = e.target.closest('[data-vip-action]');
+    if (!target) return;
+    const action = target.dataset.vipAction;
+    if (!action) return;
+
+    const s = state.vipPayments;
+
+    switch (action) {
+        case 'open-payments': {
+            vipPayments(); // ensure methods are populated
+            s.screen = 'list';
+            s.draft = {};
+            s.editingId = null;
+            s.addType = null;
+            render();
+            return;
+        }
+        case 'payments-back': {
+            // Stack: list ← add-type ← add-form ← (etc.). Going "back"
+            // from list closes the payments sub-screen entirely (returns
+            // to the main Profile sheet).
+            if (s.screen === 'list' || s.screen === 'checkout') {
+                s.screen = null;
+            } else if (s.screen === 'add-form') {
+                s.screen = 'add-type';
+                s.draft = {};
+            } else {
+                s.screen = 'list';
+                s.draft = {};
+                s.editingId = null;
+                s.addType = null;
+            }
+            render();
+            return;
+        }
+        case 'pm-add': {
+            s.screen = 'add-type';
+            s.draft = {};
+            s.addType = null;
+            render();
+            return;
+        }
+        case 'pm-pick-type': {
+            s.addType = target.dataset.vipPmType;
+            s.draft = {};
+            s.screen = 'add-form';
+            render();
+            return;
+        }
+        case 'pm-edit': {
+            s.editingId = target.dataset.vipPm;
+            s.draft = {};
+            s.screen = 'edit';
+            render();
+            return;
+        }
+        case 'pm-toggle-default': {
+            const cur = (s.draft.default !== undefined)
+                ? s.draft.default
+                : (s.editingId ? !!vipPayments().methods.find(m => m.id === s.editingId)?.default : false);
+            s.draft = { ...s.draft, default: !cur };
+            render();
+            return;
+        }
+        case 'pm-cancel': {
+            s.screen = 'list';
+            s.draft = {};
+            s.editingId = null;
+            s.addType = null;
+            render();
+            return;
+        }
+        case 'pm-remove': {
+            const id = s.editingId;
+            const methods = vipPayments().methods;
+            const idx = methods.findIndex(m => m.id === id);
+            if (idx >= 0) {
+                const wasDefault = methods[idx].default;
+                methods.splice(idx, 1);
+                // If we removed the default, promote the first remaining one.
+                if (wasDefault && methods[0]) methods[0].default = true;
+            }
+            s.screen = 'list';
+            s.draft = {};
+            s.editingId = null;
+            render();
+            return;
+        }
+        case 'pm-save': {
+            const draft = { ...s.draft };
+            const methods = vipPayments().methods;
+
+            if (s.screen === 'add-form') {
+                const type = s.addType;
+                const newM = { id: 'pm-' + Date.now(), type };
+                if (type === 'card') {
+                    newM.brand = guessCardBrand(draft.number) || 'Tarjeta';
+                    newM.holder = draft.holder || 'Sin nombre';
+                    newM.last4 = (draft.number || '').replace(/\D/g, '').slice(-4) || '0000';
+                    newM.expiry = draft.expiry || '';
+                    newM.billingAddress = draft.billingAddress || '';
+                } else if (type === 'paypal') {
+                    newM.holder = draft.holder || '';
+                    newM.email = draft.email || '';
+                } else if (type === 'bank') {
+                    newM.holder = draft.holder || '';
+                    newM.ibanLast4 = (draft.iban || '').replace(/\s/g, '').slice(-4) || '0000';
+                    newM.bic = draft.bic || '';
+                    newM.bankName = draft.bankName || 'Cuenta bancaria';
+                }
+                if (draft.default) {
+                    methods.forEach(m => { m.default = false; });
+                    newM.default = true;
+                }
+                methods.push(newM);
+            } else if (s.screen === 'edit' && s.editingId) {
+                const m = methods.find(x => x.id === s.editingId);
+                if (m) {
+                    if (m.type === 'card') {
+                        if (draft.holder !== undefined) m.holder = draft.holder;
+                        if (draft.expiry !== undefined) m.expiry = draft.expiry;
+                        if (draft.billingAddress !== undefined) m.billingAddress = draft.billingAddress;
+                        if (draft.number) {
+                            const digits = draft.number.replace(/\D/g, '');
+                            if (digits.length >= 4 && !draft.number.startsWith('•')) {
+                                m.last4 = digits.slice(-4);
+                                const guessed = guessCardBrand(draft.number);
+                                if (guessed) m.brand = guessed;
+                            }
+                        }
+                    } else if (m.type === 'paypal') {
+                        if (draft.holder !== undefined) m.holder = draft.holder;
+                        if (draft.email  !== undefined) m.email  = draft.email;
+                    } else if (m.type === 'bank') {
+                        if (draft.holder   !== undefined) m.holder = draft.holder;
+                        if (draft.bic      !== undefined) m.bic = draft.bic;
+                        if (draft.bankName !== undefined) m.bankName = draft.bankName;
+                        if (draft.iban) {
+                            const digits = draft.iban.replace(/\s/g, '');
+                            if (digits.length >= 4 && !draft.iban.startsWith('ES•')) {
+                                m.ibanLast4 = digits.slice(-4);
+                            }
+                        }
+                    }
+                    if (draft.default) {
+                        methods.forEach(x => { x.default = (x.id === m.id); });
+                    }
+                }
+            }
+
+            s.screen = 'list';
+            s.draft = {};
+            s.editingId = null;
+            s.addType = null;
+            render();
+            return;
+        }
+        case 'pm-open-checkout': {
+            s.screen = 'checkout';
+            render();
+            return;
+        }
+    }
+}
+
+function handleVipPaymentsInput(e) {
+    if (!e.target.matches || !e.target.matches('[data-vip-pm-field]')) return;
+    const field = e.target.dataset.vipPmField;
+    const s = state.vipPayments;
+    s.draft = { ...s.draft, [field]: e.target.value };
+    // No render — keep focus / cursor in the field. The draft is the
+    // source of truth; the next render (on save / cancel / nav) reads it.
+}
+
+// Lightweight card brand sniffer based on the BIN.
+function guessCardBrand(num) {
+    const n = String(num || '').replace(/\D/g, '');
+    if (!n) return null;
+    if (/^4/.test(n))                          return 'Visa';
+    if (/^(5[1-5]|2[2-7])/.test(n))            return 'Mastercard';
+    if (/^3[47]/.test(n))                       return 'American Express';
+    if (/^6011|^65/.test(n))                    return 'Discover';
+    return null;
 }
 
 function commitPickerAssignment() {

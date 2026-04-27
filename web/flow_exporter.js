@@ -899,6 +899,93 @@ registerFlow('fan.sidemenu.v2.mock-detail', {
     }]
 });
 
+// ── VIP · Gestión de métodos de pago ─────────────────────────────
+registerFlow('vip.payments.management', {
+    title: 'Gestión de métodos de pago',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() {
+        Flags.set('vip.payments.management', true);
+        state.app = 'vip';
+        state.vipTab = 'perfil';
+        state.vipPerfilOpen = true;
+        state.vipPalcoSheetOpen = false;
+        // Reset payments to seed so the screens always show the same 3 methods.
+        state.vipPayments = {
+            screen: null,
+            methods: JSON.parse(JSON.stringify(VIP_PAYMENT_METHODS)),
+            editingId: null,
+            addType: null,
+            draft: {},
+            applePayMock: true
+        };
+    },
+    paths: [
+        {
+            label: 'Acceso desde Perfil y lista de métodos guardados',
+            steps: [
+                { caption: '1 · Perfil con entrada "Métodos de pago"', async run() { state.vipPayments.screen = null; } },
+                { caption: '2 · Lista con VISA, PayPal y Banco Santander', async run() { state.vipPayments.screen = 'list'; } }
+            ]
+        },
+        {
+            label: 'Añadir tarjeta nueva (Visa/Mastercard)',
+            steps: [
+                { caption: '1 · Pulsar "Add payment method"', async run() { state.vipPayments.screen = 'list'; } },
+                { caption: '2 · Selector de tipo de método',  async run() { state.vipPayments.screen = 'add-type'; } },
+                { caption: '3 · Formulario de nueva tarjeta', async run() {
+                    state.vipPayments.addType = 'card';
+                    state.vipPayments.draft = {
+                        holder: 'Marcos Novo',
+                        number: '5500 0000 0000 0040',
+                        expiry: '12/28',
+                        cvv: '321',
+                        billingAddress: 'Avenida de la Castellana 100, Madrid',
+                        default: false
+                    };
+                    state.vipPayments.screen = 'add-form';
+                } },
+                { caption: '4 · "Make it default" activado',  async run() {
+                    state.vipPayments.draft = { ...state.vipPayments.draft, default: true };
+                } }
+            ]
+        },
+        {
+            label: 'Editar y eliminar un método existente',
+            steps: [
+                { caption: '1 · Pulsar Edit en la VISA por defecto', async run() {
+                    state.vipPayments.editingId = 'pm-001';
+                    state.vipPayments.draft = {};
+                    state.vipPayments.screen = 'edit';
+                } },
+                { caption: '2 · Cambia caducidad y dirección', async run() {
+                    state.vipPayments.draft = {
+                        holder: 'Marcos Novo Acuses',
+                        expiry: '04/29',
+                        billingAddress: 'C/ Padre Damián 23, 28036 Madrid'
+                    };
+                } },
+                { caption: '3 · Botón Remove para eliminarla', async run() {
+                    // Just stay on the edit screen; the destructive button is visible.
+                } }
+            ]
+        },
+        {
+            label: 'Selector de pago en checkout (con Apple Pay disponible)',
+            steps: [
+                { caption: '1 · Pulsar "Ver checkout con estos métodos"', async run() { state.vipPayments.screen = 'list'; } },
+                { caption: '2 · Apple Pay destacado como recomendado', async run() {
+                    state.vipPayments.applePayMock = true;
+                    state.vipPayments.screen = 'checkout';
+                } },
+                { caption: '3 · Sin Apple Pay → preselecciona el método por defecto', async run() {
+                    state.vipPayments.applePayMock = false;
+                    state.vipPayments.screen = 'checkout';
+                } }
+            ]
+        }
+    ]
+});
+
 // ── Fan · RM Play (rebrand de RMTV) ──────────────────────────────
 registerFlow('fan.rmtv.play', {
     title: 'RM Play — nueva RMTV',
