@@ -6822,11 +6822,11 @@ function flagRowHTML(f, { indent = false } = {}) {
     const effectiveOn = f.rawEnabled && parentEnabled;
     const locked = parent && !parent.enabled;
 
-    // Show "Exportar flujo" only for features that registered a flow
-    // and are currently effectively enabled (no point exporting an
-    // inactive feature — the screens wouldn't render).
-    const hasExporter = !!(window.FlowExporter && window.FlowExporter.has(f.key));
-    const showExport = hasExporter && effectiveOn;
+    // Show "Exportar flujo" whenever a flow is registered for this
+    // feature — the flow's init() enables the flag (and its parents)
+    // during capture and restores them after, so we don't need the
+    // user to toggle it on first.
+    const showExport = !!(window.FlowExporter && window.FlowExporter.has(f.key));
 
     return `
         <div class="flag-row ${indent ? 'is-child' : ''} ${locked ? 'is-locked' : ''}" data-flag-row="${f.key}">
