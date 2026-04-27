@@ -10952,5 +10952,4 @@ body.auth-mode .app-layout { visibility: hidden; }
     text-align: center;
     line-height: 1.45;
 }
-.vip-palco-sheet ~ .vip-sheet-backdrop,
-.vip-app > .vip-sheet-backdrop { z-index: 45; }
+.vip-palco-backdrop { z-index: 45; }

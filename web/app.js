@@ -2577,7 +2577,7 @@ function renderVipApp() {
 function renderVipPalcoSheet() {
     const ev = VIP_EVENTS.find(e => e.id === state.vipEventId) || VIP_EVENTS[0];
     return `
-        <div class="vip-sheet-backdrop" data-vip-action="toggle-palco-sheet"></div>
+        <div class="vip-sheet-backdrop vip-palco-backdrop" data-vip-action="toggle-palco-sheet"></div>
         <div class="vip-palco-sheet">
             <div class="vip-picker-grabber"></div>
             <div class="vip-palco-sheet-head">
