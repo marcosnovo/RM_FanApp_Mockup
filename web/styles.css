@@ -10962,6 +10962,51 @@ body.auth-mode .app-layout { visibility: hidden; }
 }
 .vip-palco-backdrop { z-index: 45; }
 
+/* ── Flow exporter — "Exportar flujo a PDF" per-flag button ─── */
+.flag-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 5px 10px 5px 8px;
+    background: #ffffff08;
+    border: 1px solid #ffffff14;
+    border-radius: 8px;
+    color: var(--side-text-secondary, #b6b6c0);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.flag-export-btn:hover {
+    background: #ffffff10;
+    border-color: #ffffff22;
+    color: white;
+}
+.flag-export-btn:active { transform: translateY(0.5px); }
+.flag-export-btn > svg { color: currentColor; flex-shrink: 0; }
+
+/* Overlay shown while a flow capture is running. Sits above
+   everything else on the page. */
+.flow-export-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 9, 16, 0.78);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    pointer-events: all;
+}
+
 /* ── Contacts permission gate (iOS-style alert) ─────────────── */
 .vip-permission-sheet {
     position: absolute;

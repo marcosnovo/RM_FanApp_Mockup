@@ -6822,6 +6822,12 @@ function flagRowHTML(f, { indent = false } = {}) {
     const effectiveOn = f.rawEnabled && parentEnabled;
     const locked = parent && !parent.enabled;
 
+    // Show "Exportar flujo" only for features that registered a flow
+    // and are currently effectively enabled (no point exporting an
+    // inactive feature — the screens wouldn't render).
+    const hasExporter = !!(window.FlowExporter && window.FlowExporter.has(f.key));
+    const showExport = hasExporter && effectiveOn;
+
     return `
         <div class="flag-row ${indent ? 'is-child' : ''} ${locked ? 'is-locked' : ''}" data-flag-row="${f.key}">
             <div class="flag-row-main">
@@ -6831,6 +6837,16 @@ function flagRowHTML(f, { indent = false } = {}) {
                     ${statusChip(f)}
                 </div>
                 <div class="flag-row-desc">${f.description}</div>
+                ${showExport ? `
+                    <button class="flag-export-btn" data-export-flow="${f.key}"
+                            title="Capturar el flujo paso a paso y descargar como PDF">
+                        <svg viewBox="0 0 16 16" width="12" height="12" fill="none"
+                             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 12v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1"/>
+                        </svg>
+                        <span>Exportar flujo a PDF</span>
+                    </button>
+                ` : ''}
             </div>
             <label class="flag-toggle ${effectiveOn ? 'on' : ''}" aria-label="Activar ${f.label}">
                 <input type="checkbox"
@@ -6976,6 +6992,17 @@ function _attachFlagsPanelListeners() {
         inp.addEventListener('click', e => e.stopPropagation());
         inp.addEventListener('change', () => {
             Flags.set(inp.dataset.flagKey, inp.checked);
+        });
+    });
+
+    // "Exportar flujo a PDF" buttons (only present on cards whose
+    // feature has registered a flow in flow_exporter.js).
+    $$('[data-export-flow]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            const key = btn.dataset.exportFlow;
+            if (window.FlowExporter) window.FlowExporter.run(key);
         });
     });
 
