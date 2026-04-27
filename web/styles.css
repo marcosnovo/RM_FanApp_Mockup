@@ -1725,6 +1725,14 @@ body.resizing-side * {
 
 .news-sheet-slot:empty { display: none; }
 
+/* VIP share / restaurant / profile sheets are mounted inside the news
+   slot wrapped in a `.vip-app` div. The slot has `pointer-events: none`
+   for the news-sheet pattern (each piece re-enables auto), but VIP
+   sheets don't paint a backdrop themselves on every child — re-enable
+   pointer-events on the whole VIP subtree so taps reach the picker rows,
+   buttons and inputs. */
+.news-sheet-slot > .vip-app { pointer-events: auto; }
+
 .news-sheet-backdrop {
     position: absolute;
     inset: 0;
