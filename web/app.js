@@ -61,6 +61,7 @@ const state = {
     vipHoursExpanded: false,
     vipPerfilOpen: false,
     vipPerfilSub: 'main',         // 'main' | 'pedidos' | 'autorizados'
+    vipPalcoSheetOpen: false,     // toggled by the PALCO 4101 ▾ pill in the top bar
 
     // Multi-ticket share flow (flag 'vip.tickets.multi-share')
     vipShare: {
@@ -2558,14 +2559,51 @@ function renderVipApp() {
         case 'perfil':  content = renderVipInicio(); break;  // Inicio backdrop while perfil sheet is open
         default:        content = renderVipInicio();
     }
+    const palcoSheet = state.vipPalcoSheetOpen ? renderVipPalcoSheet() : '';
+
     return `
         <div class="vip-app">
-            <div class="vip-palco-bar">
+            <button class="vip-palco-bar" data-vip-action="toggle-palco-sheet" type="button">
                 <div class="vip-palco-label">
                     PALCO 4101 ${VIP_I.chevronDown}
                 </div>
-            </div>
+            </button>
             ${content}
+            ${palcoSheet}
+        </div>
+    `;
+}
+
+function renderVipPalcoSheet() {
+    const ev = VIP_EVENTS.find(e => e.id === state.vipEventId) || VIP_EVENTS[0];
+    return `
+        <div class="vip-sheet-backdrop" data-vip-action="toggle-palco-sheet"></div>
+        <div class="vip-palco-sheet">
+            <div class="vip-picker-grabber"></div>
+            <div class="vip-palco-sheet-head">
+                <div class="vip-palco-sheet-title">Tu palco</div>
+                <div class="vip-palco-sheet-sub">Próximo evento · ${ev.dateTime}</div>
+            </div>
+            <div class="vip-palco-sheet-card">
+                <div class="vip-palco-sheet-row">
+                    <span class="lbl">PALCO</span>
+                    <span class="val">4101</span>
+                </div>
+                <div class="vip-palco-sheet-row">
+                    <span class="lbl">PUERTA</span>
+                    <span class="val">${ev.puerta}</span>
+                </div>
+                <div class="vip-palco-sheet-row">
+                    <span class="lbl">SECTOR</span>
+                    <span class="val">${ev.sector}</span>
+                </div>
+                <div class="vip-palco-sheet-row">
+                    <span class="lbl">CAPACIDAD</span>
+                    <span class="val">19 asientos</span>
+                </div>
+            </div>
+            <div class="vip-palco-sheet-note">Es el único palco asociado a tu cuenta.</div>
+            <button class="vip-share-cancel" data-vip-action="toggle-palco-sheet">Cerrar</button>
         </div>
     `;
 }
@@ -2916,14 +2954,17 @@ function renderVipTicketsV2() {
     const draft     = tickets.filter(t => t.status === 'assigned').length;
     const pending   = tickets.filter(t => t.status === 'unassigned').length;
 
-    // Main CTA logic
+    // Main CTA logic.
+    // - Drafts pending review → floating "Revisar y enviar".
+    // - Only unassigned (no drafts) → no floating CTA; the pending-summary
+    //   card below already acts as the primary call-to-action, and a second
+    //   floating button on top of it competes for attention and covers
+    //   recipient rows.
+    // - Everything sent → static "Todo repartido" badge.
     let ctaLabel = null, ctaAction = null, ctaVariant = 'primary';
     if (draft > 0) {
         ctaLabel = `Revisar y enviar (${draft})`;
         ctaAction = 'open-preview';
-    } else if (pending > 0) {
-        ctaLabel = 'Compartir tickets';
-        ctaAction = 'open-picker';
     } else if (sent > 0 && sent === total - mineCount) {
         ctaLabel = 'Todo repartido';
         ctaVariant = 'done';
@@ -2931,12 +2972,34 @@ function renderVipTicketsV2() {
 
     const showRepeat = !!VIP_LAST_GROUP && pending > 0 && draft === 0 && sent === 0;
 
-    // Build compact status list (read-only reference)
+    // Recipients are split: assigned/sent/etc render as individual rows;
+    // unassigned tickets collapse into one summary row to avoid 18 identical
+    // "Sin asignar" lines flooding the screen.
     const mineTicket = tickets.find(t => t.status === 'mine');
-    const recipientRows = tickets
-        .filter(t => t.status !== 'mine')
+    const recipients = tickets.filter(t => t.status !== 'mine');
+    const unassigned = recipients.filter(t => t.status === 'unassigned');
+    const filledRows = recipients
+        .filter(t => t.status !== 'unassigned')
         .map(renderVipTicketRow)
         .join('');
+
+    const filaRange = (() => {
+        if (unassigned.length === 0) return '';
+        const filas = [...new Set(unassigned.map(t => t.fila))].sort();
+        if (filas.length === 1) return `Fila ${filas[0]}`;
+        return `Filas ${filas[0]} – ${filas[filas.length - 1]}`;
+    })();
+
+    const pendingSummary = unassigned.length > 0 ? `
+        <button class="vip-pending-summary" data-vip-action="open-picker">
+            <div class="vip-pending-summary-icon">${VIP_I.plus}</div>
+            <div class="vip-pending-summary-body">
+                <strong>+${unassigned.length} asiento${unassigned.length === 1 ? '' : 's'} sin asignar</strong>
+                <span>${filaRange} · pulsa para repartir</span>
+            </div>
+            ${VIP_I.chevronRight}
+        </button>
+    ` : '';
 
     return `
         <div class="vip-event-detail-head">
@@ -2994,9 +3057,13 @@ function renderVipTicketsV2() {
         ` : ''}
 
         <div class="vip-ticket-list-label">DESTINATARIOS</div>
-        <div class="vip-ticket-list">
-            ${recipientRows}
-        </div>
+        ${filledRows ? `<div class="vip-ticket-list">${filledRows}</div>` : ''}
+        ${pendingSummary ? `<div class="vip-ticket-list" style="padding-top: ${filledRows ? '0' : '0'}; margin-top: ${filledRows ? '-4px' : '0'}">${pendingSummary}</div>` : ''}
+        ${!filledRows && !pendingSummary ? `
+            <div class="vip-empty-state" style="padding: 20px">
+                <div>Todavía no hay destinatarios.</div>
+            </div>
+        ` : ''}
 
         ${ctaLabel ? `
             <div class="vip-sticky-cta-wrap">
@@ -3032,13 +3099,17 @@ function renderVipTicketRow(t) {
         ? `data-vip-action="main-actions" data-vip-ticket-id="${t.id}"`
         : '';
 
+    // The "PARA MÍ" badge duplicates the row title — only show a status badge
+    // when the status conveys new info (sent / accepted / bound).
+    const showStatusBadge = !isMine && interactive;
+
     return `
         <${tag} class="vip-ticket-item ${statusClass} ${interactive ? '' : 'static'}" ${attrs}>
             <div class="vip-ticket-avatar">${avatar}</div>
             <div class="vip-ticket-main">
                 <div class="vip-ticket-top">
                     <span class="vip-ticket-name">${title}</span>
-                    <span class="vip-ticket-status ${statusClass}">${statusLabel}</span>
+                    ${showStatusBadge ? `<span class="vip-ticket-status ${statusClass}">${statusLabel}</span>` : ''}
                 </div>
                 <div class="vip-ticket-sub">${seatLabel}</div>
             </div>
@@ -3073,6 +3144,31 @@ function renderVipShareSheets() {
     return '';
 }
 
+// 3-step wizard pip indicator: contactos → revisar → enviar.
+// Same component reused across picker, preview and disclaimer/share so the
+// flow feels coherent. `current` is 1-based.
+function renderVipFlowSteps(current) {
+    const steps = [
+        { n: 1, label: 'Contactos' },
+        { n: 2, label: 'Revisar' },
+        { n: 3, label: 'Enviar' }
+    ];
+    return `
+        <div class="vip-flow-steps" aria-label="Paso ${current} de 3">
+            ${steps.map(s => {
+                const state = s.n < current ? 'done' : s.n === current ? 'current' : 'todo';
+                return `
+                    <div class="vip-flow-step ${state}">
+                        <div class="vip-flow-step-pip">${s.n < current ? '✓' : s.n}</div>
+                        <span>${s.label}</span>
+                    </div>
+                    ${s.n < steps.length ? '<div class="vip-flow-step-line"></div>' : ''}
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
 // ── STEP 1 · Picker ─────────────────────────────────────────────
 function renderVipPickerSheet() {
     const s = state.vipShare;
@@ -3102,6 +3198,8 @@ function renderVipPickerSheet() {
                         ${selected.length === 0 ? 'disabled' : ''}
                         data-vip-action="commit-picker">${doneLabel}</button>
             </div>
+
+            ${renderVipFlowSteps(1)}
 
             <div class="vip-keep-mine-row">
                 <div>
@@ -3166,6 +3264,8 @@ function renderVipPreviewSheet() {
                 </div>
                 <div style="width:36px"></div>
             </div>
+
+            ${renderVipFlowSteps(2)}
 
             <div class="vip-preview-body">
                 ${mineTicket ? `
@@ -3414,6 +3514,7 @@ function renderVipShareChannelSheet() {
         <div class="vip-sheet-backdrop" data-vip-action="back-to-preview"></div>
         <div class="vip-share-sheet">
             <div class="vip-picker-grabber"></div>
+            ${renderVipFlowSteps(3)}
             <div class="vip-share-head">
                 <div class="vip-share-title">Enviar ${ready.length} ticket${ready.length === 1 ? '' : 's'}</div>
                 <div class="vip-share-sub">Cada contacto recibirá su ticket personalizado con el asiento asignado.</div>
@@ -3841,6 +3942,13 @@ function handleVipShareClick(e) {
     const tickets = vipTicketsForCurrentEvent();
 
     switch (action) {
+        // ── Top bar PALCO 4101 ▾ pill ────────────────────────────
+        case 'toggle-palco-sheet': {
+            state.vipPalcoSheetOpen = !state.vipPalcoSheetOpen;
+            render();
+            return;
+        }
+
         // ── Entry points from the main tickets screen ─────────────
         case 'open-picker': {
             s.step = 'picker';
@@ -4842,8 +4950,15 @@ function updateSideNavActive() {
 }
 
 function updateStageHeader() {
+    const title = $('#stageTitle');
     const subtitle = $('#stageSubtitle');
     if (!subtitle) return;
+
+    if (title) {
+        title.textContent = state.app === 'vip'
+            ? 'Real Madrid VIP App'
+            : 'Real Madrid Fan App';
+    }
 
     if (state.app === 'vip') {
         const labels = {
