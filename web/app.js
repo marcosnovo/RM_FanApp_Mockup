@@ -6758,6 +6758,18 @@ function _attachFlagsPanelListeners() {
 // ================================================================
 
 async function bootApp() {
+    // 0) Dev bypass (`?dev=1`) — skips Supabase, stubs a session, renders the
+    //    app shell. For design review / preview tools only.
+    if (Auth.isDevBypass && Auth.isDevBypass()) {
+        Auth.devBypass();
+        closeAuthOverlay();
+        document.body.classList.remove('auth-mode');
+        render();
+        renderUserBox();
+        console.warn('[boot] DEV BYPASS active — auth skipped');
+        return;
+    }
+
     // 1) Recovery (forgot-password email) takes priority.
     //    `isRecovery()` is seeded synchronously from the URL hash so this works
     //    even if Supabase hasn't fired PASSWORD_RECOVERY yet.

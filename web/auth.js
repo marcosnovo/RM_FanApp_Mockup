@@ -264,6 +264,32 @@ const Auth = {
         return _initialUrlType === 'recovery';
     },
 
+    // ── Dev bypass ────────────────────────────────────────────
+    // Visit with `?dev=1` to skip the Supabase login and render the app
+    // shell with a stub session. Useful for design review / preview tools
+    // that can't perform real OAuth. Strictly URL-based (NOT persisted),
+    // so a stray landing on the live site without the param logs out as
+    // normal. Supabase data calls will still fail — this only unlocks the
+    // chrome and flag-driven UI.
+    isDevBypass() {
+        try {
+            return new URLSearchParams(window.location.search).get('dev') === '1';
+        } catch { return false; }
+    },
+
+    devBypass() {
+        _cachedSession = {
+            user: {
+                id: 'dev-bypass-user',
+                user_metadata: { name: 'Dev Tester' }
+            }
+        };
+        _cachedProfile = {
+            email: 'dev@local',
+            role: 'admin'
+        };
+    },
+
     onAuthChange(cb) {
         _authStateListeners.push(cb);
     },
