@@ -10961,3 +10961,146 @@ body.auth-mode .app-layout { visibility: hidden; }
     line-height: 1.45;
 }
 .vip-palco-backdrop { z-index: 45; }
+
+/* ── Contacts permission gate (iOS-style alert) ─────────────── */
+.vip-permission-sheet {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 56px);
+    max-width: 320px;
+    background: var(--vip-bg-2);
+    border: 1px solid var(--vip-card-border);
+    border-radius: 18px;
+    padding: 22px 22px 16px;
+    z-index: 50;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.vip-permission-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    box-shadow: 0 6px 14px rgba(201, 163, 110, 0.35);
+}
+.vip-permission-icon > svg { width: 26px !important; height: 26px !important; }
+.vip-permission-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--vip-text);
+}
+.vip-permission-body {
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--vip-text-secondary);
+    padding: 0 4px;
+}
+.vip-permission-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    margin-top: 10px;
+}
+.vip-permission-deny,
+.vip-permission-allow {
+    flex: 1;
+    height: 42px;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--vip-card-border);
+    background: var(--vip-bg-3);
+    color: var(--vip-text);
+}
+.vip-permission-allow {
+    border-color: transparent;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    font-weight: 700;
+}
+
+/* ── Per-contact channel availability badges (in picker rows) ─ */
+.vip-picker-channels {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+.vip-channel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px 2px 5px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    border-radius: 999px;
+    border: 1px solid var(--vip-card-border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--vip-text-secondary);
+    line-height: 1.4;
+}
+.vip-channel-badge > svg { width: 11px !important; height: 11px !important; }
+.vip-channel-badge.ch-email {
+    border-color: rgba(88, 176, 248, 0.4);
+    color: #9ec9f5;
+    background: rgba(88, 176, 248, 0.08);
+}
+.vip-channel-badge.ch-sms {
+    border-color: rgba(76, 217, 100, 0.35);
+    color: #9adba2;
+    background: rgba(76, 217, 100, 0.07);
+}
+
+/* ── Channel chip in preview rows (the routed channel for ticket) ─ */
+.vip-preview-row-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.vip-channel-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px 2px 5px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    line-height: 1.4;
+}
+.vip-channel-chip > svg { width: 11px !important; height: 11px !important; }
+.vip-channel-chip.ch-email {
+    background: rgba(88, 176, 248, 0.18);
+    color: #b9d8f7;
+}
+.vip-channel-chip.ch-sms {
+    background: rgba(76, 217, 100, 0.18);
+    color: #b6e7bd;
+}
+
+/* ── Sending breakdown line ─────────────────────────────────── */
+.vip-sending-breakdown {
+    margin-top: 12px;
+    font-size: 11.5px;
+    color: var(--vip-text-tertiary);
+    letter-spacing: 0.2px;
+    text-align: center;
+}

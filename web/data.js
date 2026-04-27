@@ -1021,29 +1021,33 @@ const VIP_EVENTS = [
 ];
 
 // ── VIP Contacts (mock phone address book) ──────────────────────
+// Each contact may have `phone`, `email`, or both (never neither).
+// The reparto flow uses this to route tickets: prefer email when
+// available, fall back to SMS. Contacts with only one channel
+// surface that constraint in the UI.
 const VIP_CONTACTS = [
-    { id: 'c01', name: 'María González',     phone: '+34 612 345 678', initial: 'MG', hue: 12 },
-    { id: 'c02', name: 'Javier Santos',       phone: '+34 667 223 910', initial: 'JS', hue: 210 },
-    { id: 'c03', name: 'Carla Ruiz',          phone: '+34 611 902 345', initial: 'CR', hue: 330 },
-    { id: 'c04', name: 'Álvaro Fernández',    phone: '+34 654 321 987', initial: 'AF', hue: 45 },
-    { id: 'c05', name: 'Lucía Martín',        phone: '+34 699 112 233', initial: 'LM', hue: 170 },
-    { id: 'c06', name: 'Diego Pérez',         phone: '+34 644 556 778', initial: 'DP', hue: 280 },
-    { id: 'c07', name: 'Sofía Romero',        phone: '+34 633 998 112', initial: 'SR', hue: 90 },
-    { id: 'c08', name: 'Pablo Navarro',       phone: '+34 688 441 223', initial: 'PN', hue: 15 },
-    { id: 'c09', name: 'Elena Castro',        phone: '+34 622 113 445', initial: 'EC', hue: 255 },
-    { id: 'c10', name: 'Hugo Torres',         phone: '+34 677 889 001', initial: 'HT', hue: 190 },
-    { id: 'c11', name: 'Marta Jiménez',       phone: '+34 655 234 112', initial: 'MJ', hue: 340 },
-    { id: 'c12', name: 'Rafael Vidal',        phone: '+34 611 553 224', initial: 'RV', hue: 60 },
-    { id: 'c13', name: 'Nuria Ortega',        phone: '+34 699 334 556', initial: 'NO', hue: 150 },
-    { id: 'c14', name: 'Sergio Molina',       phone: '+34 644 667 889', initial: 'SM', hue: 300 },
-    { id: 'c15', name: 'Ana Herrera',         phone: '+34 633 778 990', initial: 'AH', hue: 30 },
-    { id: 'c16', name: 'Iván Delgado',        phone: '+34 688 112 334', initial: 'ID', hue: 220 },
-    { id: 'c17', name: 'Clara Rubio',         phone: '+34 622 445 667', initial: 'CR', hue: 110 },
-    { id: 'c18', name: 'Tomás Blanco',        phone: '+34 677 556 778', initial: 'TB', hue: 355 },
-    { id: 'c19', name: 'Beatriz Serrano',     phone: '+34 655 889 001', initial: 'BS', hue: 75 },
-    { id: 'c20', name: 'Óscar Vega',          phone: '+34 611 223 445', initial: 'OV', hue: 240 },
-    { id: 'c21', name: 'Laura Campos',        phone: '+34 699 556 778', initial: 'LC', hue: 130 },
-    { id: 'c22', name: 'Adrián Gómez',        phone: '+34 644 223 334', initial: 'AG', hue: 20 }
+    { id: 'c01', name: 'María González',     phone: '+34 612 345 678', email: 'maria.gonzalez@gmail.com', initial: 'MG', hue: 12 },
+    { id: 'c02', name: 'Javier Santos',      phone: '+34 667 223 910', email: 'jsantos@hey.com',         initial: 'JS', hue: 210 },
+    { id: 'c03', name: 'Carla Ruiz',         phone: '+34 611 902 345', email: null,                       initial: 'CR', hue: 330 },
+    { id: 'c04', name: 'Álvaro Fernández',   phone: null,              email: 'alvaro.fdz@outlook.es',    initial: 'AF', hue: 45 },
+    { id: 'c05', name: 'Lucía Martín',       phone: '+34 699 112 233', email: 'lucia.m@icloud.com',       initial: 'LM', hue: 170 },
+    { id: 'c06', name: 'Diego Pérez',        phone: '+34 644 556 778', email: null,                       initial: 'DP', hue: 280 },
+    { id: 'c07', name: 'Sofía Romero',       phone: '+34 633 998 112', email: 'sromero@gmail.com',        initial: 'SR', hue: 90 },
+    { id: 'c08', name: 'Pablo Navarro',      phone: null,              email: 'pablo.navarro@yahoo.es',   initial: 'PN', hue: 15 },
+    { id: 'c09', name: 'Elena Castro',       phone: '+34 622 113 445', email: 'elenacastro@gmail.com',    initial: 'EC', hue: 255 },
+    { id: 'c10', name: 'Hugo Torres',        phone: '+34 677 889 001', email: null,                       initial: 'HT', hue: 190 },
+    { id: 'c11', name: 'Marta Jiménez',      phone: '+34 655 234 112', email: 'mjimenez@protonmail.com',  initial: 'MJ', hue: 340 },
+    { id: 'c12', name: 'Rafael Vidal',       phone: '+34 611 553 224', email: 'rafa.vidal@me.com',        initial: 'RV', hue: 60 },
+    { id: 'c13', name: 'Nuria Ortega',       phone: null,              email: 'nuria.ortega@gmail.com',   initial: 'NO', hue: 150 },
+    { id: 'c14', name: 'Sergio Molina',      phone: '+34 644 667 889', email: 'sergio.m@hotmail.com',     initial: 'SM', hue: 300 },
+    { id: 'c15', name: 'Ana Herrera',        phone: '+34 633 778 990', email: null,                       initial: 'AH', hue: 30 },
+    { id: 'c16', name: 'Iván Delgado',       phone: '+34 688 112 334', email: 'idelgado@icloud.com',      initial: 'ID', hue: 220 },
+    { id: 'c17', name: 'Clara Rubio',        phone: '+34 622 445 667', email: 'clara.rubio@gmail.com',    initial: 'CR', hue: 110 },
+    { id: 'c18', name: 'Tomás Blanco',       phone: '+34 677 556 778', email: 'tomas.b@outlook.com',      initial: 'TB', hue: 355 },
+    { id: 'c19', name: 'Beatriz Serrano',    phone: null,              email: 'bea.serrano@hey.com',      initial: 'BS', hue: 75 },
+    { id: 'c20', name: 'Óscar Vega',         phone: '+34 611 223 445', email: 'oscar.vega@gmail.com',     initial: 'OV', hue: 240 },
+    { id: 'c21', name: 'Laura Campos',       phone: '+34 699 556 778', email: 'lcampos@me.com',           initial: 'LC', hue: 130 },
+    { id: 'c22', name: 'Adrián Gómez',       phone: '+34 644 223 334', email: null,                       initial: 'AG', hue: 20 }
 ];
 
 // ── VIP Tickets per event (mock seed) ───────────────────────────

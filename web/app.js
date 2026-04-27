@@ -65,8 +65,9 @@ const state = {
 
     // Multi-ticket share flow (flag 'vip.tickets.multi-share')
     vipShare: {
-        step: null,                 // null | 'picker' | 'preview' | 'disclaimer' | 'share' | 'sending' | 'sent'
-                                    //        | 'row-actions' | 'replace-contact' | 'main-actions'
+        step: null,                 // null | 'permission' | 'picker' | 'preview' | 'disclaimer'
+                                    //        | 'sending' | 'sent' | 'row-actions'
+                                    //        | 'replace-contact' | 'main-actions'
         // Picker
         selection: [],              // contact ids selected in picker
         query: '',                  // search query
@@ -79,7 +80,6 @@ const state = {
         // Main-actions (for already-sent tickets in the main list)
         mainTicketId: null,
         // Send
-        channel: null,
         progress: 0,
         disclaimerSeen: false
     },
@@ -2547,7 +2547,9 @@ const VIP_I = {
     history: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12 a9 9 0 1 0 2.6-6.4"/><polyline points="3,4 3,10 9,10"/><polyline points="12,8 12,12 15,14"/></svg>`,
     xmark: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>`,
     walletPass: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 11h18"/><rect x="14" y="14" width="5" height="3" rx="0.5" fill="currentColor"/></svg>`,
-    moreVert: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>`
+    moreVert: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>`,
+    sms: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>`,
+    addressBook: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="11" r="3"/><path d="M7 18a5 5 0 0 1 10 0"/><path d="M3 7h2M3 12h2M3 17h2"/></svg>`
 };
 
 function renderVipApp() {
@@ -2929,6 +2931,39 @@ function vipContactById(id) {
     return VIP_CONTACTS.find(c => c.id === id) || null;
 }
 
+// Channels available for a contact, in routing-preference order.
+// Email is preferred over SMS so the user receives the prettier
+// rendered message; SMS is the fallback when there's no email.
+function vipChannelsFor(contact) {
+    if (!contact) return [];
+    const out = [];
+    if (contact.email) out.push('email');
+    if (contact.phone) out.push('sms');
+    return out;
+}
+
+function vipDefaultChannelFor(contact) {
+    return vipChannelsFor(contact)[0] || null;
+}
+
+const VIP_CHANNEL_LABEL = { email: 'Correo', sms: 'SMS' };
+const VIP_CHANNEL_ICON  = { email: () => VIP_I.mail, sms: () => VIP_I.sms };
+
+// Contacts permission gate (simulated iOS prompt). Persisted in
+// localStorage so we don't re-prompt across sessions; cleared by
+// design tooling if needed via `localStorage.removeItem('vip.contactsPermission')`.
+const VIP_PERMISSION_KEY = 'vip.contactsPermission';
+function vipReadContactsPermission() {
+    try { return localStorage.getItem(VIP_PERMISSION_KEY) === 'granted'; }
+    catch { return false; }
+}
+function vipWriteContactsPermission(granted) {
+    try {
+        if (granted) localStorage.setItem(VIP_PERMISSION_KEY, 'granted');
+        else localStorage.removeItem(VIP_PERMISSION_KEY);
+    } catch {}
+}
+
 function vipAvatarHTML(contactOrSelf, size = 36) {
     if (contactOrSelf === 'self') {
         return `<div class="vip-avatar self" style="width:${size}px;height:${size}px">
@@ -3124,8 +3159,9 @@ function renderVipShareSheets() {
 
     // Steps that overlay the preview (keep preview visible beneath)
     const overPreview = ['row-actions', 'swap-seat', 'replace-contact',
-                         'disclaimer', 'share', 'sending', 'sent'];
+                         'disclaimer', 'sending', 'sent'];
 
+    if (s.step === 'permission')   return renderVipPermissionSheet();
     if (s.step === 'picker')       return renderVipPickerSheet();
     if (s.step === 'main-actions') return renderVipMainActionsSheet();
     if (s.step === 'preview')      return renderVipPreviewSheet();
@@ -3136,12 +3172,31 @@ function renderVipShareSheets() {
         else if (s.step === 'swap-seat')  overlay = renderVipSwapSeatSheet();
         else if (s.step === 'replace-contact') overlay = renderVipReplaceContactSheet();
         else if (s.step === 'disclaimer') overlay = renderVipDisclaimerSheet();
-        else if (s.step === 'share')      overlay = renderVipShareChannelSheet();
         else if (s.step === 'sending')    overlay = renderVipSendingSheet();
         else if (s.step === 'sent')       overlay = renderVipSentSheet();
         return renderVipPreviewSheet() + overlay;
     }
     return '';
+}
+
+// ── STEP 0 · Contacts permission gate (one-time iOS-style prompt) ──
+function renderVipPermissionSheet() {
+    return `
+        <div class="vip-sheet-backdrop"></div>
+        <div class="vip-permission-sheet">
+            <div class="vip-permission-icon">${VIP_I.addressBook}</div>
+            <div class="vip-permission-title">"Real Madrid" quiere acceder<br>a tus contactos</div>
+            <div class="vip-permission-body">
+                Necesitamos leer tu lista de contactos para que puedas
+                seleccionar a quién enviar cada ticket por correo o SMS.
+                No se guardarán en nuestros servidores.
+            </div>
+            <div class="vip-permission-actions">
+                <button class="vip-permission-deny" data-vip-action="deny-contacts">No permitir</button>
+                <button class="vip-permission-allow" data-vip-action="allow-contacts">Permitir</button>
+            </div>
+        </div>
+    `;
 }
 
 // 3-step wizard pip indicator: contactos → revisar → enviar.
@@ -3232,13 +3287,24 @@ function renderVipPickerSheet() {
 function renderVipPickerRow(c, selected, maxSelect) {
     const isSel = selected.includes(c.id);
     const disabled = !isSel && selected.length >= maxSelect;
+    const channels = vipChannelsFor(c);
+    // Subtitle: prefer email when both, but always make it clear which
+    // channels exist via the badges below.
+    const subtitle = c.email || c.phone || '';
+    const channelBadges = channels.map(ch => `
+        <span class="vip-channel-badge ch-${ch}" title="${VIP_CHANNEL_LABEL[ch]}">
+            ${VIP_CHANNEL_ICON[ch]()}<span>${VIP_CHANNEL_LABEL[ch]}</span>
+        </span>
+    `).join('');
+
     return `
         <div class="vip-picker-row ${isSel ? 'selected' : ''} ${disabled ? 'disabled' : ''}"
              data-vip-action="toggle-contact" data-vip-contact="${c.id}">
             ${vipAvatarHTML(c, 40)}
             <div class="vip-picker-info">
                 <div class="name">${c.name}</div>
-                <div class="phone">${c.phone}</div>
+                <div class="phone">${subtitle}</div>
+                <div class="vip-picker-channels">${channelBadges}</div>
             </div>
             <div class="vip-picker-check ${isSel ? 'on' : ''}">
                 ${isSel ? '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="4,10 9,15 16,6"/></svg>' : ''}
@@ -3302,16 +3368,23 @@ function renderVipPreviewSheet() {
 function renderVipPreviewRow(t, idx) {
     const contact = vipContactById(t.contactId);
     if (!contact) return '';
+    const ch = t.channel || vipDefaultChannelFor(contact);
+    const subtitle = ch === 'email' ? (contact.email || contact.phone) : (contact.phone || contact.email);
     return `
         <button class="vip-preview-row" data-vip-action="open-row-actions" data-vip-idx="${idx}">
             ${vipAvatarHTML(contact, 40)}
             <div class="vip-preview-row-info">
                 <div class="name">${contact.name}</div>
-                <div class="phone">${contact.phone}</div>
+                <div class="phone">${subtitle}</div>
             </div>
-            <div class="vip-preview-row-seat">
-                <div class="fila">Fila ${t.fila}</div>
-                <div class="asiento">Asiento ${t.asiento}</div>
+            <div class="vip-preview-row-meta">
+                <span class="vip-channel-chip ch-${ch}">
+                    ${VIP_CHANNEL_ICON[ch]()}<span>${VIP_CHANNEL_LABEL[ch]}</span>
+                </span>
+                <div class="vip-preview-row-seat">
+                    <div class="fila">Fila ${t.fila}</div>
+                    <div class="asiento">Asiento ${t.asiento}</div>
+                </div>
             </div>
             ${VIP_I.chevronRight}
         </button>
@@ -3326,6 +3399,9 @@ function renderVipRowActionsSheet() {
     const t = draft[s.activeIdx];
     if (!t) return '';
     const contact = vipContactById(t.contactId);
+    const channels = contact ? vipChannelsFor(contact) : [];
+    const currentCh = t.channel || vipDefaultChannelFor(contact);
+    const otherCh = channels.find(c => c !== currentCh);
 
     return `
         <div class="vip-sheet-backdrop" data-vip-action="back-to-preview"></div>
@@ -3336,6 +3412,15 @@ function renderVipRowActionsSheet() {
                 <div class="vip-actions-recipient">${contact ? contact.name : '—'}</div>
             </div>
             <div class="vip-actions-list">
+                ${otherCh ? `
+                    <button class="vip-actions-row" data-vip-action="switch-channel" data-vip-channel="${otherCh}">
+                        ${VIP_CHANNEL_ICON[otherCh]()}<span>Enviar por ${VIP_CHANNEL_LABEL[otherCh]} en su lugar</span>
+                    </button>
+                ` : `
+                    <div class="vip-actions-row disabled" aria-disabled="true">
+                        ${VIP_CHANNEL_ICON[currentCh]()}<span>Solo recibe por ${VIP_CHANNEL_LABEL[currentCh]}</span>
+                    </div>
+                `}
                 <button class="vip-actions-row" data-vip-action="start-swap">
                     ${VIP_I.ticket}<span>Cambiar de asiento</span>
                 </button>
@@ -3501,58 +3586,53 @@ function renderVipDisclaimerSheet() {
     `;
 }
 
-function renderVipShareChannelSheet() {
-    const tickets = vipTicketsForCurrentEvent();
-    const ready = tickets.filter(t => t.status === 'assigned');
-    const channels = [
-        { key: 'imessage', label: 'Mensajes',    color: '#4cd964', icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.8 2 11.5c0 2.4 1.2 4.6 3.1 6.1-.1.8-.5 2.3-1.6 3.4 1.7-.1 3.6-.7 4.9-1.6 1.1.4 2.3.6 3.6.6 5.5 0 10-3.8 10-8.5S17.5 3 12 3z"/></svg>` },
-        { key: 'whatsapp', label: 'WhatsApp',    color: '#25d366', icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4C16 0 10 0 6 4c-3.5 3.5-3.8 9-.7 12.9L4 22l5.3-1.3c3.9 2.6 9 2.1 12.2-1.1C25.5 15.8 25.5 9 20 4zm-3.2 12c-.3.9-1.6 1.6-2.5 1.7-.6.1-1.5.2-4.5-.9-3.7-1.6-6.1-5.4-6.3-5.6-.2-.2-1.5-2-1.5-3.8s.9-2.7 1.3-3.1c.3-.3.7-.5 1-.5h.7c.2 0 .5 0 .8.6.3.7 1 2.5 1.1 2.7.1.2.1.4 0 .6-.3.7-.6.7-.9 1-.2.2-.4.4-.2.8.2.3 1 1.6 2.1 2.6 1.4 1.3 2.7 1.7 3 1.8.3.2.6.1.8-.1.3-.3.8-.9 1-1.2.2-.3.5-.3.8-.2.3.1 2 1 2.3 1.1.3.2.5.2.6.3.1.2.1.9-.2 1.8z"/></svg>` },
-        { key: 'mail',     label: 'Mail',        color: '#58b0f8', icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16c1 0 2 1 2 2v8c0 1-1 2-2 2H4c-1 0-2-1-2-2V8c0-1 1-2 2-2zm0 2l8 6 8-6H4zm16 2.2L12 16 4 10.2V16h16v-5.8z"/></svg>` },
-        { key: 'link',     label: 'Copiar link', color: '#666a76', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>` }
-    ];
-    return `
-        <div class="vip-sheet-backdrop" data-vip-action="back-to-preview"></div>
-        <div class="vip-share-sheet">
-            <div class="vip-picker-grabber"></div>
-            ${renderVipFlowSteps(3)}
-            <div class="vip-share-head">
-                <div class="vip-share-title">Enviar ${ready.length} ticket${ready.length === 1 ? '' : 's'}</div>
-                <div class="vip-share-sub">Cada contacto recibirá su ticket personalizado con el asiento asignado.</div>
-            </div>
-            <div class="vip-share-channels">
-                ${channels.map(ch => `
-                    <button class="vip-share-channel" data-vip-action="pick-channel" data-vip-channel="${ch.key}">
-                        <div class="icon" style="background:${ch.color}">${ch.icon}</div>
-                        <span>${ch.label}</span>
-                    </button>
-                `).join('')}
-            </div>
-            <button class="vip-share-cancel" data-vip-action="back-to-preview">Cancelar</button>
-        </div>
-    `;
+// Channel breakdown for the current draft (or just-sent batch).
+// Used by the sending and sent sheets so the user sees how the batch
+// got routed across email and SMS.
+function vipChannelBreakdown(ticketList) {
+    const out = { email: 0, sms: 0 };
+    for (const t of ticketList) {
+        const ch = t.channel || vipDefaultChannelFor(vipContactById(t.contactId));
+        if (ch === 'email') out.email++;
+        else if (ch === 'sms') out.sms++;
+    }
+    return out;
+}
+
+function vipChannelBreakdownLine(breakdown) {
+    const parts = [];
+    if (breakdown.email > 0) parts.push(`${breakdown.email} por correo`);
+    if (breakdown.sms   > 0) parts.push(`${breakdown.sms} por SMS`);
+    return parts.join(' · ');
 }
 
 function renderVipSendingSheet() {
     const s = state.vipShare;
     const tickets = vipTicketsForCurrentEvent();
-    const total = tickets.filter(t => t.status === 'assigned' || (t.status === 'sent' && t._justSent)).length
-        || Math.max(1, s.progress);
+    // Snapshot the batch as the union of still-assigned + just-sent tickets.
+    const batch = tickets.filter(t => t.status === 'assigned'
+                                  || (t.status === 'sent' && (Date.now() - (t.sentAt || 0)) < 8000));
+    const total = batch.length || Math.max(1, s.progress);
     const done = Math.min(s.progress, total);
     const pct = total ? Math.round((done / total) * 100) : 100;
+    const breakdown = vipChannelBreakdown(batch);
     return `
         <div class="vip-sheet-backdrop"></div>
         <div class="vip-sending-sheet">
+            ${renderVipFlowSteps(3)}
             <div class="vip-sending-spinner"></div>
             <div class="vip-sending-title">Enviando tickets…</div>
             <div class="vip-sending-count">${done} / ${total}</div>
             <div class="vip-sending-bar"><div class="fill" style="width:${pct}%"></div></div>
+            <div class="vip-sending-breakdown">${vipChannelBreakdownLine(breakdown)}</div>
         </div>
     `;
 }
 
 function renderVipSentSheet() {
     const tickets = vipTicketsForCurrentEvent();
-    const sent = tickets.filter(t => ['sent', 'accepted', 'bound'].includes(t.status)).length;
+    const sent = tickets.filter(t => ['sent', 'accepted', 'bound'].includes(t.status));
+    const breakdown = vipChannelBreakdown(sent);
     return `
         <div class="vip-sheet-backdrop" data-vip-action="close-sheet"></div>
         <div class="vip-sent-sheet">
@@ -3560,7 +3640,10 @@ function renderVipSentSheet() {
                 <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="7,17 14,24 26,10"/></svg>
             </div>
             <div class="vip-sent-title">¡Tickets enviados!</div>
-            <div class="vip-sent-body">Hemos enviado ${sent} tickets. Recibirás una notificación cuando cada persona añada el suyo a su Wallet.</div>
+            <div class="vip-sent-body">
+                Hemos enviado ${sent.length} ticket${sent.length === 1 ? '' : 's'}: ${vipChannelBreakdownLine(breakdown)}.
+                Recibirás una notificación cuando cada persona añada el suyo a su Wallet.
+            </div>
             <button class="vip-disclaimer-cta" data-vip-action="close-sheet">Volver a mis tickets</button>
         </div>
     `;
@@ -3951,13 +4034,30 @@ function handleVipShareClick(e) {
 
         // ── Entry points from the main tickets screen ─────────────
         case 'open-picker': {
-            s.step = 'picker';
+            // Reset picker state up front so the permission gate and the
+            // picker share a clean slate.
             s.selection = [];
             s.query = '';
-            s.keepMine = !tickets.some(t => t.status === 'mine' && t.contactId)
-                ? (tickets.find(t => t.status === 'mine') ? true : true)
-                : true;
+            s.keepMine = true;
+            // Gate the very first entry behind the iOS-style contacts
+            // permission prompt. Subsequent entries skip it.
+            if (!vipReadContactsPermission()) {
+                s.step = 'permission';
+            } else {
+                s.step = 'picker';
+            }
             render();
+            return;
+        }
+        case 'allow-contacts': {
+            vipWriteContactsPermission(true);
+            s.step = 'picker';
+            render();
+            return;
+        }
+        case 'deny-contacts': {
+            // No permission → there's nothing useful to show; close the flow.
+            closeSheet();
             return;
         }
         case 'open-preview': {
@@ -3976,7 +4076,11 @@ function handleVipShareClick(e) {
             }
             VIP_LAST_GROUP.contactIds.forEach((cid, i) => {
                 const t = mutable[offset + i];
-                if (t) { t.status = 'assigned'; t.contactId = cid; }
+                if (t) {
+                    t.status = 'assigned';
+                    t.contactId = cid;
+                    t.channel = vipDefaultChannelFor(vipContactById(cid));
+                }
             });
             s.step = 'preview';
             render();
@@ -4081,7 +4185,21 @@ function handleVipShareClick(e) {
             const draft = tickets.filter(t => t.status === 'assigned');
             const t = draft[s.activeIdx];
             const cid = target.dataset.vipContact;
-            if (t && cid) t.contactId = cid;
+            if (t && cid) {
+                t.contactId = cid;
+                // Re-route channel to the new contact's preferred channel.
+                t.channel = vipDefaultChannelFor(vipContactById(cid));
+            }
+            s.step = 'preview';
+            s.activeIdx = null;
+            render();
+            return;
+        }
+        case 'switch-channel': {
+            const draft = tickets.filter(t => t.status === 'assigned');
+            const t = draft[s.activeIdx];
+            const ch = target.dataset.vipChannel;
+            if (t && ch) t.channel = ch;
             s.step = 'preview';
             s.activeIdx = null;
             render();
@@ -4105,20 +4223,19 @@ function handleVipShareClick(e) {
         }
 
         // ── Send pipeline ────────────────────────────────────────
+        // The channel sheet was removed: each ticket carries its own
+        // routed channel (email/SMS) since commitPickerAssignment, and
+        // the user can override it from the preview row. So confirm-send
+        // goes either to the disclaimer (first time) or straight to the
+        // sending animation.
         case 'confirm-send': {
-            s.step = s.disclaimerSeen ? 'share' : 'disclaimer';
-            render();
+            if (s.disclaimerSeen) startBatchSend();
+            else { s.step = 'disclaimer'; render(); }
             return;
         }
         case 'accept-disclaimer': {
             s.disclaimerSeen = true;
-            s.step = 'share';
-            render();
-            return;
-        }
-        case 'pick-channel': {
-            const channel = target.dataset.vipChannel;
-            startBatchSend(channel);
+            startBatchSend();
             return;
         }
 
@@ -4159,7 +4276,14 @@ function commitPickerAssignment() {
     }
     s.selection.forEach((cid, i) => {
         const t = mutable[offset + i];
-        if (t) { t.status = 'assigned'; t.contactId = cid; }
+        if (t) {
+            t.status = 'assigned';
+            t.contactId = cid;
+            // Auto-route on the channel preferred by this contact
+            // (email when available, SMS as fallback). Stored on the
+            // ticket so the user can override it from the preview row.
+            t.channel = vipDefaultChannelFor(vipContactById(cid));
+        }
     });
 }
 
@@ -4170,14 +4294,15 @@ function closeSheet() {
     s.query = '';
     s.activeIdx = null;
     s.mainTicketId = null;
-    s.channel = null;
     s.progress = 0;
     render();
 }
 
-function startBatchSend(channel) {
+// Each draft ticket already carries its routed `channel` (set at
+// commitPickerAssignment / switch-channel / do-replace). The send
+// loop just walks through them and respects whatever was chosen.
+function startBatchSend() {
     const s = state.vipShare;
-    s.channel = channel;
     s.step = 'sending';
     s.progress = 0;
     render();
@@ -4201,7 +4326,10 @@ function startBatchSend(channel) {
         }
         assigned[i].status = 'sent';
         assigned[i].sentAt = Date.now();
-        assigned[i].channel = channel;
+        // channel already set at draft time (auto-routed or overridden)
+        if (!assigned[i].channel) {
+            assigned[i].channel = vipDefaultChannelFor(vipContactById(assigned[i].contactId));
+        }
         i++;
         s.progress = i;
         render();
