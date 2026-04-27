@@ -65,9 +65,10 @@ html, body {
 
 .app-layout {
     display: grid;
-    grid-template-columns: var(--side-panel-w) 1fr;
+    grid-template-columns: var(--side-panel-w) minmax(0, 1fr);
     height: 100vh;
-    width: 100vw;
+    height: 100dvh;
+    width: 100%;
 }
 
 /* Durante un arrastre de redimensión aplicamos `body.resizing-side`
@@ -86,6 +87,8 @@ body.resizing-side * {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
+    min-width: 0;
     position: relative;     /* para el handle absoluto */
 }
 
@@ -241,13 +244,20 @@ body.resizing-side * {
 }
 
 .side-nav {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     padding: 4px 12px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: #ffffff20 transparent;
 }
 
 .side-nav::-webkit-scrollbar { width: 6px; }
-.side-nav::-webkit-scrollbar-thumb { background: #ffffff15; border-radius: 3px; }
+.side-nav::-webkit-scrollbar-track { background: transparent; }
+.side-nav::-webkit-scrollbar-thumb { background: #ffffff20; border-radius: 3px; }
+.side-nav::-webkit-scrollbar-thumb:hover { background: #ffffff35; }
 
 .nav-section {
     margin-bottom: 4px;
@@ -268,12 +278,19 @@ body.resizing-side * {
     font-weight: 500;
     cursor: pointer;
     text-align: left;
-    transition: all 0.18s;
+    transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .nav-tab:hover {
     background: #ffffff08;
     color: white;
+}
+
+.nav-tab:focus-visible,
+.nav-sub:focus-visible {
+    outline: 2px solid var(--rm-primary);
+    outline-offset: 2px;
 }
 
 .nav-tab.active {
@@ -317,7 +334,8 @@ body.resizing-side * {
     border-radius: 7px;
     cursor: pointer;
     text-align: left;
-    transition: all 0.15s;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .nav-sub:hover {
