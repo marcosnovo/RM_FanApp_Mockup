@@ -2565,6 +2565,7 @@ const VIP_I = {
     paypal: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.4 21h2.4l.5-3h2.5c3.1 0 5.4-1.6 6-4.4.5-2.6-1-4.6-4.1-4.6H9.5c-.4 0-.8.3-.9.7L6.5 20.4c-.1.3.2.6.5.6zm3.4-5.5l.7-4.4h2.5c1.5 0 2.4.7 2.1 2.2-.3 1.5-1.5 2.2-3 2.2h-2.3z"/><path d="M5.5 17h2.4l.5-3h2.5c3.1 0 5.4-1.6 6-4.4.5-2.6-1-4.6-4.1-4.6H7.6c-.4 0-.8.3-.9.7L4.6 16.4c-.1.3.2.6.5.6h.4z" opacity="0.55"/></svg>`,
     applePay: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 11.6c0-2 1.6-2.9 1.7-3-1-1.4-2.4-1.6-2.9-1.6-1.3-.1-2.5.7-3.2.7-.7 0-1.7-.7-2.8-.7-1.4 0-2.7.8-3.5 2.1-1.5 2.6-.4 6.4 1.1 8.6.7 1 1.6 2.2 2.7 2.2 1.1 0 1.5-.7 2.8-.7 1.3 0 1.7.7 2.8.7 1.2 0 1.9-1 2.6-2 .7-1 1-2 1-2.1-.1 0-2.3-.9-2.3-3.2zm-2-5.6c.6-.7.9-1.7.8-2.7-.8 0-1.8.6-2.4 1.3-.5.6-1 1.6-.8 2.6.9.1 1.8-.5 2.4-1.2z"/></svg>`,
     googlePay: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.6 13.4v3h4.2c-.2 1-.7 1.9-1.6 2.5l2.6 2c1.5-1.4 2.4-3.5 2.4-6 0-.6 0-1.1-.1-1.6h-7.5z"/><path d="M5.7 13.5l-.6.5-2 1.5c1.3 2.5 3.9 4.3 6.9 4.3 2.1 0 3.9-.7 5.2-1.9l-2.6-2c-.7.5-1.6.8-2.6.8-2 0-3.7-1.3-4.3-3.2z" opacity="0.85"/><path d="M3.1 8c-.6 1.2-.9 2.5-.9 4 0 1.5.3 2.8.9 4l2.6-2c-.2-.6-.3-1.3-.3-2 0-.7.1-1.4.3-2L3.1 8z" opacity="0.7"/><path d="M11.6 5.7c1.1 0 2.2.4 3 1.1l2.3-2.2C15.6 3.3 13.7 2.5 11.6 2.5 8.6 2.5 6 4.3 4.7 6.8L7.3 8.8c.6-1.9 2.3-3.1 4.3-3.1z" opacity="0.55"/></svg>`,
+    samsungPay: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5.5 8.4c0-1.4 1-2.5 2.7-2.7 1.3-.2 2.6.1 3.7.6l-.4 1.6c-.9-.4-1.9-.6-2.8-.5-.6.1-1.1.5-1.1 1 0 .6.6 1 1.6 1.4 1.5.6 3.1 1.4 3.1 3.4 0 1.7-1.3 2.9-3.1 3.1-1.4.2-2.9-.1-4.1-.7l.4-1.7c1 .4 2.1.7 3.2.6.8-.1 1.4-.6 1.4-1.2 0-.7-.7-1.1-1.8-1.5-1.5-.6-2.8-1.3-2.8-3.4z"/><path d="M14.4 6h2l1.4 5.6h.1L19.3 6h2l-2.5 8.4c-.5 1.7-1.5 2.6-3.1 2.6-.5 0-1-.1-1.5-.2l.3-1.5c.3.1.6.2.9.2.7 0 1.1-.4 1.4-1.2l-2.4-8.3z"/></svg>`,
     pencil: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M13 5l6 6"/></svg>`,
     check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,12 10,17 19,7"/></svg>`
 };
@@ -3853,23 +3854,34 @@ function vipPayments() {
 
 function vipPaymentTypeMeta(type) {
     return ({
-        card:   { label: 'Tarjeta de crédito / débito', icon: VIP_I.creditCard, brand: 'Tarjeta' },
-        paypal: { label: 'PayPal',                       icon: VIP_I.paypal,     brand: 'PayPal' },
-        bank:   { label: 'Cuenta bancaria',              icon: VIP_I.bank,       brand: 'Cuenta bancaria' }
+        card:         { label: 'Tarjeta de crédito / débito', icon: VIP_I.creditCard, brand: 'Tarjeta' },
+        paypal:       { label: 'PayPal',                       icon: VIP_I.paypal,     brand: 'PayPal' },
+        bank:         { label: 'Cuenta bancaria',              icon: VIP_I.bank,       brand: 'Cuenta bancaria' },
+        // Mobile wallets — first-class methods. The "form" sólo confirma
+        // que el wallet del dispositivo se conecta (no hay campos manuales).
+        'apple-pay':  { label: 'Apple Pay',                    icon: VIP_I.applePay,   brand: 'Apple Pay',   isWallet: true },
+        'google-pay': { label: 'Google Pay',                   icon: VIP_I.googlePay,  brand: 'Google Pay',  isWallet: true },
+        'samsung-pay':{ label: 'Samsung Pay',                  icon: VIP_I.samsungPay, brand: 'Samsung Pay', isWallet: true }
     })[type] || { label: type, icon: VIP_I.creditCard, brand: type };
 }
 
+function vipPaymentIsWallet(type) {
+    return ['apple-pay', 'google-pay', 'samsung-pay'].includes(type);
+}
+
 function vipPaymentTitle(m) {
-    if (m.type === 'card')   return `${m.brand || 'Tarjeta'} •••• ${m.last4 || '0000'}`;
-    if (m.type === 'paypal') return `PayPal · ${m.email || ''}`;
-    if (m.type === 'bank')   return `${m.bankName || 'Cuenta bancaria'} •••• ${m.ibanLast4 || '0000'}`;
+    if (m.type === 'card')        return `${m.brand || 'Tarjeta'} •••• ${m.last4 || '0000'}`;
+    if (m.type === 'paypal')      return `PayPal · ${m.email || ''}`;
+    if (m.type === 'bank')        return `${m.bankName || 'Cuenta bancaria'} •••• ${m.ibanLast4 || '0000'}`;
+    if (vipPaymentIsWallet(m.type)) return vipPaymentTypeMeta(m.type).label;
     return m.type;
 }
 
 function vipPaymentSubtitle(m) {
-    if (m.type === 'card')   return `${m.holder || ''} · Caduca ${m.expiry || ''}`;
-    if (m.type === 'paypal') return `${m.holder || ''}`;
-    if (m.type === 'bank')   return `${m.holder || ''} · BIC ${m.bic || ''}`;
+    if (m.type === 'card')        return `${m.holder || ''} · Caduca ${m.expiry || ''}`;
+    if (m.type === 'paypal')      return `${m.holder || ''}`;
+    if (m.type === 'bank')        return `${m.holder || ''} · BIC ${m.bic || ''}`;
+    if (vipPaymentIsWallet(m.type)) return m.deviceLabel || 'Conectado a este dispositivo';
     return '';
 }
 
@@ -3950,26 +3962,36 @@ function renderVipPaymentsList() {
 }
 
 function renderVipPaymentsTypeSelector() {
-    const types = [
+    // Agrupados en dos secciones para que la lista sea legible:
+    // wallets de móvil arriba (lo más rápido) y métodos manuales abajo.
+    const wallets = [
+        { key: 'apple-pay',  ...vipPaymentTypeMeta('apple-pay'),  sub: 'Confirmas con Face ID / Touch ID' },
+        { key: 'google-pay', ...vipPaymentTypeMeta('google-pay'), sub: 'Pago con tu wallet de Google' },
+        { key: 'samsung-pay',...vipPaymentTypeMeta('samsung-pay'),sub: 'Disponible en dispositivos Samsung' }
+    ];
+    const manual = [
         { key: 'card',   ...vipPaymentTypeMeta('card'),   sub: 'Visa, Mastercard, Amex…' },
         { key: 'paypal', ...vipPaymentTypeMeta('paypal'), sub: 'Conecta tu cuenta PayPal' },
         { key: 'bank',   ...vipPaymentTypeMeta('bank'),   sub: 'IBAN europeo (SEPA)' }
     ];
+
+    const renderRow = (t) => `
+        <button class="vip-pm-type-row" data-vip-action="pm-pick-type" data-vip-pm-type="${t.key}">
+            <div class="vip-pm-icon pm-${t.key}">${t.icon}</div>
+            <div class="vip-pm-info">
+                <div class="vip-pm-title">${t.label}</div>
+                <div class="vip-pm-sub">${t.sub}</div>
+            </div>
+            ${VIP_I.chevronRight}
+        </button>
+    `;
+
     return `
         <div class="vip-pm-body">
-            <div class="vip-pm-intro">Elige el tipo de método</div>
-            <div class="vip-pm-types">
-                ${types.map(t => `
-                    <button class="vip-pm-type-row" data-vip-action="pm-pick-type" data-vip-pm-type="${t.key}">
-                        <div class="vip-pm-icon pm-${t.key}">${t.icon}</div>
-                        <div class="vip-pm-info">
-                            <div class="vip-pm-title">${t.label}</div>
-                            <div class="vip-pm-sub">${t.sub}</div>
-                        </div>
-                        ${VIP_I.chevronRight}
-                    </button>
-                `).join('')}
-            </div>
+            <div class="vip-pm-intro">Wallets del dispositivo</div>
+            <div class="vip-pm-types">${wallets.map(renderRow).join('')}</div>
+            <div class="vip-pm-intro" style="margin-top: 8px">Otros métodos</div>
+            <div class="vip-pm-types">${manual.map(renderRow).join('')}</div>
         </div>
     `;
 }
@@ -4066,6 +4088,49 @@ function renderVipPaymentsForm({ mode }) {
                 </div>
             `;
         }
+        if (vipPaymentIsWallet(type)) {
+            const walletName = meta.label;
+            const isApple = type === 'apple-pay';
+            const isGoogle = type === 'google-pay';
+            const isSamsung = type === 'samsung-pay';
+            const detected = isApple
+                ? 'iPhone 14 Pro de Marcos · Face ID listo'
+                : isGoogle
+                    ? 'Pixel 8 Pro de Marcos · Huella registrada'
+                    : 'Galaxy S24 Ultra de Marcos · PIN de Knox configurado';
+            const requirement = isApple
+                ? 'Necesitas tener al menos una tarjeta añadida en Wallet de iOS.'
+                : isGoogle
+                    ? 'Necesitas tener al menos una tarjeta en la app Google Wallet.'
+                    : 'Necesitas tener Samsung Pay configurado y al menos una tarjeta añadida.';
+
+            return `
+                <div class="vip-pm-wallet-block">
+                    <div class="vip-pm-wallet-detected">
+                        <div class="vip-pm-wallet-detected-dot"></div>
+                        <div>
+                            <strong>${walletName} disponible</strong>
+                            <span>${detected}</span>
+                        </div>
+                    </div>
+                    <div class="vip-pm-field">
+                        <label>Nombre del titular</label>
+                        <input type="text" data-vip-pm-field="holder"
+                               value="${escapeHtml(draft.holder ?? m?.holder ?? VIP_PROFILE.name)}"
+                               placeholder="Tal y como aparece en tu wallet">
+                    </div>
+                    <div class="vip-pm-field">
+                        <label>Etiqueta del dispositivo</label>
+                        <input type="text" data-vip-pm-field="deviceLabel"
+                               value="${escapeHtml(draft.deviceLabel ?? m?.deviceLabel ?? detected.split(' · ')[0])}"
+                               placeholder="iPhone 14 Pro de Marcos">
+                    </div>
+                    <div class="vip-pm-paypal-note">
+                        Al guardar autorizas a la app a invocar ${walletName} cuando elijas este método en el checkout. ${requirement}
+                    </div>
+                </div>
+            `;
+        }
         return '<div class="vip-pm-empty">Tipo de método no soportado.</div>';
     })();
 
@@ -4102,8 +4167,43 @@ function renderVipPaymentsForm({ mode }) {
 
 function renderVipPaymentsCheckoutMock() {
     const s = vipPayments();
-    const def = s.methods.find(m => m.default) || s.methods[0];
     const orderTotal = '€ 240,00';
+
+    // Split: wallets up top, manual methods below. Within wallets,
+    // mark "device-detected" when applePayMock is on (simulación
+    // de la disponibilidad por SO) — sólo para Apple Pay como en el
+    // requisito original; Google/Samsung detectarían igual en su SO.
+    const wallets = s.methods.filter(m => vipPaymentIsWallet(m.type));
+    const manual  = s.methods.filter(m => !vipPaymentIsWallet(m.type));
+
+    // Preselection rule: priorizamos un wallet detectado en el SO;
+    // si no hay, caemos al método predeterminado.
+    const detectedWallet = state.vipPayments.applePayMock
+        ? wallets.find(w => w.type === 'apple-pay') || wallets[0]
+        : null;
+    const defaultMethod  = s.methods.find(m => m.default) || s.methods[0];
+    const preselectedId  = (detectedWallet && detectedWallet.id) || (defaultMethod && defaultMethod.id);
+
+    const renderRow = (m, opts = {}) => {
+        const meta = vipPaymentTypeMeta(m.type);
+        const selected = m.id === preselectedId;
+        const isWalletDetected = opts.detected;
+        return `
+            <button class="vip-pm-card ${selected ? 'is-selected' : ''} ${isWalletDetected ? 'vip-pm-applepay' : ''}">
+                <div class="vip-pm-icon pm-${m.type}">${meta.icon}</div>
+                <div class="vip-pm-info">
+                    <div class="vip-pm-title">${vipPaymentTitle(m)}</div>
+                    <div class="vip-pm-sub">${isWalletDetected
+                        ? 'Disponible en este dispositivo · 1 toque'
+                        : vipPaymentSubtitle(m)}</div>
+                    ${isWalletDetected
+                        ? '<div class="vip-pm-default-badge gold">Recomendado</div>'
+                        : (m.default ? '<div class="vip-pm-default-badge">Por defecto</div>' : '')}
+                </div>
+                <div class="vip-pm-radio ${selected ? 'on' : ''}">${selected ? VIP_I.check : ''}</div>
+            </button>
+        `;
+    };
 
     return `
         <div class="vip-pm-body">
@@ -4115,37 +4215,17 @@ function renderVipPaymentsCheckoutMock() {
 
             <div class="vip-pm-intro">Selecciona método de pago</div>
 
-            ${state.vipPayments.applePayMock ? `
-                <button class="vip-pm-card vip-pm-applepay">
-                    <div class="vip-pm-icon pm-apple">${VIP_I.applePay}</div>
-                    <div class="vip-pm-info">
-                        <div class="vip-pm-title">Apple Pay</div>
-                        <div class="vip-pm-sub">Disponible en este dispositivo · 1 toque</div>
-                    </div>
-                    <div class="vip-pm-default-badge gold">Recomendado</div>
-                </button>
-            ` : ''}
-
-            ${s.methods.map(m => {
-                const meta = vipPaymentTypeMeta(m.type);
-                const selected = m.id === def.id && !state.vipPayments.applePayMock;
-                return `
-                    <button class="vip-pm-card ${selected ? 'is-selected' : ''}">
-                        <div class="vip-pm-icon pm-${m.type}">${meta.icon}</div>
-                        <div class="vip-pm-info">
-                            <div class="vip-pm-title">${vipPaymentTitle(m)}</div>
-                            <div class="vip-pm-sub">${vipPaymentSubtitle(m)}</div>
-                            ${m.default ? '<div class="vip-pm-default-badge">Por defecto</div>' : ''}
-                        </div>
-                        <div class="vip-pm-radio ${selected ? 'on' : ''}">${selected ? VIP_I.check : ''}</div>
-                    </button>
-                `;
-            }).join('')}
+            ${wallets.map(m => renderRow(m, { detected: detectedWallet && m.id === detectedWallet.id })).join('')}
+            ${manual.map(m => renderRow(m)).join('')}
 
             <button class="vip-pm-action primary full" style="margin-top: 16px">
                 Pagar ${orderTotal}
             </button>
-            <div class="vip-pm-checkout-foot">Demo de checkout — el método pre-seleccionado es el predeterminado, salvo que Apple Pay esté disponible.</div>
+            <div class="vip-pm-checkout-foot">
+                ${detectedWallet
+                    ? `${vipPaymentTypeMeta(detectedWallet.type).label} se preselecciona porque está disponible en este dispositivo.`
+                    : 'Se preselecciona tu método predeterminado. Apple Pay / Google Pay / Samsung Pay se priorizarían si el SO los detectara configurados.'}
+            </div>
         </div>
     `;
 }
@@ -4730,6 +4810,9 @@ function handleVipPaymentsClick(e) {
                     newM.ibanLast4 = (draft.iban || '').replace(/\s/g, '').slice(-4) || '0000';
                     newM.bic = draft.bic || '';
                     newM.bankName = draft.bankName || 'Cuenta bancaria';
+                } else if (vipPaymentIsWallet(type)) {
+                    newM.holder = draft.holder || VIP_PROFILE.name;
+                    newM.deviceLabel = draft.deviceLabel || 'Este dispositivo';
                 }
                 if (draft.default) {
                     methods.forEach(m => { m.default = false; });
@@ -4764,6 +4847,9 @@ function handleVipPaymentsClick(e) {
                                 m.ibanLast4 = digits.slice(-4);
                             }
                         }
+                    } else if (vipPaymentIsWallet(m.type)) {
+                        if (draft.holder      !== undefined) m.holder = draft.holder;
+                        if (draft.deviceLabel !== undefined) m.deviceLabel = draft.deviceLabel;
                     }
                     if (draft.default) {
                         methods.forEach(x => { x.default = (x.id === m.id); });

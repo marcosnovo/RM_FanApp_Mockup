@@ -1213,5 +1213,12 @@ const VIP_PAYMENT_METHODS = [
         bic: 'BSCHESMM',
         bankName: 'Banco Santander',
         default: false
+    },
+    {
+        id: 'pm-004',
+        type: 'apple-pay',
+        holder: 'Marcos Novo Acuses',
+        deviceLabel: 'iPhone 14 Pro de Marcos',
+        default: false
     }
 ];

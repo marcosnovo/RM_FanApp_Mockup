@@ -906,10 +906,12 @@ register('vip.payments.management', {
         'Para cada método: tipo (VISA, PayPal, Cuenta bancaria…), información identificativa (últimos 4, titular), botón Edit',
         'Indicador visual claro del método predeterminado',
         'Botón persistente "Add payment method"',
-        'Métodos soportados: tarjeta de débito/crédito, PayPal y cuenta bancaria',
+        'Métodos soportados: tarjeta de débito/crédito, PayPal, cuenta bancaria y wallets de móvil (Apple Pay, Google Pay, Samsung Pay)',
+        'Los wallets de móvil son métodos de primera clase: se guardan, se editan, se ponen como predeterminados igual que el resto',
         // 3. Añadir
-        'Selector de tipo al pulsar "Add payment method"',
+        'Selector de tipo al pulsar "Add payment method", agrupado en dos secciones: "Wallets del dispositivo" (Apple/Google/Samsung Pay) y "Otros métodos" (tarjeta, PayPal, banco)',
         'Formulario adaptado al método elegido (campos: titular, número de tarjeta, MM/YY, CVV, dirección de facturación; equivalentes para PayPal y banco)',
+        'Para wallets de móvil, el "formulario" se reduce a confirmar el wallet detectado en el dispositivo, etiqueta de dispositivo opcional y nombre del titular',
         'Checkbox "Make it the default payment method"',
         'Botones "Add" (valida y guarda) y "Cancel" (descarta)',
         // 4. Editar / eliminar
@@ -917,10 +919,10 @@ register('vip.payments.management', {
         'Marcar como predeterminado desde la edición',
         'Eliminar el método con botón "Remove"',
         // 5. Checkout
-        'Selector de métodos de pago en el checkout de la app VIP',
-        'Detección dinámica en frontend de Apple Pay (iOS) y Google Pay (Android) usando las APIs nativas',
-        'Si están disponibles y configurados, se muestran como opción destacada',
-        'El método predeterminado del usuario se preselecciona, salvo que Apple/Google Pay estén disponibles, en cuyo caso se priorizan'
+        'Selector de métodos de pago en el checkout de la app VIP con wallets agrupados arriba y métodos manuales debajo',
+        'Detección dinámica en frontend de Apple Pay (iOS), Google Pay (Android) y Samsung Pay (dispositivos Samsung) usando las APIs nativas',
+        'Si un wallet guardado por el usuario coincide con uno detectado en el SO, se marca con badge "Recomendado" en gold y se preselecciona',
+        'Si no hay wallet detectado, se preselecciona el método marcado como predeterminado'
     ],
     outOfScope: [
         'Métodos no listados (Bizum, criptomonedas, etc.) en v1',
@@ -932,6 +934,8 @@ register('vip.payments.management', {
         'Como palquista, quiero guardar mis métodos de pago para no introducirlos cada vez que compro.',
         'Como palquista, quiero marcar uno como predeterminado para que se seleccione solo en el checkout.',
         'Como palquista en iPhone, quiero pagar con Apple Pay para confirmar en un toque.',
+        'Como palquista en Android, quiero pagar con Google Pay o Samsung Pay según mi marca de teléfono.',
+        'Como palquista, quiero ver mis wallets de móvil agrupados juntos, separados de los métodos clásicos, para encontrarlos rápido.',
         'Como palquista, quiero eliminar un método antiguo cuando cambie de banco.',
         'Como palquista, quiero ver claramente cuál es mi método predeterminado en la lista.'
     ],
@@ -940,7 +944,8 @@ register('vip.payments.management', {
         'La pantalla muestra todos los métodos guardados con tipo, información identificativa y botón Edit.',
         'El método predeterminado lleva una marca visual diferenciada (badge "Por defecto" en gold).',
         'El botón "Add payment method" siempre está visible al final de la lista.',
-        'Se pueden añadir métodos de tipo: tarjeta de débito/crédito, PayPal y cuenta bancaria.',
+        'Se pueden añadir métodos de tipo: tarjeta de débito/crédito, PayPal, cuenta bancaria, Apple Pay, Google Pay y Samsung Pay.',
+        'El selector de tipo agrupa los métodos en dos secciones diferenciadas: "Wallets del dispositivo" y "Otros métodos".',
         'El formulario de tarjeta pide nombre del titular, número, MM/YY, CVV y dirección de facturación.',
         'El formulario incluye un checkbox "Make it the default payment method".',
         'Al pulsar "Add" se valida el formulario; si pasa, el método se guarda y se vuelve a la lista.',

@@ -950,6 +950,28 @@ registerFlow('vip.payments.management', {
             ]
         },
         {
+            label: 'Añadir Apple Pay como método',
+            steps: [
+                { caption: '1 · Selector con wallets agrupados',  async run() {
+                    state.vipPayments.screen = 'add-type';
+                    state.vipPayments.addType = null;
+                    state.vipPayments.draft = {};
+                } },
+                { caption: '2 · Apple Pay detectado en el iPhone', async run() {
+                    state.vipPayments.addType = 'apple-pay';
+                    state.vipPayments.draft = {
+                        holder: 'Marcos Novo Acuses',
+                        deviceLabel: 'iPhone 14 Pro de Marcos',
+                        default: false
+                    };
+                    state.vipPayments.screen = 'add-form';
+                } },
+                { caption: '3 · "Make it default" activado',     async run() {
+                    state.vipPayments.draft = { ...state.vipPayments.draft, default: true };
+                } }
+            ]
+        },
+        {
             label: 'Editar y eliminar un método existente',
             steps: [
                 { caption: '1 · Pulsar Edit en la VISA por defecto', async run() {
