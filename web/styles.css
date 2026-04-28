@@ -4213,43 +4213,64 @@ body.resizing-side * {
     padding: 14px 20px;
     font-size: 14.5px;
     color: var(--vip-text);
+    /* When the row is a <button> (interactive), reset the defaults so
+       it looks identical to the legacy <div> rows. */
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease;
 }
+.vip-perfil-toggle-row:hover { background: rgba(255, 255, 255, 0.02); }
+.vip-perfil-toggle-row:active { opacity: 0.92; }
+
+/* Same reset for menu rows that are now buttons (Mis pedidos, etc.) */
+.vip-perfil-card .vip-perfil-menu-row {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease;
+}
+.vip-perfil-card .vip-perfil-menu-row:hover { color: var(--vip-text); opacity: 0.85; }
 
 .vip-toggle {
+    /* DEFAULT = OFF: dark grey track with knob on the left.
+       Add `.on` for the cream/champagne ON state (matches Figma). */
     width: 52px;
     height: 30px;
-    /* ON: cream/champagne track with a deep navy knob (pushed right).
-       Matches the Figma "Notificaciones" and "Biometría" toggles. */
-    background: linear-gradient(180deg, #E5D4B0 0%, #B69C74 100%);
+    background: rgba(255, 255, 255, 0.12);
     border-radius: 16px;
     position: relative;
     cursor: pointer;
     transition: background 0.18s;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    flex-shrink: 0;
+    display: inline-block;
 }
-
 .vip-toggle::after {
     content: '';
     position: absolute;
     top: 3px;
-    right: 3px;
+    left: 3px;
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--vip-bg);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-    transition: left 0.18s, right 0.18s, background 0.18s;
-}
-
-.vip-toggle.off {
-    background: rgba(255, 255, 255, 0.12);
-    box-shadow: none;
-}
-
-.vip-toggle.off::after {
-    left: 3px;
-    right: auto;
     background: #9FA2AE;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    transition: left 0.18s, background 0.18s;
+}
+.vip-toggle.on {
+    background: linear-gradient(180deg, #E5D4B0 0%, #B69C74 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.vip-toggle.on::after {
+    left: 25px;
+    background: var(--vip-bg);
 }
 
 .vip-perfil-divider {
@@ -11558,6 +11579,479 @@ body.auth-mode .app-layout { visibility: hidden; }
     line-height: 1.45;
     padding: 4px 6px 0;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   VIP Profile · toasts, confirmation modals, sub-screens,
+   language sheet, terms screen, login mock, gestión de autorizados
+   ════════════════════════════════════════════════════════════════ */
+
+/* Toast banner — fixed at the top of the phone screen, auto-dismiss */
+.vip-toast {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 56px;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1a3320;
+    background: linear-gradient(180deg, #b6e7be 0%, #8ad0a0 100%);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    animation: vipToastIn 0.22s ease-out;
+}
+.vip-toast-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #1f6c33;
+    color: #fff;
+    flex-shrink: 0;
+}
+.vip-toast-check > svg { width: 11px !important; height: 11px !important; }
+.vip-toast-err { background: linear-gradient(180deg, #f5b9b9, #e89090); color: #5a1a1a; }
+.vip-toast-err .vip-toast-check { background: #8a2929; }
+@keyframes vipToastIn {
+    from { transform: translateY(-12px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+
+/* Backdrop scoped to the profile sheet (NOT global) — stays inside the
+   phone frame so it doesn't dim the side panel. */
+.vip-overlay-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 60;
+}
+
+/* iOS-style centered confirmation card (biometry off, eliminar usuario, cerrar sesión) */
+.vip-confirm-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 56px);
+    max-width: 320px;
+    background: var(--vip-bg-2);
+    border: 1px solid var(--vip-card-border);
+    border-radius: 18px;
+    padding: 22px 22px 16px;
+    z-index: 70;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.vip-confirm-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(201, 163, 110, 0.15);
+    color: var(--vip-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+.vip-confirm-icon > svg { width: 26px !important; height: 26px !important; }
+.vip-confirm-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--vip-text);
+}
+.vip-confirm-body {
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--vip-text-secondary);
+    padding: 0 4px;
+}
+.vip-confirm-cta {
+    width: 100%;
+    margin-top: 10px;
+    height: 44px;
+    border-radius: 22px;
+    border: 0;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.vip-confirm-secondary {
+    width: 100%;
+    height: 40px;
+    border-radius: 20px;
+    background: transparent;
+    color: var(--vip-text-secondary);
+    border: 0;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+.vip-confirm-secondary:hover { color: var(--vip-text); }
+
+/* ── Selector de idioma · bottom sheet ──────────────────────── */
+.vip-language-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--vip-bg-2);
+    border-radius: 18px 18px 0 0;
+    z-index: 70;
+    padding: 6px 18px 22px;
+    display: flex;
+    flex-direction: column;
+}
+.vip-language-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: var(--vip-text-tertiary);
+    text-transform: uppercase;
+    padding: 10px 4px 14px;
+    text-align: center;
+    border-bottom: 1px solid var(--vip-separator);
+}
+.vip-language-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 6px;
+    background: transparent;
+    border: 0;
+    color: var(--vip-text);
+    font-family: inherit;
+    font-size: 15px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--vip-separator);
+    text-align: left;
+}
+.vip-language-row:last-child { border-bottom: 0; }
+.vip-language-row.active { color: var(--vip-gold); font-weight: 600; }
+.vip-language-check {
+    width: 18px;
+    height: 18px;
+    color: var(--vip-gold);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.vip-language-check > svg { width: 16px !important; height: 16px !important; }
+
+/* ── Términos y condiciones · scrollable text ─────────────── */
+.vip-terminos-body {
+    padding: 12px 22px 32px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--vip-text-secondary);
+}
+.vip-terminos-body p { margin: 0 0 12px; }
+.vip-terminos-h {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--vip-text);
+    margin-top: 18px !important;
+    margin-bottom: 8px !important;
+}
+.vip-terminos-sub {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vip-text);
+    margin-top: 12px !important;
+    margin-bottom: 6px !important;
+}
+
+/* ── Login mock (post-logout destination) ─────────────────── */
+.vip-login-mock {
+    position: relative;
+    min-height: 100%;
+    background: var(--vip-bg);
+    padding: 64px 28px 40px;
+    color: var(--vip-text);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+}
+.vip-login-lang {
+    position: absolute;
+    top: 56px;
+    right: 22px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--vip-text-secondary);
+}
+.vip-login-crown {
+    width: 110px;
+    height: 110px;
+    color: var(--vip-gold);
+    margin: 32px 0 8px;
+}
+.vip-login-crown > svg { width: 100% !important; height: 100% !important; }
+.vip-login-title {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--vip-text);
+    margin-bottom: 10px;
+}
+.vip-login-input {
+    width: 100%;
+    height: 46px;
+    border-radius: 23px;
+    border: 1px solid var(--vip-gold-dark);
+    background: var(--vip-bg-3);
+    color: var(--vip-text-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+.vip-login-cta {
+    width: 100%;
+    height: 46px;
+    border-radius: 23px;
+    border: 0;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.vip-login-link {
+    background: transparent;
+    border: 0;
+    color: var(--vip-text-secondary);
+    font-family: inherit;
+    font-size: 12.5px;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+/* ── Gestión de autorizados ───────────────────────────────── */
+.vip-auth-empty {
+    margin: 0 16px;
+    padding: 60px 20px 40px;
+    background: var(--vip-card);
+    border: 1px solid var(--vip-card-border);
+    border-radius: 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+.vip-auth-empty-icon {
+    width: 96px;
+    height: 96px;
+    color: var(--vip-text-secondary);
+    opacity: 0.5;
+}
+.vip-auth-empty-icon > svg { width: 100% !important; height: 100% !important; }
+.vip-auth-empty-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vip-text-secondary);
+    line-height: 1.4;
+}
+
+.vip-auth-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px 0;
+}
+.vip-auth-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--vip-card);
+    border: 1px solid var(--vip-card-border);
+}
+.vip-auth-row-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.vip-auth-row-info .name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vip-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vip-auth-row-info .email {
+    font-size: 11.5px;
+    color: var(--vip-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vip-auth-row-trash {
+    background: transparent;
+    border: 0;
+    color: var(--vip-gold);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+.vip-auth-row-trash:hover { background: rgba(255, 255, 255, 0.04); }
+.vip-auth-row-trash > svg { width: 18px !important; height: 18px !important; }
+
+/* Sticky CTA at the bottom of the autorizados screen */
+.vip-auth-sticky-cta {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 14px 16px 18px;
+    background: linear-gradient(to top, var(--vip-bg) 60%, rgba(10, 11, 20, 0));
+    z-index: 50;
+}
+.vip-auth-add-btn {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 50px;
+    border-radius: 25px;
+    border: 0;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 14px rgba(201, 163, 110, 0.32);
+}
+.vip-auth-add-btn.is-disabled {
+    background: var(--vip-bg-3);
+    color: var(--vip-text-tertiary);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+.vip-auth-add-btn > svg { width: 16px !important; height: 16px !important; color: currentColor; }
+.vip-auth-sticky-foot {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--vip-text-tertiary);
+}
+
+/* Add user bottom sheet */
+.vip-auth-add-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--vip-bg-2);
+    border-radius: 18px 18px 0 0;
+    z-index: 70;
+    padding: 14px 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.vip-auth-add-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--vip-separator);
+    padding-bottom: 10px;
+}
+.vip-auth-add-x {
+    background: transparent;
+    border: 0;
+    color: var(--vip-text);
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.vip-auth-add-x > svg { width: 16px !important; height: 16px !important; }
+.vip-auth-add-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vip-text);
+    flex: 1;
+    text-align: center;
+}
+.vip-auth-add-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 4px;
+}
+.vip-auth-input {
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--vip-card-border);
+    background: var(--vip-bg-3);
+    color: var(--vip-text);
+    font-family: inherit;
+    font-size: 14px;
+    padding: 0 14px;
+}
+.vip-auth-input:focus {
+    outline: none;
+    border-color: var(--vip-gold-dark);
+}
+.vip-auth-input::placeholder { color: var(--vip-text-tertiary); }
+.vip-auth-confirm {
+    margin-top: 4px;
+    height: 46px;
+    border-radius: 23px;
+    border: 0;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 14px rgba(201, 163, 110, 0.32);
+}
+.vip-auth-confirm.is-disabled {
+    background: var(--vip-bg-3);
+    color: var(--vip-text-tertiary);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+.vip-auth-legal {
+    font-size: 10.5px;
+    color: var(--vip-text-tertiary);
+    line-height: 1.55;
+    margin-top: 4px;
+}
+.vip-auth-legal-link { color: var(--vip-gold); text-decoration: underline; }
 
 /* ── Wallet detected block (Apple/Google/Samsung Pay forms) ─── */
 .vip-pm-wallet-block {

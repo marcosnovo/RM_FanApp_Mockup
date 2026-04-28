@@ -1168,10 +1168,13 @@ const VIP_FAQS = [
 
 // ── VIP authorized users (Gestión de autorizados) ───────────────
 const VIP_AUTH_USERS = [
-    { name: 'Javier Legends',    email: 'sansegundoj.1996@gmail.com' },
-    { name: 'Rocio',             email: 'rocio.m.m.alaya@gmail.com' },
-    { name: 'Marcos Platinum',   email: 'marcosnovo+platinum@gmail.com' }
+    { id: 'au-001', name: 'Javier Legends',    email: 'sansegundoj.1996@gmail.com' },
+    { id: 'au-002', name: 'Rocio',             email: 'rocio.m.m.alaya@gmail.com' },
+    { id: 'au-003', name: 'Marcos Platinum',   email: 'marcosnovo+platinum@gmail.com' }
 ];
+
+// Maximum number of authorized users a VIP can register at the same time.
+const VIP_AUTH_MAX = 3;
 
 // ── VIP profile ─────────────────────────────────────────────────
 const VIP_PROFILE = {

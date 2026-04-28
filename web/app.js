@@ -60,8 +60,28 @@ const state = {
     vipRestaurantId: null,        // null = no sheet; id = open
     vipHoursExpanded: false,
     vipPerfilOpen: false,
-    vipPerfilSub: 'main',         // 'main' | 'pedidos' | 'autorizados'
+    vipPerfilSub: 'main',         // 'main' | 'pedidos' | 'autorizados' | 'idioma' | 'terminos' | 'login-mock'
     vipPalcoSheetOpen: false,     // toggled by the PALCO 4101 ▾ pill in the top bar
+
+    // Profile settings (defaults match the Figma: notifications off, biometry on)
+    vipNotifications: false,
+    vipBiometry: true,
+    vipBiometryConfirmOpen: false,    // confirm modal when disabling biometry
+    vipLanguage: 'es',                // 'es' | 'en'
+    vipLanguageSheetOpen: false,      // bottom sheet "Selecciona idioma"
+    vipLogoutConfirmOpen: false,      // overlay "Va a cerrar su sesión"
+
+    // Authorized users (Gestión de autorizados)
+    vipAuthorized: {
+        users: null,                  // lazy-init from VIP_AUTH_USERS seed
+        addOpen: false,               // bottom sheet "Añadir usuario autorizado"
+        addDraft: { name: '', email: '' },
+        removeId: null                // confirm modal: id of user being removed
+    },
+
+    // Transient toast at the top of the phone screen
+    // (auto-dismisses after ~2.5s via setTimeout). { msg, kind: 'ok' | 'err' }
+    vipToast: null,
 
     // Payment methods (flag 'vip.payments.management')
     vipPayments: {
@@ -2566,6 +2586,9 @@ const VIP_I = {
     applePay: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 11.6c0-2 1.6-2.9 1.7-3-1-1.4-2.4-1.6-2.9-1.6-1.3-.1-2.5.7-3.2.7-.7 0-1.7-.7-2.8-.7-1.4 0-2.7.8-3.5 2.1-1.5 2.6-.4 6.4 1.1 8.6.7 1 1.6 2.2 2.7 2.2 1.1 0 1.5-.7 2.8-.7 1.3 0 1.7.7 2.8.7 1.2 0 1.9-1 2.6-2 .7-1 1-2 1-2.1-.1 0-2.3-.9-2.3-3.2zm-2-5.6c.6-.7.9-1.7.8-2.7-.8 0-1.8.6-2.4 1.3-.5.6-1 1.6-.8 2.6.9.1 1.8-.5 2.4-1.2z"/></svg>`,
     googlePay: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.6 13.4v3h4.2c-.2 1-.7 1.9-1.6 2.5l2.6 2c1.5-1.4 2.4-3.5 2.4-6 0-.6 0-1.1-.1-1.6h-7.5z"/><path d="M5.7 13.5l-.6.5-2 1.5c1.3 2.5 3.9 4.3 6.9 4.3 2.1 0 3.9-.7 5.2-1.9l-2.6-2c-.7.5-1.6.8-2.6.8-2 0-3.7-1.3-4.3-3.2z" opacity="0.85"/><path d="M3.1 8c-.6 1.2-.9 2.5-.9 4 0 1.5.3 2.8.9 4l2.6-2c-.2-.6-.3-1.3-.3-2 0-.7.1-1.4.3-2L3.1 8z" opacity="0.7"/><path d="M11.6 5.7c1.1 0 2.2.4 3 1.1l2.3-2.2C15.6 3.3 13.7 2.5 11.6 2.5 8.6 2.5 6 4.3 4.7 6.8L7.3 8.8c.6-1.9 2.3-3.1 4.3-3.1z" opacity="0.55"/></svg>`,
     samsungPay: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5.5 8.4c0-1.4 1-2.5 2.7-2.7 1.3-.2 2.6.1 3.7.6l-.4 1.6c-.9-.4-1.9-.6-2.8-.5-.6.1-1.1.5-1.1 1 0 .6.6 1 1.6 1.4 1.5.6 3.1 1.4 3.1 3.4 0 1.7-1.3 2.9-3.1 3.1-1.4.2-2.9-.1-4.1-.7l.4-1.7c1 .4 2.1.7 3.2.6.8-.1 1.4-.6 1.4-1.2 0-.7-.7-1.1-1.8-1.5-1.5-.6-2.8-1.3-2.8-3.4z"/><path d="M14.4 6h2l1.4 5.6h.1L19.3 6h2l-2.5 8.4c-.5 1.7-1.5 2.6-3.1 2.6-.5 0-1-.1-1.5-.2l.3-1.5c.3.1.6.2.9.2.7 0 1.1-.4 1.4-1.2l-2.4-8.3z"/></svg>`,
+    alertTriangle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 L22 20 H2 Z"/><path d="M12 10v5"/><circle cx="12" cy="18" r="0.8" fill="currentColor"/></svg>`,
+    crown: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="32" cy="32" r="28"/><path d="M16 26 L24 36 L32 20 L40 36 L48 26 L46 44 L18 44 Z" fill="currentColor"/><circle cx="22" cy="42" r="1.5" fill="#000"/><circle cx="32" cy="42" r="1.5" fill="#000"/><circle cx="42" cy="42" r="1.5" fill="#000"/></svg>`,
+    usersDuo: `<svg viewBox="0 0 64 64" fill="currentColor"><circle cx="22" cy="26" r="9"/><circle cx="42" cy="22" r="7" opacity="0.55"/><path d="M8 50 a14 10 0 0 1 28 0z"/><path d="M30 48 a12 9 0 0 1 24 0z" opacity="0.55"/></svg>`,
     pencil: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M13 5l6 6"/></svg>`,
     check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,12 10,17 19,7"/></svg>`
 };
@@ -3764,20 +3787,35 @@ function renderVipSheets() {
 }
 
 function renderVipPerfil() {
-    // If the user navigated into a payments sub-screen, render that
-    // instead of the main Profile content. Keeps the same sheet
-    // chrome (palco bar, header, close button).
+    // Sub-screens take over the entire profile sheet (each renders its
+    // own chrome). Order matters: payments first because it predates
+    // the rest and may be flag-gated.
     if (Flags.isEnabled('vip.payments.management') && state.vipPayments.screen) {
         return renderVipPaymentsScreen();
     }
+    if (state.vipPerfilSub === 'autorizados') return renderVipAuthorizedScreen();
+    if (state.vipPerfilSub === 'terminos')    return renderVipTerminosScreen();
+    if (state.vipPerfilSub === 'login-mock')  return renderVipLoginMock();
 
     const p = VIP_PROFILE;
     const paymentsRow = Flags.isEnabled('vip.payments.management') ? `
-        <div class="vip-perfil-menu-row" data-vip-action="open-payments">
+        <button class="vip-perfil-menu-row" data-vip-action="open-payments">
             <div class="ico-left">${VIP_I.creditCard}<span>Métodos de pago</span></div>
             ${VIP_I.chevronRight}
-        </div>
+        </button>
     ` : '';
+
+    const langLabel = state.vipLanguage === 'en' ? 'English' : 'Español';
+    const notiOn = !!state.vipNotifications;
+    const bioOn  = !!state.vipBiometry;
+
+    // Overlays rendered conditionally on top of the profile content.
+    const overlays = `
+        ${state.vipBiometryConfirmOpen ? renderVipBiometryConfirm() : ''}
+        ${state.vipLanguageSheetOpen   ? renderVipLanguageSheet()   : ''}
+        ${state.vipLogoutConfirmOpen   ? renderVipLogoutConfirm()   : ''}
+        ${state.vipToast               ? renderVipToast()           : ''}
+    `;
 
     return `
         <div class="vip-resto-sheet" style="top: 0; border-radius: 0; background: var(--vip-bg)">
@@ -3798,43 +3836,278 @@ function renderVipPerfil() {
                         ${p.pass}<br>
                         ${p.asientos}
                     </div>
-                    <div class="vip-perfil-menu-row">
+                    <button class="vip-perfil-menu-row">
                         <div class="ico-left">${VIP_I.history}<span>Mis pedidos</span></div>
                         ${VIP_I.chevronRight}
-                    </div>
-                    <div class="vip-perfil-menu-row">
+                    </button>
+                    <button class="vip-perfil-menu-row" data-vip-action="open-authorized">
                         <div class="ico-left">${VIP_I.plus}<span>Gestión de autorizados</span></div>
                         ${VIP_I.chevronRight}
-                    </div>
+                    </button>
                     ${paymentsRow}
                 </div>
 
-                <div class="vip-perfil-toggle-row">
+                <button class="vip-perfil-toggle-row" data-vip-action="toggle-notifications">
                     <span>Notificaciones</span>
-                    <div class="vip-toggle"></div>
-                </div>
+                    <span class="vip-toggle ${notiOn ? 'on' : ''}"></span>
+                </button>
                 <div class="vip-perfil-divider"></div>
-                <div class="vip-perfil-toggle-row">
+                <button class="vip-perfil-toggle-row" data-vip-action="toggle-biometry">
                     <span>Biometría</span>
-                    <div class="vip-toggle"></div>
-                </div>
+                    <span class="vip-toggle ${bioOn ? 'on' : ''}"></span>
+                </button>
                 <div class="vip-perfil-divider"></div>
-                <div class="vip-perfil-toggle-row">
+                <button class="vip-perfil-toggle-row" data-vip-action="open-language">
                     <span>Idioma de la app</span>
-                    <span style="color: var(--vip-gold)">Español</span>
-                </div>
+                    <span style="color: var(--vip-gold)">${langLabel}</span>
+                </button>
                 <div class="vip-perfil-divider"></div>
-                <div class="vip-perfil-toggle-row">
+                <button class="vip-perfil-toggle-row" data-vip-action="open-terminos">
                     <span>Términos y condiciones</span>
                     <span></span>
-                </div>
+                </button>
                 <div class="vip-perfil-divider"></div>
-                <div class="vip-perfil-toggle-row">
+                <button class="vip-perfil-toggle-row" data-vip-action="open-logout">
                     <span>Cerrar sesión</span>
                     <span style="color: var(--vip-gold)">↗</span>
-                </div>
+                </button>
                 <div style="padding: 20px; font-size: 11px; color: var(--vip-text-tertiary); text-align: right">1.0.19 (76)</div>
             </div>
+            ${overlays}
+        </div>
+    `;
+}
+
+// ════════════════════════════════════════════════════════════════
+// VIP Profile · sub-screens, sheets, modals and toast
+// ════════════════════════════════════════════════════════════════
+
+function renderVipToast() {
+    const t = state.vipToast;
+    if (!t) return '';
+    return `
+        <div class="vip-toast vip-toast-${t.kind || 'ok'}">
+            <span class="vip-toast-check">${VIP_I.check}</span>
+            <span>${t.msg}</span>
+        </div>
+    `;
+}
+
+function vipShowToast(msg, kind) {
+    if (state._vipToastTimer) clearTimeout(state._vipToastTimer);
+    state.vipToast = { msg, kind: kind || 'ok' };
+    render();
+    state._vipToastTimer = setTimeout(() => {
+        state.vipToast = null;
+        state._vipToastTimer = null;
+        render();
+    }, 2500);
+}
+
+// ── Biometry · disable confirmation modal ───────────────────────
+function renderVipBiometryConfirm() {
+    return `
+        <div class="vip-sheet-backdrop vip-overlay-backdrop" data-vip-action="cancel-biometry"></div>
+        <div class="vip-confirm-card">
+            <div class="vip-confirm-title">¿Está seguro que quiere desactivar la biometría?</div>
+            <div class="vip-confirm-body">La próxima vez que inicie sesión tendrá que introducir el usuario y la contraseña.</div>
+            <button class="vip-confirm-cta" data-vip-action="confirm-biometry-off">Sí, desactivar biometría</button>
+            <button class="vip-confirm-secondary" data-vip-action="cancel-biometry">No, mantener biometría</button>
+        </div>
+    `;
+}
+
+// ── Language · bottom sheet ─────────────────────────────────────
+function renderVipLanguageSheet() {
+    const langs = [
+        { code: 'es', label: 'Español' },
+        { code: 'en', label: 'English' }
+    ];
+    return `
+        <div class="vip-sheet-backdrop vip-overlay-backdrop" data-vip-action="close-language"></div>
+        <div class="vip-language-sheet">
+            <div class="vip-picker-grabber"></div>
+            <div class="vip-language-title">Selecciona idioma</div>
+            ${langs.map(l => `
+                <button class="vip-language-row ${state.vipLanguage === l.code ? 'active' : ''}"
+                        data-vip-action="pick-language" data-vip-lang="${l.code}">
+                    <span>${l.label}</span>
+                    <span class="vip-language-check">${state.vipLanguage === l.code ? VIP_I.check : ''}</span>
+                </button>
+            `).join('')}
+        </div>
+    `;
+}
+
+// ── Términos y condiciones · full sub-screen ────────────────────
+function renderVipTerminosScreen() {
+    return `
+        <div class="vip-resto-sheet" style="top: 0; border-radius: 0; background: var(--vip-bg)">
+            <div class="vip-resto-scroll" style="padding: 0 0 40px">
+                <div class="vip-palco-bar" style="position: static">
+                    <div class="vip-palco-label">PALCO 4101 ${VIP_I.chevronDown}</div>
+                </div>
+                <div class="vip-perfil-head">
+                    <button class="vip-back-btn" data-vip-action="perfil-back">${I.chevronLeft}</button>
+                    <div class="vip-perfil-title" style="flex:1; text-align:center">Términos y condiciones</div>
+                    <button class="vip-perfil-close" data-vip-perfil-close>${VIP_I.xmark}</button>
+                </div>
+                <div class="vip-terminos-body">
+                    <p class="vip-terminos-h">1. Lorem ipsum sit amet</p>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam sed dictum nulla, vitae blandit dui. Etiam sed dictum nulla, vitae blandit dui. Curabitur tristique velit a tortor convallis aliquam. Praesent et nibh sed lacus rutrum congue. Phasellus euismod consequat fringilla.</p>
+                    <p>Sed semper, nisi ac vehicula sodales, nibh velit luctus quam, sed condimentum erat lectus eu nibh. Aenean dictum mauris in nulla mollis, sit amet posuere ipsum convallis.</p>
+                    <p class="vip-terminos-h">2. Adipiscing elit sapien</p>
+                    <p class="vip-terminos-sub">2.1 General</p>
+                    <p>Quisque eu pharetra orci. Maecenas convallis condimentum lectus, vel viverra erat porta nec. Donec viverra purus eget tortor blandit, vel posuere lacus blandit. Vivamus vehicula, leo a sodales semper, mauris turpis condimentum lectus, sed congue diam ipsum vel ipsum. Curabitur tincidunt, justo nec mattis luctus, dolor velit luctus odio, in convallis turpis nisi vel mauris. Sed semper aliquet ipsum.</p>
+                    <p>Curabitur tincidunt, justo nec mattis luctus, dolor velit luctus odio, in convallis turpis nisi vel mauris. Vivamus vehicula leo a sodales semper.</p>
+                    <p class="vip-terminos-sub">2.2 Política de datos</p>
+                    <p>Sed semper aliquet ipsum, in dictum quam. Sed condimentum erat lectus eu nibh. Aenean dictum mauris in nulla mollis. Curabitur tristique velit a tortor convallis aliquam.</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ── Cerrar sesión · confirmation overlay ────────────────────────
+function renderVipLogoutConfirm() {
+    return `
+        <div class="vip-sheet-backdrop vip-overlay-backdrop" data-vip-action="cancel-logout"></div>
+        <div class="vip-confirm-card">
+            <div class="vip-confirm-icon">${VIP_I.alertTriangle || '⚠'}</div>
+            <div class="vip-confirm-title">Va a cerrar su sesión</div>
+            <div class="vip-confirm-body">¿Está seguro que desea cerrar su sesión?</div>
+            <button class="vip-confirm-cta" data-vip-action="confirm-logout">Cerrar sesión</button>
+            <button class="vip-confirm-secondary" data-vip-action="cancel-logout">Cancelar</button>
+        </div>
+    `;
+}
+
+// ── Login mock (post-logout destination) ────────────────────────
+function renderVipLoginMock() {
+    return `
+        <div class="vip-resto-sheet" style="top: 0; border-radius: 0; background: var(--vip-bg)">
+            <div class="vip-resto-scroll" style="padding: 0">
+                <div class="vip-login-mock">
+                    <div class="vip-login-lang">ES <span style="font-size: 10px">▾</span></div>
+                    <div class="vip-login-crown">${VIP_I.crown || '<svg viewBox="0 0 64 64" fill="currentColor"><circle cx="32" cy="32" r="28" stroke="currentColor" fill="none" stroke-width="2"/><path d="M16 28 L24 36 L32 22 L40 36 L48 28 L46 44 L18 44 Z"/></svg>'}</div>
+                    <div class="vip-login-title">App exclusiva para clientes<br>VIP de Real Madrid</div>
+                    <div class="vip-login-input">Email / Nº Socio / Nº Madridista</div>
+                    <button class="vip-login-cta" data-vip-action="dismiss-login-mock">Continuar</button>
+                    <button class="vip-login-link" data-vip-action="dismiss-login-mock">¿No puede acceder?</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ── Gestión de autorizados ──────────────────────────────────────
+function vipAuthorized() {
+    const s = state.vipAuthorized;
+    if (s.users === null) s.users = JSON.parse(JSON.stringify(VIP_AUTH_USERS));
+    return s;
+}
+
+function renderVipAuthorizedScreen() {
+    const s = vipAuthorized();
+    const users = s.users;
+    const isFull = users.length >= VIP_AUTH_MAX;
+
+    const body = users.length === 0
+        ? `
+            <div class="vip-auth-empty">
+                <div class="vip-auth-empty-icon">${VIP_I.usersDuo || `<svg viewBox="0 0 64 64" fill="currentColor"><circle cx="22" cy="26" r="9"/><circle cx="42" cy="22" r="7" opacity="0.7"/><path d="M8 50 a14 10 0 0 1 28 0z"/><path d="M30 48 a12 9 0 0 1 24 0z" opacity="0.7"/></svg>`}</div>
+                <div class="vip-auth-empty-text">Actualmente no hay<br>usuarios autorizados</div>
+            </div>
+        `
+        : `
+            <div class="vip-auth-list">
+                ${users.map(u => `
+                    <div class="vip-auth-row">
+                        <div class="vip-auth-row-info">
+                            <div class="name">${escapeHtml(u.name)}</div>
+                            <div class="email">${escapeHtml(u.email)}</div>
+                        </div>
+                        <button class="vip-auth-row-trash" data-vip-action="auth-ask-remove" data-vip-auth="${u.id}">
+                            ${VIP_I.trash}
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+    const overlays = `
+        ${s.addOpen   ? renderVipAuthAddSheet()    : ''}
+        ${s.removeId  ? renderVipAuthRemoveModal() : ''}
+        ${state.vipToast ? renderVipToast()        : ''}
+    `;
+
+    return `
+        <div class="vip-resto-sheet" style="top: 0; border-radius: 0; background: var(--vip-bg)">
+            <div class="vip-resto-scroll" style="padding: 0 0 110px">
+                <div class="vip-palco-bar" style="position: static">
+                    <div class="vip-palco-label">PALCO 4101 ${VIP_I.chevronDown}</div>
+                </div>
+                <div class="vip-perfil-head">
+                    <button class="vip-back-btn" data-vip-action="perfil-back">${I.chevronLeft}</button>
+                    <div class="vip-perfil-title" style="flex:1; text-align:center">Gestión de autorizados</div>
+                    <button class="vip-perfil-close" data-vip-perfil-close>${VIP_I.xmark}</button>
+                </div>
+                ${body}
+            </div>
+            <div class="vip-auth-sticky-cta">
+                <button class="vip-auth-add-btn ${isFull ? 'is-disabled' : ''}"
+                        ${isFull ? 'disabled' : `data-vip-action="auth-add-open"`}>
+                    ${VIP_I.plus}<span>Añadir usuario autorizado</span>
+                </button>
+                <div class="vip-auth-sticky-foot">Puede autorizar un máximo de ${VIP_AUTH_MAX} personas</div>
+            </div>
+            ${overlays}
+        </div>
+    `;
+}
+
+function renderVipAuthAddSheet() {
+    const d = state.vipAuthorized.addDraft || { name: '', email: '' };
+    const canConfirm = (d.name || '').trim().length > 0
+                    && /^\S+@\S+\.\S+$/.test((d.email || '').trim());
+    return `
+        <div class="vip-sheet-backdrop vip-overlay-backdrop" data-vip-action="auth-add-cancel"></div>
+        <div class="vip-auth-add-sheet">
+            <div class="vip-auth-add-head">
+                <button class="vip-auth-add-x" data-vip-action="auth-add-cancel">${VIP_I.xmark}</button>
+                <div class="vip-auth-add-title">Añadir usuario autorizado</div>
+                <div style="width: 24px"></div>
+            </div>
+            <div class="vip-auth-add-body">
+                <input type="text" class="vip-auth-input" data-vip-auth-field="name"
+                       value="${escapeHtml(d.name || '')}" placeholder="Nombre">
+                <input type="email" class="vip-auth-input" data-vip-auth-field="email"
+                       value="${escapeHtml(d.email || '')}" placeholder="Correo electrónico">
+                <button class="vip-auth-confirm ${canConfirm ? '' : 'is-disabled'}"
+                        ${canConfirm ? 'data-vip-action="auth-add-confirm"' : 'disabled'}>
+                    Confirmar
+                </button>
+                <div class="vip-auth-legal">
+                    Únicamente se le dará permiso para el producto actual.<br><br>
+                    Al facilitar datos personales de terceros, usted declara y garantiza que conforme a lo dispuesto en nuestra <a href="#" class="vip-auth-legal-link">Política de Privacidad</a>, cuenta con el consentimiento expreso de dichos terceros para proporcionar sus datos personales al Real Madrid con el fin de ser registrados como Usuarios autorizados en la presente APP.
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderVipAuthRemoveModal() {
+    const id = state.vipAuthorized.removeId;
+    const u = state.vipAuthorized.users.find(x => x.id === id);
+    if (!u) return '';
+    return `
+        <div class="vip-sheet-backdrop vip-overlay-backdrop" data-vip-action="auth-remove-cancel"></div>
+        <div class="vip-confirm-card">
+            <div class="vip-confirm-icon">${VIP_I.alertTriangle || '⚠'}</div>
+            <div class="vip-confirm-title">Eliminar acceso a producto</div>
+            <div class="vip-confirm-body">${escapeHtml(u.name)} dejará de tener acceso autorizado a este producto.</div>
+            <button class="vip-confirm-cta" data-vip-action="auth-remove-confirm">Aceptar</button>
+            <button class="vip-confirm-secondary" data-vip-action="auth-remove-cancel">Cancelar y volver</button>
         </div>
     `;
 }
@@ -4421,6 +4694,9 @@ function attachVipListeners() {
 
     // ── Payment methods (flag: vip.payments.management) ───────────
     attachVipPaymentsListeners();
+
+    // ── VIP Profile flows (always on, no flag) ────────────────────
+    attachVipProfileListeners();
 }
 
 // ── VIP multi-ticket share: single delegated click handler ───────
@@ -4890,6 +5166,196 @@ function guessCardBrand(num) {
     if (/^3[47]/.test(n))                       return 'American Express';
     if (/^6011|^65/.test(n))                    return 'Discover';
     return null;
+}
+
+// ────────────────────────────────────────────────────────────────
+// VIP Profile · delegated click + input handlers (always installed)
+// ────────────────────────────────────────────────────────────────
+let _vipProfileDelegateInstalled = false;
+
+function attachVipProfileListeners() {
+    if (_vipProfileDelegateInstalled) return;
+    document.addEventListener('click', handleVipProfileClick);
+    document.addEventListener('input', handleVipProfileInput);
+    _vipProfileDelegateInstalled = true;
+}
+
+function handleVipProfileClick(e) {
+    const target = e.target.closest('[data-vip-action]');
+    if (!target) return;
+    const action = target.dataset.vipAction;
+    if (!action) return;
+
+    switch (action) {
+        // ── Profile main · toggles + nav ──────────────────────────
+        case 'toggle-notifications': {
+            state.vipNotifications = !state.vipNotifications;
+            vipShowToast(state.vipNotifications
+                ? 'Notificaciones activadas'
+                : 'Notificaciones desactivadas');
+            return;
+        }
+        case 'toggle-biometry': {
+            // Turning OFF asks for confirmation; turning ON is silent.
+            if (state.vipBiometry) {
+                state.vipBiometryConfirmOpen = true;
+                render();
+            } else {
+                state.vipBiometry = true;
+                vipShowToast('Biometría activada');
+            }
+            return;
+        }
+        case 'cancel-biometry': {
+            state.vipBiometryConfirmOpen = false;
+            render();
+            return;
+        }
+        case 'confirm-biometry-off': {
+            state.vipBiometry = false;
+            state.vipBiometryConfirmOpen = false;
+            vipShowToast('Biometría desactivada');
+            return;
+        }
+
+        // ── Language sheet ────────────────────────────────────────
+        case 'open-language': {
+            state.vipLanguageSheetOpen = true;
+            render();
+            return;
+        }
+        case 'close-language': {
+            state.vipLanguageSheetOpen = false;
+            render();
+            return;
+        }
+        case 'pick-language': {
+            const code = target.dataset.vipLang;
+            const changed = code && code !== state.vipLanguage;
+            if (code) state.vipLanguage = code;
+            state.vipLanguageSheetOpen = false;
+            if (changed) {
+                vipShowToast(code === 'en' ? 'Language changed to English' : 'Idioma cambiado a Español');
+            } else {
+                render();
+            }
+            return;
+        }
+
+        // ── Términos sub-screen ───────────────────────────────────
+        case 'open-terminos': {
+            state.vipPerfilSub = 'terminos';
+            render();
+            return;
+        }
+        case 'perfil-back': {
+            // Back from any sub-screen to the main profile.
+            state.vipPerfilSub = 'main';
+            // Clear any leftover authorized state when leaving its screen.
+            if (state.vipAuthorized) {
+                state.vipAuthorized.addOpen = false;
+                state.vipAuthorized.removeId = null;
+                state.vipAuthorized.addDraft = { name: '', email: '' };
+            }
+            render();
+            return;
+        }
+
+        // ── Cerrar sesión ─────────────────────────────────────────
+        case 'open-logout': {
+            state.vipLogoutConfirmOpen = true;
+            render();
+            return;
+        }
+        case 'cancel-logout': {
+            state.vipLogoutConfirmOpen = false;
+            render();
+            return;
+        }
+        case 'confirm-logout': {
+            state.vipLogoutConfirmOpen = false;
+            // Mock destination: a login screen overlay. The dev-bypass
+            // session stays alive so "Continuar" returns to the app.
+            state.vipPerfilSub = 'login-mock';
+            render();
+            return;
+        }
+        case 'dismiss-login-mock': {
+            state.vipPerfilSub = 'main';
+            render();
+            return;
+        }
+
+        // ── Gestión de autorizados ────────────────────────────────
+        case 'open-authorized': {
+            vipAuthorized();
+            state.vipPerfilSub = 'autorizados';
+            render();
+            return;
+        }
+        case 'auth-add-open': {
+            state.vipAuthorized.addOpen = true;
+            state.vipAuthorized.addDraft = { name: '', email: '' };
+            render();
+            return;
+        }
+        case 'auth-add-cancel': {
+            state.vipAuthorized.addOpen = false;
+            state.vipAuthorized.addDraft = { name: '', email: '' };
+            render();
+            return;
+        }
+        case 'auth-add-confirm': {
+            const d = state.vipAuthorized.addDraft || {};
+            const name = (d.name || '').trim();
+            const email = (d.email || '').trim();
+            if (!name || !/^\S+@\S+\.\S+$/.test(email)) return;
+            const users = vipAuthorized().users;
+            users.push({ id: 'au-' + Date.now(), name, email });
+            state.vipAuthorized.addOpen = false;
+            state.vipAuthorized.addDraft = { name: '', email: '' };
+            vipShowToast('Usuario añadido correctamente');
+            return;
+        }
+        case 'auth-ask-remove': {
+            state.vipAuthorized.removeId = target.dataset.vipAuth;
+            render();
+            return;
+        }
+        case 'auth-remove-cancel': {
+            state.vipAuthorized.removeId = null;
+            render();
+            return;
+        }
+        case 'auth-remove-confirm': {
+            const id = state.vipAuthorized.removeId;
+            const users = vipAuthorized().users;
+            const idx = users.findIndex(u => u.id === id);
+            if (idx >= 0) users.splice(idx, 1);
+            state.vipAuthorized.removeId = null;
+            vipShowToast('Usuario eliminado correctamente');
+            return;
+        }
+    }
+}
+
+function handleVipProfileInput(e) {
+    if (!e.target.matches || !e.target.matches('[data-vip-auth-field]')) return;
+    const field = e.target.dataset.vipAuthField;
+    const d = state.vipAuthorized.addDraft || {};
+    state.vipAuthorized.addDraft = { ...d, [field]: e.target.value };
+    // Re-render only the Confirm button enabled state so we don't lose
+    // input focus.
+    const sheet = e.target.closest('.vip-auth-add-sheet');
+    if (!sheet) return;
+    const btn = sheet.querySelector('.vip-auth-confirm');
+    if (!btn) return;
+    const draft = state.vipAuthorized.addDraft;
+    const ok = (draft.name || '').trim().length > 0
+            && /^\S+@\S+\.\S+$/.test((draft.email || '').trim());
+    btn.classList.toggle('is-disabled', !ok);
+    if (ok) btn.removeAttribute('disabled');
+    else    btn.setAttribute('disabled', '');
 }
 
 function commitPickerAssignment() {
