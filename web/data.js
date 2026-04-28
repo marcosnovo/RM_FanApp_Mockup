@@ -1225,3 +1225,149 @@ const VIP_PAYMENT_METHODS = [
         default: false
     }
 ];
+
+// ════════════════════════════════════════════════════════════════
+// VIP MATCH DETAIL — flag `vip.match.detail`
+// ────────────────────────────────────────────────────────────────
+// Mock data for the "match detail" navigation off the Inicio home
+// match module. Keyed by VIP_EVENTS.id so each VIP event can carry
+// its own line-up, stats, key events and highlight clips.
+// ════════════════════════════════════════════════════════════════
+
+const VIP_MATCH_DETAIL_BY_EVENT = {
+    1: {
+        // Real Madrid vs Alavés — pre-match (status: upcoming)
+        status: 'finished',                  // 'upcoming' | 'live' | 'finished'
+        minute: '90+3',                      // for live / finished
+        homeScore: 2,
+        awayScore: 1,
+        homeScorers: ["Mbappé 18'", "Bellingham 73'"],
+        awayScorers: ["Boyé 56'"],
+        possession: { home: 62, away: 38 },
+        stats: [
+            { label: 'Posesión',           home: 62, away: 38, isPercent: true  },
+            { label: 'Tiros totales',      home: 18, away: 7,  isPercent: false },
+            { label: 'Tiros a puerta',     home: 8,  away: 3,  isPercent: false },
+            { label: 'Córners',            home: 9,  away: 2,  isPercent: false },
+            { label: 'Faltas',             home: 8,  away: 14, isPercent: false },
+            { label: 'Fuera de juego',     home: 2,  away: 1,  isPercent: false },
+            { label: 'Tarjetas amarillas', home: 1,  away: 3,  isPercent: false },
+            { label: 'Pases completados',  home: 543, away: 312, isPercent: false },
+            { label: 'Precisión de pase',  home: 91, away: 78, isPercent: true  }
+        ],
+        // 11 vs 11 in 4-3-3 / 4-4-2 (mock).
+        lineups: {
+            home: {
+                formation: '4-3-3',
+                coach: 'Carlo Ancelotti',
+                starters: [
+                    { num: 1,  name: 'Courtois',   pos: 'POR' },
+                    { num: 2,  name: 'Carvajal',   pos: 'DEF' },
+                    { num: 3,  name: 'Militão',    pos: 'DEF' },
+                    { num: 4,  name: 'Alaba',      pos: 'DEF' },
+                    { num: 23, name: 'Mendy',      pos: 'DEF' },
+                    { num: 8,  name: 'Kroos',      pos: 'MED' },
+                    { num: 5,  name: 'Bellingham', pos: 'MED' },
+                    { num: 15, name: 'Valverde',   pos: 'MED' },
+                    { num: 7,  name: 'Vinicius',   pos: 'DEL' },
+                    { num: 9,  name: 'Mbappé',     pos: 'DEL' },
+                    { num: 11, name: 'Rodrygo',    pos: 'DEL' }
+                ],
+                bench: [
+                    { num: 13, name: 'Lunin',  pos: 'POR' },
+                    { num: 6,  name: 'Nacho',  pos: 'DEF' },
+                    { num: 10, name: 'Modric', pos: 'MED' },
+                    { num: 14, name: 'Tchouaméni', pos: 'MED' }
+                ]
+            },
+            away: {
+                formation: '4-4-2',
+                coach: 'Eduardo Coudet',
+                starters: [
+                    { num: 1,  name: 'Sivera',     pos: 'POR' },
+                    { num: 23, name: 'Tenaglia',   pos: 'DEF' },
+                    { num: 4,  name: 'Mouriño',    pos: 'DEF' },
+                    { num: 18, name: 'Sedlar',     pos: 'DEF' },
+                    { num: 3,  name: 'Diarra',     pos: 'DEF' },
+                    { num: 8,  name: 'Guidetti',   pos: 'MED' },
+                    { num: 24, name: 'Blanco',     pos: 'MED' },
+                    { num: 17, name: 'Rebbach',    pos: 'MED' },
+                    { num: 14, name: 'Aleñá',      pos: 'MED' },
+                    { num: 10, name: 'Kike',       pos: 'DEL' },
+                    { num: 9,  name: 'Boyé',       pos: 'DEL' }
+                ],
+                bench: [
+                    { num: 13, name: 'Owono',     pos: 'POR' },
+                    { num: 5,  name: 'Marín',     pos: 'DEF' },
+                    { num: 21, name: 'Stoichkov', pos: 'DEL' }
+                ]
+            }
+        },
+        // Chronological list of in-game events.
+        events: [
+            { minute: 18, side: 'home', kind: 'goal',    player: 'Mbappé',      detail: 'Asist. Bellingham' },
+            { minute: 27, side: 'away', kind: 'yellow',  player: 'Tenaglia',    detail: 'Falta táctica' },
+            { minute: 45, side: 'home', kind: 'yellow',  player: 'Valverde',    detail: 'Falta sobre Aleñá' },
+            { minute: 56, side: 'away', kind: 'goal',    player: 'Boyé',        detail: 'Centro de Rebbach' },
+            { minute: 64, side: 'home', kind: 'sub',     player: 'Modric',      detail: 'Sale Kroos' },
+            { minute: 71, side: 'away', kind: 'yellow',  player: 'Mouriño',     detail: 'Falta sobre Mbappé' },
+            { minute: 73, side: 'home', kind: 'goal',    player: 'Bellingham',  detail: 'De cabeza · Asist. Vinicius' },
+            { minute: 82, side: 'away', kind: 'sub',     player: 'Stoichkov',   detail: 'Sale Kike' },
+            { minute: 88, side: 'away', kind: 'yellow',  player: 'Blanco',      detail: 'Pérdida de tiempo' }
+        ],
+        // Highlight clips (mock — using gradient placeholders).
+        highlights: [
+            { id: 'h1', title: 'Gol de Mbappé',      duration: '0:38', minute: 18, kind: 'goal',  c1: '#3a2978', c2: '#1b1244' },
+            { id: 'h2', title: 'Gol de Boyé',        duration: '0:42', minute: 56, kind: 'goal',  c1: '#0a3a1a', c2: '#04140a' },
+            { id: 'h3', title: 'Gol de Bellingham',  duration: '0:51', minute: 73, kind: 'goal',  c1: '#5a4380', c2: '#28184a' },
+            { id: 'h4', title: 'Parada de Courtois', duration: '0:24', minute: 62, kind: 'save',  c1: '#1b3a72', c2: '#0a1a38' },
+            { id: 'h5', title: 'Tiro al palo Vinicius', duration: '0:18', minute: 38, kind: 'shot', c1: '#291447', c2: '#130a22' },
+            { id: 'h6', title: 'Resumen del partido', duration: '4:12', minute: null, kind: 'summary', c1: '#0f2145', c2: '#06101f' }
+        ],
+        summary: {
+            heading: 'El Madrid se gusta en el Bernabéu',
+            paragraphs: [
+                'El Real Madrid se llevó los tres puntos con autoridad gracias a un gran primer tiempo que abrió Mbappé al cuarto de hora, aprovechando una asistencia magistral de Bellingham.',
+                'El Alavés sorprendió en la segunda mitad con un tanto de Boyé tras un buen centro de Rebbach, pero el conjunto madridista respondió rápido con un cabezazo de Bellingham servido por Vinicius.',
+                'En los minutos finales el equipo de Ancelotti gestionó el balón y la ventaja sin sustos, dejando a los de Coudet sin opciones reales de empatar.'
+            ]
+        }
+    },
+    2: {
+        // Real Madrid vs Real Oviedo — upcoming
+        status: 'upcoming',
+        homeScore: null,
+        awayScore: null,
+        possession: null,
+        stats: [],
+        lineups: null,
+        events: [],
+        highlights: [],
+        summary: null
+    },
+    3: {
+        // Real Madrid vs Athletic — upcoming
+        status: 'upcoming',
+        homeScore: null,
+        awayScore: null,
+        possession: null,
+        stats: [],
+        lineups: null,
+        events: [],
+        highlights: [],
+        summary: null
+    }
+};
+
+// Aliases for the "Próximo evento" card (Bayern Múnich vs Real Madrid).
+// This event is not in VIP_EVENTS so we key it by a stable string id.
+const VIP_MATCH_DETAIL_NEXT = {
+    status: 'upcoming',
+    homeScore: null,
+    awayScore: null,
+    stats: [],
+    lineups: null,
+    events: [],
+    highlights: [],
+    summary: null
+};

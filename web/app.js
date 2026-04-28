@@ -129,6 +129,15 @@ const state = {
     // position. Matches native iOS "keep me where I was" behaviour.
     vipScrollPositions: { inicio: 0, eventos: 0, gestor: 0, perfil: 0 },
 
+    // Match detail navigation off the Inicio home (flag 'vip.match.detail').
+    // When `eventId` is set, the screen pushes a detail view with sub-tabs
+    // (resumen / estadísticas / alineaciones / repeticiones / eventos).
+    vipMatch: {
+        eventId: null,            // numeric id (matches VIP_EVENTS) or 'next' for the proximo card
+        tab: 'resumen',           // 'resumen' | 'stats' | 'lineups' | 'highlights' | 'events'
+        playingClipId: null       // when set → highlight player overlay open
+    },
+
     // Recipient web view (multi-share lote). Mirrors the App's reparto flow
     // for somebody who received >1 ticket and now needs to redistribute
     // them via the web link they got in their SMS / email.
@@ -2685,9 +2694,26 @@ function renderVipPalcoSheet() {
 }
 
 function renderVipInicio() {
+    // When match-detail is open, push the detail screen on top.
+    if (Flags.isEnabled('vip.match.detail') && state.vipMatch.eventId != null) {
+        return renderVipMatchDetail();
+    }
+
     const reco = VIP_EVENTS[0]; // "Real Madrid vs Alavés"
     const next = VIP_NEXT_EVENT;
     const rest = VIP_EVENTS.slice(1);
+
+    // When the flag is on, the home match modules become navigable.
+    const matchDetailOn = Flags.isEnabled('vip.match.detail');
+    const recoOpenAttr = matchDetailOn
+        ? `data-vip-action="open-match" data-vip-match-event="${reco.id}"`
+        : `data-vip-event-id="${reco.id}"`;
+    const proxOpenAttr = matchDetailOn
+        ? `data-vip-action="open-match" data-vip-match-event="next"`
+        : '';
+    const matchDetailHint = matchDetailOn
+        ? `<div class="vip-match-cta">${VIP_I.arrowRight}<span>Ver detalle del partido</span></div>`
+        : '';
 
     return `
         <div class="vip-screen-head">
@@ -2699,7 +2725,7 @@ function renderVipInicio() {
             Recomendado <small>para usted</small>
         </div>
 
-        <div class="vip-reco-card" data-vip-event-id="${reco.id}">
+        <div class="vip-reco-card ${matchDetailOn ? 'has-match-detail' : ''}" ${recoOpenAttr}>
             <div class="vip-reco-ball">${VIP_I.soccerBall}</div>
             <div class="vip-reco-teams">
                 <div class="vip-reco-crest">${bigCrestForVip(reco.home)}</div>
@@ -2708,9 +2734,10 @@ function renderVipInicio() {
             </div>
             <div class="vip-reco-title">${reco.home} vs ${reco.away}</div>
             <div class="vip-reco-meta">${reco.division}<br>${reco.date}<br>${reco.venue}</div>
+            ${matchDetailHint}
         </div>
 
-        <div class="vip-proximo">
+        <div class="vip-proximo ${matchDetailOn ? 'has-match-detail' : ''}" ${proxOpenAttr}>
             <div class="vip-proximo-ball">${VIP_I.soccerBall}</div>
             <div class="vip-proximo-teams">${next.home}<br>${next.away}</div>
             <div class="vip-proximo-center">
@@ -2719,6 +2746,7 @@ function renderVipInicio() {
                 <div class="vip-proximo-side-crest right">${bigCrestForVip(next.away)}</div>
             </div>
             <div class="vip-proximo-sub">${next.league}<br>${next.venue}</div>
+            ${matchDetailHint}
         </div>
 
         <div class="vip-section-title">
@@ -2767,6 +2795,337 @@ function renderVipInicio() {
         </div>
 
         <div style="height: 30px"></div>
+    `;
+}
+
+// ════════════════════════════════════════════════════════════════
+// VIP MATCH DETAIL — flag `vip.match.detail`
+// ────────────────────────────────────────────────────────────────
+// Push-screen accessed from the Inicio match modules. Mirrors the
+// structure of native sport apps: header score + segmented sub-tabs
+// for Resumen / Estadísticas / Alineaciones / Repeticiones / Eventos.
+// ════════════════════════════════════════════════════════════════
+
+function vipMatchContext() {
+    const id = state.vipMatch.eventId;
+    if (id === 'next') {
+        const ev = VIP_NEXT_EVENT;
+        return {
+            id: 'next',
+            home: ev.home,
+            away: ev.away,
+            division: ev.league,
+            dateTime: ev.date,
+            venue: ev.venue,
+            detail: VIP_MATCH_DETAIL_NEXT
+        };
+    }
+    const ev = VIP_EVENTS.find(e => e.id === id) || VIP_EVENTS[0];
+    return {
+        id: ev.id,
+        home: ev.home,
+        away: ev.away,
+        division: ev.division,
+        dateTime: ev.dateTime,
+        venue: ev.venue,
+        detail: VIP_MATCH_DETAIL_BY_EVENT[ev.id] || VIP_MATCH_DETAIL_BY_EVENT[1]
+    };
+}
+
+function renderVipMatchDetail() {
+    const ctx = vipMatchContext();
+    const tab = state.vipMatch.tab;
+    const isUpcoming = ctx.detail.status === 'upcoming';
+
+    // Sub-tabs config. Sections that are not meaningful pre-match are still
+    // shown but render an empty-state body — this keeps the navigation
+    // predictable as the match goes live.
+    const tabs = [
+        { key: 'resumen',    label: 'Resumen' },
+        { key: 'stats',      label: 'Estadísticas' },
+        { key: 'lineups',    label: 'Alineaciones' },
+        { key: 'highlights', label: 'Repeticiones' },
+        { key: 'events',     label: 'Eventos' }
+    ];
+
+    let body = '';
+    if (tab === 'stats')           body = renderVipMatchStats(ctx);
+    else if (tab === 'lineups')    body = renderVipMatchLineups(ctx);
+    else if (tab === 'highlights') body = renderVipMatchHighlights(ctx);
+    else if (tab === 'events')     body = renderVipMatchEvents(ctx);
+    else                            body = renderVipMatchResumen(ctx);
+
+    const scoreLine = (ctx.detail.homeScore != null && ctx.detail.awayScore != null)
+        ? `<div class="vip-match-score">
+            <span>${ctx.detail.homeScore}</span>
+            <span class="dash">–</span>
+            <span>${ctx.detail.awayScore}</span>
+           </div>`
+        : `<div class="vip-match-score upcoming">
+            <span class="vs">VS</span>
+           </div>`;
+
+    const statusBadge = isUpcoming
+        ? `<span class="vip-match-status upcoming">Próximamente</span>`
+        : ctx.detail.status === 'live'
+            ? `<span class="vip-match-status live">EN DIRECTO · ${ctx.detail.minute}'</span>`
+            : `<span class="vip-match-status finished">Final${ctx.detail.minute ? ' · ' + ctx.detail.minute + '\'' : ''}</span>`;
+
+    const playerOverlay = state.vipMatch.playingClipId
+        ? renderVipMatchPlayer(ctx)
+        : '';
+
+    return `
+        <div class="vip-event-detail-head">
+            <button class="vip-back-btn" data-vip-action="match-back">${I.chevronLeft}</button>
+            <div class="vip-event-detail-title">Detalle del partido</div>
+            <div style="width:36px"></div>
+        </div>
+
+        <div class="vip-match-hero">
+            <div class="vip-match-meta-top">${ctx.division}</div>
+            <div class="vip-match-teams">
+                <div class="vip-match-team">
+                    <div class="vip-match-crest">${bigCrestForVip(ctx.home)}</div>
+                    <div class="vip-match-name">${ctx.home}</div>
+                </div>
+                ${scoreLine}
+                <div class="vip-match-team">
+                    <div class="vip-match-crest">${bigCrestForVip(ctx.away)}</div>
+                    <div class="vip-match-name">${ctx.away}</div>
+                </div>
+            </div>
+            <div class="vip-match-meta-bottom">
+                ${statusBadge}
+                <span class="vip-match-meta-dot">·</span>
+                <span>${ctx.dateTime}</span>
+                <span class="vip-match-meta-dot">·</span>
+                <span>${ctx.venue}</span>
+            </div>
+        </div>
+
+        <div class="vip-match-tabs" role="tablist">
+            ${tabs.map(t => `
+                <button class="vip-match-tab ${tab === t.key ? 'active' : ''}"
+                        data-vip-action="match-tab" data-vip-match-tab="${t.key}"
+                        role="tab" aria-selected="${tab === t.key}">
+                    ${t.label}
+                </button>
+            `).join('')}
+        </div>
+
+        <div class="vip-match-body">${body}</div>
+        <div style="height: 90px"></div>
+        ${playerOverlay}
+    `;
+}
+
+function renderVipMatchEmpty(text) {
+    return `
+        <div class="vip-match-empty">
+            <div class="icon">${VIP_I.soccerBall}</div>
+            <p>${text}</p>
+        </div>
+    `;
+}
+
+function renderVipMatchResumen(ctx) {
+    const d = ctx.detail;
+    if (!d.summary) {
+        return renderVipMatchEmpty('El resumen estará disponible al finalizar el partido.');
+    }
+    const scorers = (side) => {
+        const arr = side === 'home' ? d.homeScorers : d.awayScorers;
+        if (!arr || arr.length === 0) return '';
+        return `
+            <div class="vip-match-scorers ${side}">
+                ${arr.map(s => `<div class="row">${VIP_I.soccerBall}<span>${s}</span></div>`).join('')}
+            </div>
+        `;
+    };
+
+    const summaryClip = (d.highlights || []).find(h => h.kind === 'summary');
+
+    return `
+        <div class="vip-match-card">
+            <div class="vip-match-scorers-row">
+                ${scorers('home')}
+                <div class="vip-match-vs-mini">${VIP_I.soccerBall}</div>
+                ${scorers('away')}
+            </div>
+        </div>
+
+        ${summaryClip ? `
+            <button class="vip-match-summary-clip" data-vip-action="match-play" data-vip-clip="${summaryClip.id}">
+                <div class="thumb" style="background: linear-gradient(135deg, ${summaryClip.c1} 0%, ${summaryClip.c2} 100%)">
+                    <div class="play-button">${VIP_I.share ? '' : ''}
+                        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+                    </div>
+                    <div class="dur">${summaryClip.duration}</div>
+                </div>
+                <div class="info">
+                    <strong>${summaryClip.title}</strong>
+                    <span>Vídeo · Real Madrid TV</span>
+                </div>
+            </button>
+        ` : ''}
+
+        <div class="vip-match-card">
+            <h3 class="vip-match-card-title">${d.summary.heading}</h3>
+            ${d.summary.paragraphs.map(p => `<p>${p}</p>`).join('')}
+        </div>
+    `;
+}
+
+function renderVipMatchStats(ctx) {
+    const d = ctx.detail;
+    if (!d.stats || d.stats.length === 0) {
+        return renderVipMatchEmpty('Las estadísticas se mostrarán cuando el partido empiece.');
+    }
+    return `
+        <div class="vip-match-card">
+            ${d.stats.map(s => {
+                const total = (s.home + s.away) || 1;
+                const homePct = Math.round((s.home / total) * 100);
+                const awayPct = 100 - homePct;
+                return `
+                    <div class="vip-stat-row">
+                        <div class="vip-stat-label">${s.label}</div>
+                        <div class="vip-stat-line">
+                            <span class="num home">${s.home}${s.isPercent ? '%' : ''}</span>
+                            <div class="bar">
+                                <div class="bar-home" style="width:${homePct}%"></div>
+                                <div class="bar-away" style="width:${awayPct}%"></div>
+                            </div>
+                            <span class="num away">${s.away}${s.isPercent ? '%' : ''}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderVipMatchLineups(ctx) {
+    const d = ctx.detail;
+    if (!d.lineups) {
+        return renderVipMatchEmpty('Las alineaciones oficiales se publican una hora antes del partido.');
+    }
+    const renderSide = (side) => {
+        const team = side === 'home' ? d.lineups.home : d.lineups.away;
+        const teamName = side === 'home' ? ctx.home : ctx.away;
+        return `
+            <div class="vip-lineup-block">
+                <div class="vip-lineup-head">
+                    <div class="vip-lineup-crest">${bigCrestForVip(teamName)}</div>
+                    <div class="vip-lineup-team">
+                        <div class="name">${teamName}</div>
+                        <div class="meta">${team.formation} · ${team.coach}</div>
+                    </div>
+                </div>
+                <div class="vip-lineup-section-title">Once inicial</div>
+                <div class="vip-lineup-list">
+                    ${team.starters.map(p => `
+                        <div class="vip-lineup-row">
+                            <span class="num">${p.num}</span>
+                            <span class="name">${p.name}</span>
+                            <span class="pos pos-${p.pos.toLowerCase()}">${p.pos}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                ${team.bench && team.bench.length ? `
+                    <div class="vip-lineup-section-title">Suplentes</div>
+                    <div class="vip-lineup-list bench">
+                        ${team.bench.map(p => `
+                            <div class="vip-lineup-row">
+                                <span class="num">${p.num}</span>
+                                <span class="name">${p.name}</span>
+                                <span class="pos pos-${p.pos.toLowerCase()}">${p.pos}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    };
+    return `
+        ${renderSide('home')}
+        ${renderSide('away')}
+    `;
+}
+
+function renderVipMatchHighlights(ctx) {
+    const d = ctx.detail;
+    if (!d.highlights || d.highlights.length === 0) {
+        return renderVipMatchEmpty('Las repeticiones y goles se publican durante y tras el partido.');
+    }
+    return `
+        <div class="vip-match-clips">
+            ${d.highlights.map(h => `
+                <button class="vip-match-clip" data-vip-action="match-play" data-vip-clip="${h.id}">
+                    <div class="thumb" style="background: linear-gradient(135deg, ${h.c1} 0%, ${h.c2} 100%)">
+                        <div class="play-button">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+                        </div>
+                        <div class="dur">${h.duration}</div>
+                        ${h.minute != null ? `<div class="minute">${h.minute}'</div>` : ''}
+                    </div>
+                    <div class="info">
+                        <strong>${h.title}</strong>
+                        <span>${h.kind === 'goal' ? 'Gol' : h.kind === 'save' ? 'Parada' : h.kind === 'shot' ? 'Tiro' : h.kind === 'summary' ? 'Resumen' : 'Vídeo'} · Real Madrid TV</span>
+                    </div>
+                </button>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderVipMatchEvents(ctx) {
+    const d = ctx.detail;
+    if (!d.events || d.events.length === 0) {
+        return renderVipMatchEmpty('Los eventos del partido (goles, tarjetas, sustituciones) aparecerán aquí en directo.');
+    }
+    const iconFor = kind => {
+        if (kind === 'goal')   return `<span class="ev-icon goal">${VIP_I.soccerBall}</span>`;
+        if (kind === 'yellow') return `<span class="ev-icon yellow"></span>`;
+        if (kind === 'red')    return `<span class="ev-icon red"></span>`;
+        if (kind === 'sub')    return `<span class="ev-icon sub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>`;
+        return `<span class="ev-icon">·</span>`;
+    };
+    return `
+        <div class="vip-event-timeline">
+            ${d.events.map(e => `
+                <div class="vip-event-row ev-${e.side}">
+                    <div class="vip-event-min">${e.minute}'</div>
+                    <div class="vip-event-bullet">${iconFor(e.kind)}</div>
+                    <div class="vip-event-main">
+                        <div class="vip-event-player">${e.player}</div>
+                        <div class="vip-event-detail">${e.detail}</div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderVipMatchPlayer(ctx) {
+    const clip = (ctx.detail.highlights || []).find(h => h.id === state.vipMatch.playingClipId);
+    if (!clip) return '';
+    return `
+        <div class="vip-match-player-bg" data-vip-action="match-stop"></div>
+        <div class="vip-match-player">
+            <button class="vip-match-player-close" data-vip-action="match-stop">${VIP_I.xmark}</button>
+            <div class="screen" style="background: linear-gradient(135deg, ${clip.c1} 0%, ${clip.c2} 100%)">
+                <div class="play-orb">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+                </div>
+                <div class="dur">${clip.duration}</div>
+            </div>
+            <div class="meta">
+                <strong>${clip.title}</strong>
+                <span>Real Madrid TV · ${ctx.home} vs ${ctx.away}</span>
+            </div>
+        </div>
     `;
 }
 
@@ -5281,6 +5640,9 @@ function attachVipListeners() {
             state.vipTab = btn.dataset.vipTab;
             state.vipEventScreen = 'list';
             state.vipPerfilOpen = false;
+            // Close any pushed match-detail screen so the new tab lands clean
+            state.vipMatch.eventId = null;
+            state.vipMatch.playingClipId = null;
         });
     }));
 
@@ -5439,10 +5801,13 @@ function attachVipSolicitarListeners() {
 let _vipShareDelegateInstalled = false;
 
 function attachVipShareListeners() {
-    if (!Flags.isEnabled('vip.tickets.multi-share')) return;
+    // The delegated handler powers several VIP flows (multi-share, match
+    // detail, palco sheet). It's a no-op when nothing matches, so we install
+    // it whenever any VIP flag that uses it is on.
+    const needed = Flags.isEnabled('vip.tickets.multi-share')
+        || Flags.isEnabled('vip.match.detail');
+    if (!needed) return;
 
-    // Install the delegated handlers once on document. They survive
-    // every re-render because they are not attached to inner DOM.
     if (!_vipShareDelegateInstalled) {
         document.addEventListener('click', handleVipShareClick);
         document.addEventListener('input', handleVipShareInput);
@@ -5694,6 +6059,44 @@ function handleVipShareClick(e) {
         case 'accept-disclaimer': {
             s.disclaimerSeen = true;
             startBatchSend();
+            return;
+        }
+
+        // ── VIP match detail (flag vip.match.detail) ─────────────
+        case 'open-match': {
+            const ev = target.dataset.vipMatchEvent;
+            state.vipMatch.eventId = ev === 'next' ? 'next' : parseInt(ev, 10);
+            state.vipMatch.tab = 'resumen';
+            state.vipMatch.playingClipId = null;
+            // Force the screen body to top so the detail lands at the head
+            const sb = $('#screenBody');
+            if (sb) state.vipScrollPositions.inicio = sb.scrollTop;
+            render();
+            const sb2 = $('#screenBody');
+            if (sb2) sb2.scrollTop = 0;
+            return;
+        }
+        case 'match-back': {
+            state.vipMatch.eventId = null;
+            state.vipMatch.playingClipId = null;
+            render();
+            const sb = $('#screenBody');
+            if (sb) sb.scrollTop = state.vipScrollPositions.inicio || 0;
+            return;
+        }
+        case 'match-tab': {
+            state.vipMatch.tab = target.dataset.vipMatchTab;
+            render();
+            return;
+        }
+        case 'match-play': {
+            state.vipMatch.playingClipId = target.dataset.vipClip;
+            render();
+            return;
+        }
+        case 'match-stop': {
+            state.vipMatch.playingClipId = null;
+            render();
             return;
         }
 

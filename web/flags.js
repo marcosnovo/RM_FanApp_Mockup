@@ -182,6 +182,14 @@ const FLAGS = [
         category: 'Pagos',
         default: false
     }
+    ,{
+        app: 'vip',
+        key: 'vip.match.detail',
+        label: 'Detalle de partido en Inicio',
+        description: 'Hace navegable el módulo de partido del Home: estadísticas, alineaciones, repeticiones y goles, eventos del partido (tarjetas, sustituciones) y resumen.',
+        category: 'Inicio',
+        default: false
+    }
 ];
 
 // ── Internal state ──────────────────────────────────────────────
