@@ -16,7 +16,7 @@
 
     <!-- Cibeles Design System tokens (Madridistas) -->
     <link rel="stylesheet" href="tokens/cibeles-tokens.css">
-    <link rel="stylesheet" href="styles.css?v=40">
+    <link rel="stylesheet" href="styles.css?v=42">
 
     <!-- RM Neue is the brand font; fall back to Inter (Cibeles uses near-identical metrics) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -90,45 +90,50 @@
                 <p id="stageSubtitle">Hoy · Directo</p>
             </div>
 
-            <div class="phone">
-                <div class="phone-frame">
-                    <div class="phone-notch">
-                        <div class="notch-camera"></div>
-                        <div class="notch-speaker"></div>
-                    </div>
-                    <div class="phone-screen" id="phoneScreen">
-                        <!-- Status bar (fixed) -->
-                        <div class="status-bar">
-                            <span class="status-time">10:17</span>
-                            <span class="status-icons">
-                                <span class="status-signal">
-                                    <span></span><span></span><span></span><span></span>
-                                </span>
-                                <span class="status-wifi">
-                                    <svg viewBox="0 0 20 14" width="16" height="12" fill="currentColor"><path d="M10 12.5 a1.5 1.5 0 1 0 0 -3 a1.5 1.5 0 0 0 0 3z M5.3 7.8 a6.7 6.7 0 0 1 9.4 0 l-1.1 1.1 a5.2 5.2 0 0 0 -7.2 0 z M2 4.5 a11.3 11.3 0 0 1 16 0 l-1.1 1.1 a9.7 9.7 0 0 0 -13.8 0 z"/></svg>
-                                </span>
-                                <span class="status-battery">99</span>
-                            </span>
+            <div class="stage-row">
+                <div class="phone">
+                    <div class="phone-frame">
+                        <div class="phone-notch">
+                            <div class="notch-camera"></div>
+                            <div class="notch-speaker"></div>
                         </div>
+                        <div class="phone-screen" id="phoneScreen">
+                            <!-- Status bar (fixed) -->
+                            <div class="status-bar">
+                                <span class="status-time">10:17</span>
+                                <span class="status-icons">
+                                    <span class="status-signal">
+                                        <span></span><span></span><span></span><span></span>
+                                    </span>
+                                    <span class="status-wifi">
+                                        <svg viewBox="0 0 20 14" width="16" height="12" fill="currentColor"><path d="M10 12.5 a1.5 1.5 0 1 0 0 -3 a1.5 1.5 0 0 0 0 3z M5.3 7.8 a6.7 6.7 0 0 1 9.4 0 l-1.1 1.1 a5.2 5.2 0 0 0 -7.2 0 z M2 4.5 a11.3 11.3 0 0 1 16 0 l-1.1 1.1 a9.7 9.7 0 0 0 -13.8 0 z"/></svg>
+                                    </span>
+                                    <span class="status-battery">99</span>
+                                </span>
+                            </div>
 
-                        <!-- Cabecera global de login (flag `fan.app.login-header`).
-                             Aparece entre el status-bar y el contenido y persiste
-                             al cambiar de pestaña. JS la puebla / vacía. -->
-                        <div class="app-topbar-slot" id="appTopbarSlot"></div>
+                            <!-- Cabecera global de login (flag `fan.app.login-header`).
+                                 Aparece entre el status-bar y el contenido y persiste
+                                 al cambiar de pestaña. JS la puebla / vacía. -->
+                            <div class="app-topbar-slot" id="appTopbarSlot"></div>
 
-                        <!-- Scrollable content -->
-                        <div class="screen-body" id="screenBody"></div>
+                            <!-- Scrollable content -->
+                            <div class="screen-body" id="screenBody"></div>
 
-                        <!-- Fixed tab bar (injected by JS) -->
-                        <div class="tab-bar-slot" id="tabBarSlot"></div>
+                            <!-- Fixed tab bar (injected by JS) -->
+                            <div class="tab-bar-slot" id="tabBarSlot"></div>
 
-                        <!-- News detail sheet (overlays, injected by JS) -->
-                        <div class="news-sheet-slot" id="newsSheetSlot"></div>
+                            <!-- News detail sheet (overlays, injected by JS) -->
+                            <div class="news-sheet-slot" id="newsSheetSlot"></div>
 
-                        <!-- Home indicator -->
-                        <div class="home-indicator"></div>
+                            <!-- Home indicator -->
+                            <div class="home-indicator"></div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Recipient web view (multi-share lote) — populated by JS -->
+                <aside class="web-preview" id="webPreviewSlot"></aside>
             </div>
 
             <div class="stage-caption" id="stageCaption">
@@ -178,11 +183,11 @@
          don't keep a stale copy (Python http.server and GH Pages both respect
          a different query string as a different cache entry). -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script defer src="auth.js?v=40"></script>
-    <script defer src="flags.js?v=40"></script>
-    <script defer src="data.js?v=40"></script>
-    <script defer src="app.js?v=40"></script>
-    <script defer src="flow_exporter.js?v=40"></script>
-    <script defer src="jira_initiatives.js?v=40"></script>
+    <script defer src="auth.js?v=42"></script>
+    <script defer src="flags.js?v=42"></script>
+    <script defer src="data.js?v=42"></script>
+    <script defer src="app.js?v=42"></script>
+    <script defer src="flow_exporter.js?v=42"></script>
+    <script defer src="jira_initiatives.js?v=42"></script>
 </body>
 </html>

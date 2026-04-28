@@ -127,8 +127,27 @@ const state = {
     // (#screenBody) is shared between tabs — without this, switching
     // tabs would leave the new tab pre-scrolled to the previous tab's
     // position. Matches native iOS "keep me where I was" behaviour.
-    vipScrollPositions: { inicio: 0, eventos: 0, gestor: 0, perfil: 0 }
+    vipScrollPositions: { inicio: 0, eventos: 0, gestor: 0, perfil: 0 },
+
+    // Recipient web view (multi-share lote). Mirrors the App's reparto flow
+    // for somebody who received >1 ticket and now needs to redistribute
+    // them via the web link they got in their SMS / email.
+    webView: {
+        open: false,
+        contactId: null,        // which lote we're viewing (the "Yo" of the page)
+        screen: 'manage',       // 'manage' | 'picker' | 'sending' | 'sent'
+        actionsTicketId: null,  // ticket whose action menu is open
+        reassignTicketId: null, // ticket being reassigned via web picker
+        formName: '',           // free-form recipient name
+        formContact: '',        // free-form phone or email
+        sendingProgress: 0
+    }
 };
+
+// Synthetic contacts created from the recipient web view. Held in a
+// separate list so reassignments inside the web preview don't pollute
+// the App's main address book — but `vipContactById` falls back here.
+const VIP_WEB_CONTACTS = [];
 
 // ── App configurations for sidebar ───────────────────────────────
 const APP_CONFIG = {
@@ -2599,7 +2618,12 @@ const VIP_I = {
     crown: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="32" cy="32" r="28"/><path d="M16 26 L24 36 L32 20 L40 36 L48 26 L46 44 L18 44 Z" fill="currentColor"/><circle cx="22" cy="42" r="1.5" fill="#000"/><circle cx="32" cy="42" r="1.5" fill="#000"/><circle cx="42" cy="42" r="1.5" fill="#000"/></svg>`,
     usersDuo: `<svg viewBox="0 0 64 64" fill="currentColor"><circle cx="22" cy="26" r="9"/><circle cx="42" cy="22" r="7" opacity="0.55"/><path d="M8 50 a14 10 0 0 1 28 0z"/><path d="M30 48 a12 9 0 0 1 24 0z" opacity="0.55"/></svg>`,
     pencil: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M13 5l6 6"/></svg>`,
-    check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,12 10,17 19,7"/></svg>`
+    check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,12 10,17 19,7"/></svg>`,
+    share: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><line x1="8" y1="11" x2="16" y2="7"/><line x1="8" y1="13" x2="16" y2="17"/></svg>`,
+    lock: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 a5 5 0 0 0-5 5 v3 H6 a2 2 0 0 0-2 2 v9 a2 2 0 0 0 2 2 h12 a2 2 0 0 0 2-2 v-9 a2 2 0 0 0-2-2 h-1 V7 a5 5 0 0 0-5-5z M9 7 a3 3 0 0 1 6 0 v3 H9z"/></svg>`,
+    refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23,4 23,10 17,10"/><polyline points="1,20 1,14 7,14"/><path d="M3.5 9 a9 9 0 0 1 14.85-3.36 L23 10"/><path d="M20.5 15 a9 9 0 0 1-14.85 3.36 L1 14"/></svg>`,
+    arrowLeftBack: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,6 9,12 15,18"/></svg>`,
+    arrowRightFwd: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>`
 };
 
 function renderVipApp() {
@@ -2980,7 +3004,38 @@ function vipTicketStatusLabel(t) {
 }
 
 function vipContactById(id) {
-    return VIP_CONTACTS.find(c => c.id === id) || null;
+    return VIP_CONTACTS.find(c => c.id === id)
+        || VIP_WEB_CONTACTS.find(c => c.id === id)
+        || null;
+}
+
+// Multi-share helpers (vip.tickets.multi-share)
+// Returns { [loteOwnerId]: { contact, count, tickets } } for tickets that
+// belong to the same multi-share "lote". A ticket joins a lote when, at
+// reparto time, more than one ticket is assigned to the same contact.
+// We stamp `loteOwner` on each so the group survives even after the
+// recipient claims / reassigns from the web view.
+function vipMultiShareGroups() {
+    const tickets = vipTicketsForCurrentEvent();
+    const map = {};
+    for (const t of tickets) {
+        const key = t.loteOwner || t.contactId;
+        if (!key) continue;
+        if (!['assigned', 'sent', 'accepted', 'bound'].includes(t.status)) continue;
+        if (!map[key]) {
+            map[key] = { contact: vipContactById(key), count: 0, tickets: [] };
+        }
+        map[key].count += 1;
+        map[key].tickets.push(t);
+    }
+    // Keep groups stamped as a lote (loteOwner present on at least one
+    // ticket) OR groups that currently have ≥2 tickets to the same
+    // contact — singletons never become lotes.
+    Object.keys(map).forEach(k => {
+        const stamped = map[k].tickets.some(t => t.loteOwner === k);
+        if (!stamped && map[k].count < 2) delete map[k];
+    });
+    return map;
 }
 
 // Channels available for a contact, in routing-preference order.
@@ -3137,6 +3192,27 @@ function renderVipTicketsV2() {
             </button>
         ` : ''}
 
+        ${(() => {
+            const groups = vipMultiShareGroups();
+            const entries = Object.entries(groups);
+            if (entries.length === 0) return '';
+            const first = entries[0];
+            const totalLote = entries.reduce((n, [, g]) => n + g.count, 0);
+            const headline = entries.length === 1
+                ? `${first[1].contact ? first[1].contact.name : 'Destinatario'} gestionará ${first[1].count} tickets`
+                : `${entries.length} personas gestionan varios tickets (${totalLote} en total)`;
+            return `
+                <button class="vip-multi-banner" data-vip-action="open-web-lote" data-vip-lote="${first[0]}">
+                    <div class="vip-multi-banner-icon">${VIP_I.share}</div>
+                    <div class="vip-multi-banner-body">
+                        <strong>${headline}</strong>
+                        <span>Recibirá un enlace por SMS o email para repartirlos en web (también puede quedarse uno).</span>
+                    </div>
+                    <span class="vip-multi-banner-cta">Vista web</span>
+                </button>
+            `;
+        })()}
+
         ${mineTicket ? `
             <div class="vip-ticket-list" style="padding-bottom:4px">
                 ${renderVipTicketRow(mineTicket)}
@@ -3190,6 +3266,17 @@ function renderVipTicketRow(t) {
     // when the status conveys new info (sent / accepted / bound).
     const showStatusBadge = !isMine && interactive;
 
+    // Surface the lote when the contact has more than one ticket — keeps
+    // the App in sync with the web view's "Lote · N" framing.
+    let loteTag = '';
+    if (contact && ['assigned', 'sent', 'accepted', 'bound'].includes(t.status)) {
+        const groups = vipMultiShareGroups();
+        const g = groups[t.loteOwner || t.contactId];
+        if (g && g.count > 1) {
+            loteTag = ` <span class="vip-ticket-lote-tag">· Lote ${g.count}</span>`;
+        }
+    }
+
     return `
         <${tag} class="vip-ticket-item ${statusClass} ${interactive ? '' : 'static'}" ${attrs}>
             <div class="vip-ticket-avatar">${avatar}</div>
@@ -3198,7 +3285,7 @@ function renderVipTicketRow(t) {
                     <span class="vip-ticket-name">${title}</span>
                     ${showStatusBadge ? `<span class="vip-ticket-status ${statusClass}">${statusLabel}</span>` : ''}
                 </div>
-                <div class="vip-ticket-sub">${seatLabel}</div>
+                <div class="vip-ticket-sub">${seatLabel}${loteTag}</div>
             </div>
             ${interactive ? `<div class="vip-ticket-more">${VIP_I.moreVert}</div>` : ''}
         </${tag}>
@@ -3367,6 +3454,7 @@ function renderVipPickerSheet() {
         || c.name.toLowerCase().includes(q)
         || c.phone.includes(q));
 
+    const distinctContacts = new Set(selected).size;
     const doneLabel = selected.length > 0
         ? `Siguiente (${selected.length})`
         : 'Siguiente';
@@ -3395,9 +3483,13 @@ function renderVipPickerSheet() {
             </div>
 
             <div class="vip-picker-counter">
-                <strong>${selected.length}</strong> / ${maxSelect} contactos
+                <strong>${selected.length}</strong> / ${maxSelect} tickets ·
+                ${distinctContacts} ${distinctContacts === 1 ? 'persona' : 'personas'}
                 ${selected.length >= maxSelect && maxSelect > 0
                     ? '<span class="vip-picker-limit">límite alcanzado</span>' : ''}
+            </div>
+            <div class="vip-picker-hint">
+                Pulsa <strong>+</strong> varias veces para asignar más de un ticket a la misma persona. Recibirá un enlace para repartirlos en web.
             </div>
 
             <div class="vip-picker-search">
@@ -3414,11 +3506,12 @@ function renderVipPickerSheet() {
 }
 
 function renderVipPickerRow(c, selected, maxSelect) {
-    const isSel = selected.includes(c.id);
-    const disabled = !isSel && selected.length >= maxSelect;
+    // Quantity-aware: a contact may appear multiple times in `selected`,
+    // meaning a multi-share lote where the same person gets several tickets.
+    const count = selected.filter(id => id === c.id).length;
+    const totalSelected = selected.length;
+    const canInc = totalSelected < maxSelect;
     const channels = vipChannelsFor(c);
-    // Subtitle: prefer email when both, but always make it clear which
-    // channels exist via the badges below.
     const subtitle = c.email || c.phone || '';
     const channelBadges = channels.map(ch => `
         <span class="vip-channel-badge ch-${ch}" title="${VIP_CHANNEL_LABEL[ch]}">
@@ -3427,16 +3520,21 @@ function renderVipPickerRow(c, selected, maxSelect) {
     `).join('');
 
     return `
-        <div class="vip-picker-row ${isSel ? 'selected' : ''} ${disabled ? 'disabled' : ''}"
-             data-vip-action="toggle-contact" data-vip-contact="${c.id}">
+        <div class="vip-picker-row ${count > 0 ? 'has-count' : ''}">
             ${vipAvatarHTML(c, 40)}
             <div class="vip-picker-info">
                 <div class="name">${c.name}</div>
                 <div class="phone">${subtitle}</div>
                 <div class="vip-picker-channels">${channelBadges}</div>
             </div>
-            <div class="vip-picker-check ${isSel ? 'on' : ''}">
-                ${isSel ? '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="4,10 9,15 16,6"/></svg>' : ''}
+            <div class="vip-picker-stepper">
+                <button class="vp-step minus ${count > 0 ? '' : 'disabled'}"
+                        ${count > 0 ? `data-vip-action="dec-contact" data-vip-contact="${c.id}"` : 'disabled'}
+                        aria-label="Quitar un ticket">−</button>
+                <div class="vp-count ${count > 0 ? 'on' : ''}">${count}</div>
+                <button class="vp-step plus ${canInc ? '' : 'disabled'}"
+                        ${canInc ? `data-vip-action="inc-contact" data-vip-contact="${c.id}"` : 'disabled'}
+                        aria-label="Asignar un ticket más">+</button>
             </div>
         </div>
     `;
@@ -3762,6 +3860,8 @@ function renderVipSentSheet() {
     const tickets = vipTicketsForCurrentEvent();
     const sent = tickets.filter(t => ['sent', 'accepted', 'bound'].includes(t.status));
     const breakdown = vipChannelBreakdown(sent);
+    const groups = vipMultiShareGroups();
+    const loteCount = Object.keys(groups).length;
     return `
         <div class="vip-sheet-backdrop" data-vip-action="close-sheet"></div>
         <div class="vip-sent-sheet">
@@ -3771,9 +3871,16 @@ function renderVipSentSheet() {
             <div class="vip-sent-title">¡Tickets enviados!</div>
             <div class="vip-sent-body">
                 Hemos enviado ${sent.length} ticket${sent.length === 1 ? '' : 's'}: ${vipChannelBreakdownLine(breakdown)}.
-                Recibirás una notificación cuando cada persona añada el suyo a su Wallet.
+                ${loteCount > 0
+                    ? `<br><br><strong>${loteCount} ${loteCount === 1 ? 'persona ha recibido un lote' : 'personas han recibido lotes'}</strong> con un enlace para repartir sus tickets en web.`
+                    : 'Recibirás una notificación cuando cada persona añada el suyo a su Wallet.'}
             </div>
-            <button class="vip-disclaimer-cta" data-vip-action="close-sheet">Volver a mis tickets</button>
+            ${loteCount > 0 ? `
+                <button class="vip-disclaimer-cta" data-vip-action="open-web-after-send">Ver vista web del destinatario</button>
+                <button class="vip-disclaimer-cta-secondary" data-vip-action="close-sheet">Volver a mis tickets</button>
+            ` : `
+                <button class="vip-disclaimer-cta" data-vip-action="close-sheet">Volver a mis tickets</button>
+            `}
         </div>
     `;
 }
@@ -3782,6 +3889,472 @@ function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
+}
+
+// ════════════════════════════════════════════════════════════════
+// MULTI-SHARE — Recipient web view
+// ────────────────────────────────────────────────────────────────
+// Mocks the desktop browser experience that opens when the lote
+// recipient (somebody who got >1 ticket) clicks the SMS / email link.
+// Mirrors the App's reparto flow in HTML inside a chrome browser frame.
+// ════════════════════════════════════════════════════════════════
+
+function renderWebPreview() {
+    const slot = $('#webPreviewSlot');
+    if (!slot) return;
+
+    const w = state.webView;
+    const flagOn = state.app === 'vip' && Flags.isEnabled('vip.tickets.multi-share');
+
+    // Render / refresh the toggle handle attached to the phone frame.
+    // We recreate it each render so listeners don't pile up.
+    const phoneFrame = document.querySelector('.phone-frame');
+    const oldToggle = document.querySelector('.web-preview-toggle');
+    if (oldToggle) oldToggle.remove();
+    if (flagOn && phoneFrame) {
+        const groups = vipMultiShareGroups();
+        const totalLote = Object.values(groups).reduce((n, g) => n + g.count, 0);
+        const hasLote = totalLote > 0;
+        const toggle = document.createElement('button');
+        toggle.className = 'web-preview-toggle' + (w.open ? ' open' : '') + (!hasLote && !w.open ? ' disabled' : '');
+        toggle.dataset.vipWebToggle = '1';
+        toggle.innerHTML = `${VIP_I.share}${hasLote ? `Vista web · ${totalLote}` : 'Vista web'}`;
+        phoneFrame.appendChild(toggle);
+    }
+
+    const visible = flagOn && w.open;
+    slot.classList.toggle('visible', visible);
+    if (!visible) { slot.innerHTML = ''; return; }
+
+    const groups = vipMultiShareGroups();
+    const groupKeys = Object.keys(groups);
+
+    if (groupKeys.length === 0) {
+        slot.innerHTML = renderWebPreviewChrome('—', '') + `
+            <div class="wp-body">
+                <div class="wp-empty">
+                    <div class="icon">${VIP_I.share}</div>
+                    <h3>Sin lotes activos</h3>
+                    <p>Asigna más de un ticket a la misma persona en el reparto y aquí verás la web que esa persona recibirá para repartirlos.</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    if (!w.contactId || !groups[w.contactId]) {
+        w.contactId = groupKeys[0];
+    }
+
+    const g = groups[w.contactId];
+    const recipient = g.contact;
+    const ev = VIP_EVENTS.find(e => e.id === state.vipEventId) || VIP_EVENTS[0];
+    const loteCode = `RM-${ev.id}${recipient ? recipient.id.slice(1).toUpperCase() : 'X'}-${g.count}`;
+
+    let body = '';
+    if (w.screen === 'sent')         body = renderWebPreviewSent();
+    else if (w.screen === 'sending') body = renderWebPreviewSending(g);
+    else if (w.screen === 'picker')  body = renderWebPreviewPicker(g, ev, recipient);
+    else                              body = renderWebPreviewManage(g, ev, recipient, groupKeys, groups);
+
+    slot.innerHTML = renderWebPreviewChrome(loteCode, recipient ? recipient.name : '') + body;
+}
+
+function renderWebPreviewChrome(loteCode, recipientName) {
+    const tabLabel = recipientName ? `Tus tickets · ${recipientName.split(' ')[0]}` : 'Real Madrid · Tus tickets';
+    return `
+        <div class="wp-chrome">
+            <div class="wp-traffic"><span></span><span></span><span></span></div>
+            <div class="wp-tabs">
+                <div class="wp-tab"><span class="dot"></span>${tabLabel}</div>
+            </div>
+            <div class="wp-actions">${VIP_I.refresh}</div>
+        </div>
+        <div class="wp-urlbar">
+            <div class="wp-url-nav">
+                <button>${VIP_I.arrowLeftBack}</button>
+                <button>${VIP_I.arrowRightFwd}</button>
+                <button>${VIP_I.refresh}</button>
+            </div>
+            <div class="wp-url">
+                <span class="lock">${VIP_I.lock}</span>
+                <span class="host">entradas.realmadrid.com</span>/lote/${loteCode}
+            </div>
+        </div>
+    `;
+}
+
+function renderWebPreviewManage(g, ev, recipient, groupKeys, groups) {
+    const tabs = groupKeys.length > 1 ? `
+        <div class="wp-recipient-tabs">
+            ${groupKeys.map(cid => {
+                const gg = groups[cid];
+                const c = gg.contact;
+                return `
+                    <button class="wp-recipient-chip ${cid === state.webView.contactId ? 'active' : ''}"
+                            data-vip-web-recipient="${cid}">
+                        ${c ? c.name.split(' ')[0] : 'Lote'}
+                        <span class="badge">${gg.count}</span>
+                    </button>
+                `;
+            }).join('')}
+        </div>
+    ` : '';
+
+    const ticketRows = g.tickets.map(t => renderWpTicketRow(t)).join('');
+    const claimed    = g.tickets.filter(t => t.status === 'bound').length;
+    const reassigned = g.tickets.filter(t => t.contactId && String(t.contactId).startsWith('w-')).length;
+
+    const actionsSheet = state.webView.actionsTicketId
+        ? renderWebActionsSheet(g.tickets.find(t => t.id === state.webView.actionsTicketId))
+        : '';
+
+    return `
+        <div class="wp-body">
+            <div class="wp-page">
+                <div class="wp-brand">
+                    <div class="logo">${VIP_I.ticket}</div>
+                    <div>
+                        <div class="name">Real Madrid</div>
+                        <div class="crumb">Reparto de entradas VIP</div>
+                    </div>
+                </div>
+                ${tabs}
+                <div class="wp-greet">Hola <em>${recipient ? recipient.name.split(' ')[0] : 'destinatario'}</em>, te han enviado <em>${g.count} tickets</em>.</div>
+                <div class="wp-lede">
+                    Marcos Novo te ha repartido un lote para el partido. Puedes <strong>quedarte uno</strong> o <strong>reasignar el resto</strong> a otras personas. Cada ticket se vincula al iPhone que lo añade a su Wallet.
+                </div>
+                <div class="wp-event-card">
+                    <div class="crests">
+                        <div>${bigCrestForVip(ev.home)}</div>
+                        <div class="vs">VS</div>
+                        <div>${bigCrestForVip(ev.away)}</div>
+                    </div>
+                    <div class="info">
+                        <div class="title">${ev.home} vs ${ev.away}</div>
+                        <div class="meta">${ev.dateTime}<br>${ev.venue} · Puerta ${ev.puerta} · Sector ${ev.sector}</div>
+                    </div>
+                </div>
+
+                <div class="wp-section-title">
+                    <span>Tus ${g.count} tickets</span>
+                    <span class="count">${claimed} en tu Wallet · ${reassigned} reasignados</span>
+                </div>
+                <div class="wp-tickets">${ticketRows}</div>
+
+                <div class="wp-disclaimer">
+                    <div class="icon">${VIP_I.ticket}</div>
+                    <div>Cada ticket se vincula al iPhone que lo añade al Wallet. Si reasignas un ticket, esa persona recibirá su propio enlace para gestionarlo.</div>
+                </div>
+            </div>
+        </div>
+        ${actionsSheet}
+    `;
+}
+
+function renderWpTicketRow(t) {
+    const seatLabel = `Fila ${t.fila} · Asiento ${t.asiento}`;
+    const reassigned = t.contactId && String(t.contactId).startsWith('w-');
+    const reassignedTo = reassigned ? vipContactById(t.contactId) : null;
+    const original = vipContactById(state.webView.contactId);
+
+    let avatarHTML, name, meta, pillClass, pillLabel;
+
+    if (t.status === 'bound') {
+        avatarHTML = `<div class="av self">${original ? original.initial : 'TÚ'}</div>`;
+        name = 'Para ti';
+        meta = `${seatLabel} · Añadido a tu Wallet`;
+        pillClass = 'bound'; pillLabel = 'En tu Wallet';
+    } else if (reassignedTo) {
+        const bg = `hsl(${reassignedTo.hue}, 45%, 38%)`;
+        avatarHTML = `<div class="av" style="background:${bg};color:#fff">${reassignedTo.initial}</div>`;
+        name = reassignedTo.name;
+        meta = `${seatLabel} · ${reassignedTo.phone}`;
+        pillClass = 'sent'; pillLabel = 'Reasignado';
+    } else {
+        avatarHTML = `<div class="av unassigned">${VIP_I.plus}</div>`;
+        name = '<span class="muted">Pendiente de asignar</span>';
+        meta = seatLabel;
+        pillClass = 'unassigned'; pillLabel = 'Pendiente';
+    }
+
+    return `
+        <div class="wp-ticket">
+            ${avatarHTML}
+            <div class="body">
+                <div class="name">${name}</div>
+                <div class="meta">${meta}</div>
+            </div>
+            <span class="pill ${pillClass}">${pillLabel}</span>
+            <button class="more" data-vip-web-ticket="${t.id}" aria-label="Acciones">
+                ${VIP_I.moreVert}
+            </button>
+        </div>
+    `;
+}
+
+function renderWebActionsSheet(t) {
+    if (!t) return '';
+    const seatLabel = `Fila ${t.fila} · Asiento ${t.asiento}`;
+    const reassigned = t.contactId && String(t.contactId).startsWith('w-');
+    const reassignedTo = reassigned ? vipContactById(t.contactId) : null;
+
+    const actions = [];
+    if (t.status === 'bound') {
+        actions.push({ key: 'info', label: 'Ya está en tu Wallet · no se puede cambiar', disabled: true });
+    } else if (reassignedTo) {
+        actions.push({ key: 'wp-reassign', label: 'Cambiar destinatario', icon: VIP_I.share });
+        actions.push({ key: 'wp-revoke',   label: 'Revocar y volver a pendiente', destructive: true });
+    } else {
+        actions.push({ key: 'wp-mine',     label: 'Quedármelo · añadir a mi Wallet', icon: VIP_I.walletPass });
+        actions.push({ key: 'wp-reassign', label: 'Reasignar a otra persona', icon: VIP_I.share });
+    }
+
+    return `
+        <div class="wp-action-sheet-bg" data-vip-web-actions-close></div>
+        <div class="wp-action-sheet">
+            <div class="head">
+                <div class="seat">${seatLabel}</div>
+                <div class="who">${reassignedTo ? `Reasignado a ${reassignedTo.name}` : (t.status === 'bound' ? 'En tu Wallet' : 'Pendiente de asignar')}</div>
+            </div>
+            ${actions.map(a => `
+                <button class="row ${a.destructive ? 'destructive' : ''}"
+                        ${a.disabled ? 'disabled' : `data-vip-web-action="${a.key}"`}>
+                    ${a.icon || ''}
+                    <span>${a.label}</span>
+                </button>
+            `).join('')}
+            <button class="cancel" data-vip-web-actions-close>Cancelar</button>
+        </div>
+    `;
+}
+
+const VIP_WEB_SUGGESTED = [
+    { name: 'Carlos Méndez', phone: '+34 645 778 224', initial: 'CM', hue: 200 },
+    { name: 'Ana Vázquez',   phone: 'ana.v@email.com', initial: 'AV', hue: 320 },
+    { name: 'Daniel Soto',   phone: '+34 612 998 553', initial: 'DS', hue: 50 }
+];
+
+function renderWebPreviewPicker(g, ev, recipient) {
+    const w = state.webView;
+    const t = g.tickets.find(x => x.id === w.reassignTicketId);
+    const seatLabel = t ? `Fila ${t.fila} · Asiento ${t.asiento}` : '';
+    const canSubmit = w.formName.trim().length > 1 && w.formContact.trim().length > 4;
+
+    return `
+        <div class="wp-body">
+            <div class="wp-page">
+                <div class="wp-brand">
+                    <div class="logo">${VIP_I.ticket}</div>
+                    <div>
+                        <div class="name">Real Madrid</div>
+                        <div class="crumb">Reasignar ticket · ${seatLabel}</div>
+                    </div>
+                </div>
+                <div class="wp-greet">¿A quién se lo envías?</div>
+                <div class="wp-lede">Le llegará un SMS o email con su propio enlace para añadir el ticket a su Wallet.</div>
+
+                <div class="wp-form">
+                    <div class="wp-input">
+                        <label>Nombre</label>
+                        <input type="text" placeholder="p. ej. Carlos Méndez"
+                               value="${escapeHtml(w.formName || '')}"
+                               data-vip-web-form="name" autocomplete="off">
+                    </div>
+                    <div class="wp-input">
+                        <label>Teléfono o email</label>
+                        <input type="text" placeholder="+34 600 000 000"
+                               value="${escapeHtml(w.formContact || '')}"
+                               data-vip-web-form="contact" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="wp-suggested-title">Contactos sugeridos</div>
+                <div class="wp-suggested">
+                    ${VIP_WEB_SUGGESTED.map((c, i) => `
+                        <button class="wp-suggested-row" data-vip-web-suggest="${i}">
+                            <div class="av">${c.initial}</div>
+                            <div class="info">
+                                <div class="name">${c.name}</div>
+                                <div class="ph">${c.phone}</div>
+                            </div>
+                            ${VIP_I.chevronRight}
+                        </button>
+                    `).join('')}
+                </div>
+
+                <div class="wp-cta-row">
+                    <button class="wp-cta secondary" data-vip-web-picker-cancel>Cancelar</button>
+                    <button class="wp-cta primary" data-vip-web-picker-confirm
+                            ${canSubmit ? '' : 'disabled'}>
+                        Enviar ticket
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderWebPreviewSending(g) {
+    const total = g.count;
+    const done = state.webView.sendingProgress;
+    const pct = total ? Math.round((done / total) * 100) : 100;
+    return `
+        <div class="wp-body">
+            <div class="wp-page" style="text-align:center; padding-top: 80px;">
+                <div class="wp-greet">Procesando…</div>
+                <div class="wp-lede">${done} / ${total}</div>
+                <div style="height: 6px; border-radius: 3px; background: #00000010; margin: 22px auto 0; max-width: 280px; overflow: hidden;">
+                    <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #c9a36e, #8c6a3f); transition: width 0.2s;"></div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderWebPreviewSent() {
+    return `
+        <div class="wp-body">
+            <div class="wp-page">
+                <div class="wp-sent">
+                    <div class="check">
+                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="7,17 14,24 26,10"/></svg>
+                    </div>
+                    <h3>¡Hecho!</h3>
+                    <p>Tu ticket ya está reasignado. La persona recibirá su propio enlace para añadirlo a su Wallet.</p>
+                    <button class="wp-cta primary" style="display:inline-flex;min-width:220px" data-vip-web-back-manage>Volver a mis tickets</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function attachWebPreviewListeners() {
+    const w = state.webView;
+
+    // Toggle handle on the phone frame
+    document.querySelectorAll('[data-vip-web-toggle]').forEach(btn => btn.addEventListener('click', () => {
+        if (btn.classList.contains('disabled') && !w.open) return;
+        w.open = !w.open;
+        if (!w.open) {
+            w.screen = 'manage';
+            w.actionsTicketId = null;
+            w.reassignTicketId = null;
+        }
+        render();
+    }));
+
+    // Recipient chips
+    document.querySelectorAll('[data-vip-web-recipient]').forEach(chip => chip.addEventListener('click', () => {
+        w.contactId = chip.dataset.vipWebRecipient;
+        w.screen = 'manage';
+        w.actionsTicketId = null;
+        render();
+    }));
+
+    // Per-ticket actions
+    document.querySelectorAll('[data-vip-web-ticket]').forEach(btn => btn.addEventListener('click', () => {
+        w.actionsTicketId = btn.dataset.vipWebTicket;
+        render();
+    }));
+    document.querySelectorAll('[data-vip-web-actions-close]').forEach(el => el.addEventListener('click', () => {
+        w.actionsTicketId = null;
+        render();
+    }));
+    document.querySelectorAll('[data-vip-web-action]').forEach(btn => btn.addEventListener('click', () => {
+        const tickets = vipTicketsForCurrentEvent();
+        const t = tickets.find(x => x.id === w.actionsTicketId);
+        if (!t) return;
+        const action = btn.dataset.vipWebAction;
+
+        if (action === 'wp-mine') {
+            t.status = 'bound';
+            w.actionsTicketId = null;
+        } else if (action === 'wp-reassign') {
+            w.reassignTicketId = t.id;
+            w.formName = '';
+            w.formContact = '';
+            w.actionsTicketId = null;
+            w.screen = 'picker';
+        } else if (action === 'wp-revoke') {
+            t.contactId = w.contactId;
+            t.status = 'sent';
+            w.actionsTicketId = null;
+        }
+        render();
+    }));
+
+    // Picker form
+    document.querySelectorAll('[data-vip-web-form]').forEach(input => input.addEventListener('input', e => {
+        const field = input.dataset.vipWebForm;
+        if (field === 'name')    w.formName = e.target.value;
+        if (field === 'contact') w.formContact = e.target.value;
+        const canSubmit = w.formName.trim().length > 1 && w.formContact.trim().length > 4;
+        document.querySelectorAll('.wp-page .wp-cta.primary').forEach(b => {
+            if (canSubmit) b.removeAttribute('disabled');
+            else            b.setAttribute('disabled', 'disabled');
+        });
+    }));
+    document.querySelectorAll('[data-vip-web-suggest]').forEach(row => row.addEventListener('click', () => {
+        const idx = parseInt(row.dataset.vipWebSuggest, 10);
+        const c = VIP_WEB_SUGGESTED[idx];
+        if (!c) return;
+        w.formName = c.name;
+        w.formContact = c.phone;
+        render();
+    }));
+    document.querySelectorAll('[data-vip-web-picker-cancel]').forEach(btn => btn.addEventListener('click', () => {
+        w.screen = 'manage';
+        w.reassignTicketId = null;
+        w.formName = '';
+        w.formContact = '';
+        render();
+    }));
+    document.querySelectorAll('[data-vip-web-picker-confirm]').forEach(btn => btn.addEventListener('click', _vipWebPickerConfirm));
+    document.querySelectorAll('[data-vip-web-back-manage]').forEach(btn => btn.addEventListener('click', () => {
+        w.screen = 'manage';
+        render();
+    }));
+}
+
+function _vipWebPickerConfirm() {
+    const w = state.webView;
+    const tickets = vipTicketsForCurrentEvent();
+    const t = tickets.find(x => x.id === w.reassignTicketId);
+    if (!t) return;
+    if (w.formName.trim().length < 2 || w.formContact.trim().length < 5) return;
+
+    const key = (w.formName.trim() + '|' + w.formContact.trim()).toLowerCase();
+    let existing = VIP_WEB_CONTACTS.find(c => (c.name + '|' + c.phone).toLowerCase() === key);
+    if (!existing) {
+        existing = {
+            id: 'w-' + (VIP_WEB_CONTACTS.length + 1) + '-' + Date.now().toString(36),
+            name: w.formName.trim(),
+            phone: w.formContact.trim(),
+            initial: (w.formName.trim().split(/\s+/).map(p => p[0]).join('').slice(0, 2) || 'NN').toUpperCase(),
+            hue: Math.floor(Math.random() * 360)
+        };
+        VIP_WEB_CONTACTS.push(existing);
+    }
+    t.contactId = existing.id;
+    t.status = 'sent';
+    t.sentAt = Date.now();
+    t.channel = 'web';
+
+    w.screen = 'sending';
+    w.sendingProgress = 0;
+    render();
+
+    let i = 0;
+    const total = 1;
+    const tick = () => {
+        if (i >= total) { w.screen = 'sent'; render(); return; }
+        i++;
+        w.sendingProgress = i;
+        render();
+        setTimeout(tick, 220);
+    };
+    setTimeout(tick, 260);
 }
 
 function renderVipGestor() {
@@ -4949,6 +5522,8 @@ function handleVipShareClick(e) {
         }
 
         // ── Picker ───────────────────────────────────────────────
+        // Legacy single-toggle (kept for backwards compat with any
+        // remaining code paths that fire it).
         case 'toggle-contact': {
             const cid = target.dataset.vipContact;
             const mutableCount = tickets.filter(t => ['unassigned', 'mine'].includes(t.status)).length;
@@ -4959,6 +5534,25 @@ function handleVipShareClick(e) {
             } else if (s.selection.length < max) {
                 s.selection.push(cid);
             }
+            render();
+            return;
+        }
+        // Quantity stepper for the multi-share picker. The selection
+        // array can hold the same contact id more than once; each
+        // duplicate is one extra ticket that will be assigned to that
+        // person and stamped with `loteOwner` at commit time.
+        case 'inc-contact': {
+            const cid = target.dataset.vipContact;
+            const mutableCount = tickets.filter(t => ['unassigned', 'mine'].includes(t.status)).length;
+            const max = s.keepMine ? Math.max(0, mutableCount - 1) : mutableCount;
+            if (s.selection.length < max) s.selection.push(cid);
+            render();
+            return;
+        }
+        case 'dec-contact': {
+            const cid = target.dataset.vipContact;
+            const idx = s.selection.lastIndexOf(cid);
+            if (idx >= 0) s.selection.splice(idx, 1);
             render();
             return;
         }
@@ -5079,6 +5673,29 @@ function handleVipShareClick(e) {
         case 'accept-disclaimer': {
             s.disclaimerSeen = true;
             startBatchSend();
+            return;
+        }
+
+        // ── Multi-share recipient web view ───────────────────────
+        case 'open-web-lote': {
+            const cid = target.dataset.vipLote;
+            state.webView.contactId = cid;
+            state.webView.screen = 'manage';
+            state.webView.actionsTicketId = null;
+            state.webView.open = true;
+            render();
+            return;
+        }
+        case 'open-web-after-send': {
+            const groups = vipMultiShareGroups();
+            const keys = Object.keys(groups);
+            if (keys.length === 0) { closeSheet(); return; }
+            state.webView.contactId = keys[0];
+            state.webView.screen = 'manage';
+            state.webView.actionsTicketId = null;
+            state.webView.open = true;
+            // Close the App's "sent" sheet so the focus shifts to the web frame.
+            closeSheet();
             return;
         }
 
@@ -5506,22 +6123,32 @@ function commitPickerAssignment() {
     const tickets = vipTicketsForCurrentEvent();
     // Mutable slots are current 'mine' + 'unassigned' tickets
     const mutable = tickets.filter(t => ['unassigned', 'mine'].includes(t.status));
-    mutable.forEach(t => { t.status = 'unassigned'; t.contactId = null; t.sentAt = null; });
+    mutable.forEach(t => {
+        t.status = 'unassigned';
+        t.contactId = null;
+        t.sentAt = null;
+        t.loteOwner = null;
+    });
 
     let offset = 0;
     if (s.keepMine && mutable.length > 0) {
         mutable[0].status = 'mine';
         offset = 1;
     }
+    // Count how many tickets each contact will get — anyone receiving
+    // more than one becomes a multi-share lote owner. We stamp
+    // `loteOwner` so we can recognise the lote later, even after the
+    // recipient redistributes some of those tickets via the web view.
+    const counts = {};
+    s.selection.forEach(cid => { counts[cid] = (counts[cid] || 0) + 1; });
+
     s.selection.forEach((cid, i) => {
         const t = mutable[offset + i];
         if (t) {
             t.status = 'assigned';
             t.contactId = cid;
-            // Auto-route on the channel preferred by this contact
-            // (email when available, SMS as fallback). Stored on the
-            // ticket so the user can override it from the preview row.
             t.channel = vipDefaultChannelFor(vipContactById(cid));
+            if (counts[cid] > 1) t.loteOwner = cid;
         }
     });
 }
@@ -6181,8 +6808,12 @@ function render() {
     // VIP sheets
     renderVipSheets();
 
+    // Recipient web view (multi-share lote)
+    renderWebPreview();
+
     attachListeners();
     attachVipListeners();
+    attachWebPreviewListeners();
     updateStatusBarStyle();
     updateStageHeader();
     renderSidebar();
