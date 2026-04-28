@@ -4083,8 +4083,11 @@ function renderVipAuthAddSheet() {
                        value="${escapeHtml(d.name || '')}" placeholder="Nombre">
                 <input type="email" class="vip-auth-input" data-vip-auth-field="email"
                        value="${escapeHtml(d.email || '')}" placeholder="Correo electrónico">
+                <!-- Always render with data-vip-action so input handler can
+                     toggle .is-disabled in place without losing the binding.
+                     The action handler also validates draft before saving. -->
                 <button class="vip-auth-confirm ${canConfirm ? '' : 'is-disabled'}"
-                        ${canConfirm ? 'data-vip-action="auth-add-confirm"' : 'disabled'}>
+                        data-vip-action="auth-add-confirm">
                     Confirmar
                 </button>
                 <div class="vip-auth-legal">
@@ -5183,6 +5186,10 @@ function attachVipProfileListeners() {
 function handleVipProfileClick(e) {
     const target = e.target.closest('[data-vip-action]');
     if (!target) return;
+    // Skip clicks on visually-disabled controls (form not yet valid, etc.)
+    if (target.classList.contains('is-disabled')
+        || target.classList.contains('disabled')
+        || target.disabled) return;
     const action = target.dataset.vipAction;
     if (!action) return;
 
@@ -5344,8 +5351,9 @@ function handleVipProfileInput(e) {
     const field = e.target.dataset.vipAuthField;
     const d = state.vipAuthorized.addDraft || {};
     state.vipAuthorized.addDraft = { ...d, [field]: e.target.value };
-    // Re-render only the Confirm button enabled state so we don't lose
-    // input focus.
+    // Update the visual disabled state without re-rendering the whole
+    // sheet (would lose input focus and cursor position). The actual
+    // click action validates the draft itself before saving.
     const sheet = e.target.closest('.vip-auth-add-sheet');
     if (!sheet) return;
     const btn = sheet.querySelector('.vip-auth-confirm');
@@ -5354,8 +5362,6 @@ function handleVipProfileInput(e) {
     const ok = (draft.name || '').trim().length > 0
             && /^\S+@\S+\.\S+$/.test((draft.email || '').trim());
     btn.classList.toggle('is-disabled', !ok);
-    if (ok) btn.removeAttribute('disabled');
-    else    btn.setAttribute('disabled', '');
 }
 
 function commitPickerAssignment() {
