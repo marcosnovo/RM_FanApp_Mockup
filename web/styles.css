@@ -4297,24 +4297,61 @@ body.resizing-side * {
 
 /* ── VIP Tab bar ─────────────────────────────────────────────── */
 .vip-tab-bar {
-    background: rgba(10, 11, 20, 0.96);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: linear-gradient(180deg, rgba(15, 16, 28, 0.92) 0%, rgba(10, 11, 20, 0.98) 100%);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
     border-top: 0.5px solid var(--vip-separator);
-    color: var(--vip-text-secondary);
+    padding: 8px 6px 22px;
+    gap: 4px;
+    color: rgba(255, 255, 255, 0.62);
 }
 
-.vip-tab-bar .tab-bar-item { color: var(--vip-text-tertiary); }
-.vip-tab-bar .tab-bar-item.active { color: var(--vip-text); }
-
-/* Subtle raised pill behind the active tab's icon — matches the Figma
-   where the active tab sits on a slightly lighter navy chip. */
-.vip-tab-bar .tab-bar-item.active .tab-bar-icon,
-.vip-tab-bar .tab-bar-item.active > svg:first-child {
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 18px;
-    padding: 6px 16px;
+.vip-tab-bar .tab-bar-item {
+    color: rgba(255, 255, 255, 0.62);
+    gap: 4px;
+    padding: 6px 4px 4px;
+    border-radius: 14px;
+    transition: color 0.18s ease, transform 0.18s ease;
 }
+
+.vip-tab-bar .tab-bar-item .vip-tab-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+}
+.vip-tab-bar .tab-bar-item .vip-tab-icon > svg {
+    width: 26px !important;
+    height: 26px !important;
+    display: block;
+    color: inherit;
+}
+.vip-tab-bar .tab-bar-item .vip-tab-icon > svg [stroke="currentColor"] { stroke: currentColor; }
+
+.vip-tab-bar .tab-bar-item span:not(.vip-tab-icon) {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+    color: inherit;
+}
+
+/* Active state — solid gold tint on the filled glyph + label. We use
+   the hex directly because the tab bar sits outside the `.vip-app`
+   wrapper that scopes `--vip-gold`, so the var would resolve to empty. */
+.vip-tab-bar .tab-bar-item.active {
+    color: #C9A36E;
+}
+.vip-tab-bar .tab-bar-item.active .vip-tab-icon {
+    filter: drop-shadow(0 1px 2px rgba(201, 163, 110, 0.4));
+}
+.vip-tab-bar .tab-bar-item.active span:not(.vip-tab-icon) {
+    font-weight: 600;
+    color: #C9A36E;
+}
+
+.vip-tab-bar .tab-bar-item:active { transform: scale(0.96); }
 
 
 

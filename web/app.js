@@ -5171,19 +5171,40 @@ function renderVipPaymentsCheckoutMock() {
 }
 
 function renderVipTabBar() {
+    // Each item carries an outlined glyph (inactive) and a filled glyph
+    // (active). The CSS hides whichever one isn't current. Shapes match
+    // the Figma reference: rounded house, billfold wallet, concierge bell.
     const items = [
-        { key: 'inicio',  label: 'Inicio',      icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 L21 10 V21 H14 V14 H10 V21 H3 V10 Z"/></svg>` },
-        { key: 'eventos', label: 'Mis eventos', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 11h18"/><path d="M8 3v4M16 3v4"/></svg>` },
-        { key: 'gestor',  label: 'Gestor',      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 a8 8 0 0 0-8 8 v3 h3 v-3 a5 5 0 0 1 10 0 v3 h3 v-3 a8 8 0 0 0-8-8z"/><path d="M4 14 v3 a2 2 0 0 0 2 2 h1 v-5 z"/><path d="M20 14 v3 a2 2 0 0 1-2 2 h-1 v-5 z"/></svg>` }
+        {
+            key: 'inicio',
+            label: 'Inicio',
+            outline: `<svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 L14 4.5 L24 12.5 V22 a1.5 1.5 0 0 1-1.5 1.5 H5.5 A1.5 1.5 0 0 1 4 22 Z"/><path d="M11.5 23.5 V16.5 a1 1 0 0 1 1-1 h3 a1 1 0 0 1 1 1 V23.5"/></svg>`,
+            filled:  `<svg viewBox="0 0 28 28" fill="currentColor"><path d="M4 12.7 L14 4.7 L24 12.7 V22 a1.5 1.5 0 0 1-1.5 1.5 H17 V17 a1 1 0 0 0-1-1 h-4 a1 1 0 0 0-1 1 v6.5 H5.5 A1.5 1.5 0 0 1 4 22 Z"/></svg>`
+        },
+        {
+            key: 'eventos',
+            label: 'Mis eventos',
+            outline: `<svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7" width="21" height="15" rx="3"/><path d="M3.5 12 H24.5"/><circle cx="20" cy="17" r="1.4" fill="currentColor"/></svg>`,
+            filled:  `<svg viewBox="0 0 28 28" fill="currentColor"><path d="M6.5 6 H21.5 a3 3 0 0 1 3 3 v0.5 H3.5 V9 a3 3 0 0 1 3-3z"/><path d="M3.5 11.5 H24.5 V19 a3 3 0 0 1-3 3 H6.5 a3 3 0 0 1-3-3 Z M20 16 a1.5 1.5 0 1 0 0 3 a1.5 1.5 0 0 0 0-3z" fill-rule="evenodd"/></svg>`
+        },
+        {
+            key: 'gestor',
+            label: 'Gestor',
+            outline: `<svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20.5 a9 9 0 0 1 18 0z"/><path d="M3.5 20.5 H24.5"/><line x1="14" y1="7" x2="14" y2="9"/><circle cx="14" cy="5.7" r="1.3" fill="currentColor"/></svg>`,
+            filled:  `<svg viewBox="0 0 28 28" fill="currentColor"><path d="M5 20.5 a9 9 0 0 1 18 0 H5z"/><rect x="3.5" y="20.8" width="21" height="2" rx="1"/><circle cx="14" cy="5.5" r="1.5"/><rect x="13.3" y="6.4" width="1.4" height="3" rx="0.7"/></svg>`
+        }
     ];
     return `
         <div class="tab-bar vip-tab-bar">
-            ${items.map(t => `
-                <button class="tab-bar-item ${state.vipTab === t.key ? 'active' : ''}" data-vip-tab="${t.key}">
-                    ${t.icon}
-                    <span>${t.label}</span>
-                </button>
-            `).join('')}
+            ${items.map(t => {
+                const isActive = state.vipTab === t.key;
+                return `
+                    <button class="tab-bar-item ${isActive ? 'active' : ''}" data-vip-tab="${t.key}">
+                        <span class="vip-tab-icon">${isActive ? t.filled : t.outline}</span>
+                        <span>${t.label}</span>
+                    </button>
+                `;
+            }).join('')}
         </div>
     `;
 }
