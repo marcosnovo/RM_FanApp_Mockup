@@ -10513,6 +10513,217 @@ body.auth-mode .app-layout { visibility: hidden; }
     margin-bottom: 20px;
 }
 
+/* ── Solicitar entradas (request tickets) ───────────────────── */
+.vip-solicitar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: calc(100% - 40px);
+    margin: 8px 20px 4px;
+    height: 48px;
+    border-radius: 24px;
+    border: none;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.vip-solicitar-btn > svg { width: 18px !important; height: 18px !important; }
+
+.vip-solicitar-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--vip-bg-2);
+    border-radius: 22px 22px 0 0;
+    padding: 14px 20px 24px;
+    z-index: 30;
+    border-top: 1px solid var(--vip-card-border);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+}
+.vip-solicitar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+.vip-solicitar-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--vip-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.vip-solicitar-close > svg { width: 18px !important; height: 18px !important; }
+.vip-solicitar-title {
+    flex: 1;
+    text-align: left;
+    margin-left: 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--vip-text);
+}
+.vip-solicitar-body {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--vip-text-secondary);
+    margin-bottom: 18px;
+}
+.vip-solicitar-body > strong {
+    color: var(--vip-text);
+    font-weight: 600;
+}
+
+.vip-solicitar-counter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+.vip-solicitar-date {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vip-text);
+}
+.vip-solicitar-counter {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.vip-solicitar-step {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.vip-solicitar-step.disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+.vip-solicitar-count {
+    min-width: 24px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--vip-text);
+}
+.vip-solicitar-disclaimer {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--vip-text-tertiary);
+    margin-bottom: 14px;
+}
+.vip-solicitar-check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 18px;
+    cursor: pointer;
+    user-select: none;
+}
+.vip-solicitar-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    border: 1.5px solid var(--vip-text-tertiary);
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+.vip-solicitar-check.on {
+    background: var(--vip-gold);
+    border-color: var(--vip-gold);
+    color: var(--vip-gold-text);
+}
+.vip-solicitar-check > svg { width: 14px !important; height: 14px !important; }
+.vip-solicitar-check-text {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--vip-text-secondary);
+}
+.vip-solicitar-check-text u {
+    color: var(--vip-text);
+    text-decoration-color: var(--vip-text-secondary);
+}
+
+.vip-solicitar-cta {
+    width: 100%;
+    height: 48px;
+    border-radius: 24px;
+    border: none;
+    background: var(--vip-gradient-gold);
+    color: var(--vip-gold-text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.vip-solicitar-cta.disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.vip-solicitar-confirm {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--vip-bg-2);
+    border-radius: 18px;
+    border: 1px solid var(--vip-card-border);
+    padding: 28px 22px 22px;
+    z-index: 30;
+    text-align: center;
+}
+.vip-solicitar-confirm-check {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: rgba(122, 223, 143, 0.18);
+    color: #7adf8f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.vip-solicitar-confirm-check > svg { width: 36px !important; height: 36px !important; }
+.vip-solicitar-confirm-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vip-text);
+    line-height: 1.4;
+    margin-bottom: 22px;
+}
+
 /* ════════════════════════════════════════════════════════════════
    VIP Multi-Ticket Share · v2 (preview + swap + keep-mine toggle)
    ════════════════════════════════════════════════════════════════ */

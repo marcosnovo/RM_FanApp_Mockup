@@ -93,6 +93,15 @@ const state = {
         applePayMock: true    // simulated availability of Apple Pay in the checkout demo
     },
 
+    // Solicitar entradas (request tickets) flow — bottom sheet + confirmation modal
+    vipSolicitar: {
+        open: null,                 // null | 'sheet' | 'confirm'
+        count: 8,                   // current counter value
+        max: 8,                     // max selectable (N)
+        min: 5,                     // min selectable (N/2 + 1, ceil)
+        agreed: false               // legal checkbox state
+    },
+
     // Multi-ticket share flow (flag 'vip.tickets.multi-share')
     vipShare: {
         step: null,                 // null | 'permission' | 'picker' | 'preview' | 'disclaimer'
@@ -2802,6 +2811,8 @@ function renderVipEventDetail() {
 
         <button class="vip-mis-entradas-btn" data-vip-open-tickets>Mis entradas</button>
 
+        <button class="vip-solicitar-btn" data-vip-solicitar-open>${VIP_I.ticket} Solicitar entradas</button>
+
         <div class="vip-event-meta">
             <div class="vip-event-meta-row">${VIP_I.calendar} ${ev.date}</div>
             <div class="vip-event-meta-row">${VIP_I.location} ${ev.venue}</div>
@@ -3191,6 +3202,83 @@ function renderVipTicketRow(t) {
             </div>
             ${interactive ? `<div class="vip-ticket-more">${VIP_I.moreVert}</div>` : ''}
         </${tag}>
+    `;
+}
+
+function renderVipSolicitarSheets() {
+    const s = state.vipSolicitar;
+    if (!s.open) return '';
+    if (s.open === 'sheet')   return renderVipSolicitarSheet();
+    if (s.open === 'confirm') return renderVipSolicitarConfirm();
+    return '';
+}
+
+function renderVipSolicitarSheet() {
+    const s = state.vipSolicitar;
+    const ev = VIP_EVENTS.find(e => e.id === state.vipEventId) || VIP_EVENTS[0];
+    const canDec = s.count > s.min;
+    const canInc = s.count < s.max;
+    const canSubmit = s.agreed;
+    const checkSvg = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,10 9,15 16,6"/></svg>';
+
+    return `
+        <div class="vip-sheet-backdrop" data-vip-solicitar-close></div>
+        <div class="vip-solicitar-sheet">
+            <div class="vip-solicitar-head">
+                <button class="vip-solicitar-close" data-vip-solicitar-close>${VIP_I.xmark}</button>
+                <div class="vip-solicitar-title">${ev.home} vs ${ev.away}</div>
+                <div style="width: 24px"></div>
+            </div>
+
+            <div class="vip-solicitar-body">
+                Puede solicitar un mínimo de <strong>${s.min}</strong> y un
+                máximo de <strong>${s.max}</strong> entradas para su palco y día.
+            </div>
+
+            <div class="vip-solicitar-counter-row">
+                <div class="vip-solicitar-date">${ev.date}</div>
+                <div class="vip-solicitar-counter">
+                    <button class="vip-solicitar-step ${canDec ? '' : 'disabled'}"
+                            ${canDec ? 'data-vip-solicitar-dec' : 'disabled'}>−</button>
+                    <div class="vip-solicitar-count">${s.count}</div>
+                    <button class="vip-solicitar-step ${canInc ? '' : 'disabled'}"
+                            ${canInc ? 'data-vip-solicitar-inc' : 'disabled'}>+</button>
+                </div>
+            </div>
+
+            <div class="vip-solicitar-disclaimer">
+                Únicamente se le asignarán entradas para su palco. Nos
+                pondremos en contacto con usted para confirmar la
+                compra de las entradas.
+            </div>
+
+            <label class="vip-solicitar-check-row" data-vip-solicitar-toggle>
+                <span class="vip-solicitar-check ${s.agreed ? 'on' : ''}">
+                    ${s.agreed ? checkSvg : ''}
+                </span>
+                <span class="vip-solicitar-check-text">
+                    He leído y acepto las <u>Condiciones de reserva</u>.
+                </span>
+            </label>
+
+            <button class="vip-solicitar-cta ${canSubmit ? '' : 'disabled'}"
+                    ${canSubmit ? 'data-vip-solicitar-submit' : 'disabled'}>
+                Solicitar entradas
+            </button>
+        </div>
+    `;
+}
+
+function renderVipSolicitarConfirm() {
+    return `
+        <div class="vip-sheet-backdrop"></div>
+        <div class="vip-solicitar-confirm">
+            <div class="vip-solicitar-confirm-check">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="7,17 14,24 26,10"/></svg>
+            </div>
+            <div class="vip-solicitar-confirm-title">Entradas solicitadas correctamente</div>
+            <button class="vip-solicitar-cta" data-vip-solicitar-accept>Aceptar</button>
+        </div>
     `;
 }
 
@@ -3778,9 +3866,12 @@ function renderVipSheets() {
         shareHTML = renderVipShareSheets();
     }
 
+    // Solicitar entradas sheet + confirmation modal
+    const solicitarHTML = renderVipSolicitarSheets();
+
     // We'll drop all VIP sheets into #newsSheetSlot (repurpose it as a sheet slot)
     // Wrap in .vip-app so CSS variables cascade
-    const html = restoHTML + perfilHTML + shareHTML;
+    const html = restoHTML + perfilHTML + shareHTML + solicitarHTML;
     $('#newsSheetSlot').innerHTML = html
         ? `<div class="vip-app" style="position: relative; background: transparent; padding: 0; inset: auto">${html}</div>`
         : '';
@@ -4695,11 +4786,57 @@ function attachVipListeners() {
     // ── Multi-ticket share (flag: vip.tickets.multi-share) ────────
     attachVipShareListeners();
 
+    // ── Solicitar entradas (request tickets) ──────────────────────
+    attachVipSolicitarListeners();
+
     // ── Payment methods (flag: vip.payments.management) ───────────
     attachVipPaymentsListeners();
 
     // ── VIP Profile flows (always on, no flag) ────────────────────
     attachVipProfileListeners();
+}
+
+function attachVipSolicitarListeners() {
+    const s = state.vipSolicitar;
+
+    $$('[data-vip-solicitar-open]').forEach(btn => btn.addEventListener('click', () => {
+        s.open = 'sheet';
+        s.count = s.max;
+        s.agreed = false;
+        render();
+    }));
+
+    $$('[data-vip-solicitar-close]').forEach(el => el.addEventListener('click', () => {
+        s.open = null;
+        render();
+    }));
+
+    $$('[data-vip-solicitar-dec]').forEach(btn => btn.addEventListener('click', () => {
+        if (s.count > s.min) s.count -= 1;
+        render();
+    }));
+
+    $$('[data-vip-solicitar-inc]').forEach(btn => btn.addEventListener('click', () => {
+        if (s.count < s.max) s.count += 1;
+        render();
+    }));
+
+    $$('[data-vip-solicitar-toggle]').forEach(el => el.addEventListener('click', e => {
+        e.preventDefault();
+        s.agreed = !s.agreed;
+        render();
+    }));
+
+    $$('[data-vip-solicitar-submit]').forEach(btn => btn.addEventListener('click', () => {
+        s.open = 'confirm';
+        render();
+    }));
+
+    $$('[data-vip-solicitar-accept]').forEach(btn => btn.addEventListener('click', () => {
+        s.open = null;
+        s.agreed = false;
+        render();
+    }));
 }
 
 // ── VIP multi-ticket share: single delegated click handler ───────
