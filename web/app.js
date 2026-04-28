@@ -2703,11 +2703,10 @@ function renderVipInicio() {
     const next = VIP_NEXT_EVENT;
     const rest = VIP_EVENTS.slice(1);
 
-    // When the flag is on, the home match modules become navigable.
+    // When the flag is on, only the "Próximo evento" match module becomes
+    // navigable. The Recomendado card remains a VIP-event entry point
+    // (tickets / event detail), which is a different intent.
     const matchDetailOn = Flags.isEnabled('vip.match.detail');
-    const recoOpenAttr = matchDetailOn
-        ? `data-vip-action="open-match" data-vip-match-event="${reco.id}"`
-        : `data-vip-event-id="${reco.id}"`;
     const proxOpenAttr = matchDetailOn
         ? `data-vip-action="open-match" data-vip-match-event="next"`
         : '';
@@ -2725,7 +2724,7 @@ function renderVipInicio() {
             Recomendado <small>para usted</small>
         </div>
 
-        <div class="vip-reco-card ${matchDetailOn ? 'has-match-detail' : ''}" ${recoOpenAttr}>
+        <div class="vip-reco-card" data-vip-event-id="${reco.id}">
             <div class="vip-reco-ball">${VIP_I.soccerBall}</div>
             <div class="vip-reco-teams">
                 <div class="vip-reco-crest">${bigCrestForVip(reco.home)}</div>
@@ -2734,7 +2733,6 @@ function renderVipInicio() {
             </div>
             <div class="vip-reco-title">${reco.home} vs ${reco.away}</div>
             <div class="vip-reco-meta">${reco.division}<br>${reco.date}<br>${reco.venue}</div>
-            ${matchDetailHint}
         </div>
 
         <div class="vip-proximo ${matchDetailOn ? 'has-match-detail' : ''}" ${proxOpenAttr}>

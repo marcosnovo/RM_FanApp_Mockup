@@ -13352,15 +13352,12 @@ body.auth-mode .app-layout { visibility: hidden; }
    VIP MATCH DETAIL — flag `vip.match.detail`
    ════════════════════════════════════════════════════════════════ */
 
-/* Hint affordance on the home match modules when the flag is on */
-.vip-reco-card.has-match-detail,
+/* Hint affordance on the "Próximo evento" module when the flag is on */
 .vip-proximo.has-match-detail {
     cursor: pointer;
     transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-.vip-reco-card.has-match-detail:active,
 .vip-proximo.has-match-detail:active { transform: scale(0.985); }
-.vip-reco-card.has-match-detail:hover,
 .vip-proximo.has-match-detail:hover {
     box-shadow: 0 0 0 1px rgba(201, 163, 110, 0.35), 0 12px 24px rgba(0,0,0,0.35);
 }
