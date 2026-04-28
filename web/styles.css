@@ -244,7 +244,12 @@ body.resizing-side * {
 }
 
 .side-nav {
-    flex: 1 1 auto;
+    /* Natural height (just enough to fit the tab list). The flex space
+       in the side-panel is given to #sideFlags via margin-top: auto so
+       Funcionalidades sits roughly in the middle of the sidebar instead
+       of crowding right below the tabs. */
+    flex: 0 0 auto;
+    max-height: 40vh;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -252,6 +257,17 @@ body.resizing-side * {
     padding: 4px 12px 20px;
     scrollbar-width: thin;
     scrollbar-color: #ffffff20 transparent;
+}
+
+/* The flags container is pushed toward the bottom of the side-panel and
+   capped so it never crowds the user box / footer. The body scrolls
+   internally when there are many cards. */
+#sideFlags {
+    margin-top: auto;
+    flex: 0 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .side-nav::-webkit-scrollbar { width: 6px; }
@@ -5215,10 +5231,14 @@ body.auth-mode .app-layout { visibility: hidden; }
     flex-direction: column;
     min-height: 0;
     flex: 1 1 auto;
+    /* Cap to roughly half the panel so a long list scrolls internally
+       instead of pushing the user box / footer off-screen. */
+    max-height: 55vh;
 }
 
 .flags-panel.closed {
     flex: 0 0 auto;
+    max-height: none;
 }
 
 .flags-head {
@@ -5285,7 +5305,15 @@ body.auth-mode .app-layout { visibility: hidden; }
     flex-direction: column;
     min-height: 0;
     gap: 8px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #ffffff20 transparent;
 }
+/* Standard <button>/<input>/<div> with the `hidden` attribute should
+   not render. `display: flex` above wins over the user-agent rule, so
+   we restate it here. */
+.flags-body[hidden] { display: none; }
 
 /* ── Buscador ─────────────────────────────────────────────── */
 .flags-search {
