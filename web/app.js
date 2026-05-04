@@ -7892,19 +7892,39 @@ function renderHoyV2VideoSheet() {
 // `--side-panel-w` sobre :root, que `.app-layout` usa como columna.
 // Límites: [240px, 560px] para evitar valores absurdos.
 
-const SIDE_PANEL_WIDTH_KEY = 'rm_side_panel_w_v1';
+const SIDE_PANEL_WIDTH_KEY       = 'rm_side_panel_w_v1';
+const SIDE_PANEL_RIGHT_WIDTH_KEY = 'rm_side_panel_right_w_v1';
 const SIDE_PANEL_MIN = 240;
 const SIDE_PANEL_MAX = 560;
 
 function setupSidePanelResize() {
-    const handle = document.getElementById('sideResizeHandle');
+    setupOneResize({
+        handleId: 'sideResizeHandle',
+        panelSelector: '.side-panel:not(.side-panel-right)',
+        cssVar: '--side-panel-w',
+        defaultW: 320,
+        storageKey: SIDE_PANEL_WIDTH_KEY,
+        side: 'left'
+    });
+    setupOneResize({
+        handleId: 'sideResizeHandleRight',
+        panelSelector: '.side-panel-right',
+        cssVar: '--side-panel-right-w',
+        defaultW: 340,
+        storageKey: SIDE_PANEL_RIGHT_WIDTH_KEY,
+        side: 'right'
+    });
+}
+
+function setupOneResize({ handleId, panelSelector, cssVar, defaultW, storageKey, side }) {
+    const handle = document.getElementById(handleId);
     if (!handle) return;
 
-    // Aplica el ancho guardado (si existe) al arrancar.
+    // Apply the width saved in localStorage (if any) at boot.
     try {
-        const saved = parseInt(localStorage.getItem(SIDE_PANEL_WIDTH_KEY), 10);
+        const saved = parseInt(localStorage.getItem(storageKey), 10);
         if (saved >= SIDE_PANEL_MIN && saved <= SIDE_PANEL_MAX) {
-            document.documentElement.style.setProperty('--side-panel-w', `${saved}px`);
+            document.documentElement.style.setProperty(cssVar, `${saved}px`);
         }
     } catch {}
 
@@ -7913,9 +7933,11 @@ function setupSidePanelResize() {
 
     const onMove = (e) => {
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        let next = startW + (clientX - startX);
+        // Left panel grows when dragging right; right panel grows when dragging left.
+        const delta = (side === 'left') ? (clientX - startX) : (startX - clientX);
+        let next = startW + delta;
         next = Math.max(SIDE_PANEL_MIN, Math.min(SIDE_PANEL_MAX, next));
-        document.documentElement.style.setProperty('--side-panel-w', `${next}px`);
+        document.documentElement.style.setProperty(cssVar, `${next}px`);
     };
 
     const onUp = () => {
@@ -7926,18 +7948,17 @@ function setupSidePanelResize() {
         window.removeEventListener('touchmove', onMove);
         window.removeEventListener('touchend', onUp);
 
-        // Persistir el ancho final.
-        const w = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--side-panel-w'), 10);
+        const w = parseInt(getComputedStyle(document.documentElement).getPropertyValue(cssVar), 10);
         if (!isNaN(w)) {
-            try { localStorage.setItem(SIDE_PANEL_WIDTH_KEY, String(w)); } catch {}
+            try { localStorage.setItem(storageKey, String(w)); } catch {}
         }
     };
 
     const onDown = (e) => {
         e.preventDefault();
         startX = e.touches ? e.touches[0].clientX : e.clientX;
-        const panel = document.querySelector('.side-panel');
-        startW = panel ? panel.getBoundingClientRect().width : 320;
+        const panel = document.querySelector(panelSelector);
+        startW = panel ? panel.getBoundingClientRect().width : defaultW;
         handle.classList.add('active');
         document.body.classList.add('resizing-side');
         window.addEventListener('mousemove', onMove);
@@ -7949,10 +7970,10 @@ function setupSidePanelResize() {
     handle.addEventListener('mousedown', onDown);
     handle.addEventListener('touchstart', onDown, { passive: false });
 
-    // Doble click del handle → reset al ancho por defecto.
+    // Double-click the handle → reset to the default width for that panel.
     handle.addEventListener('dblclick', () => {
-        document.documentElement.style.setProperty('--side-panel-w', '320px');
-        try { localStorage.removeItem(SIDE_PANEL_WIDTH_KEY); } catch {}
+        document.documentElement.style.setProperty(cssVar, `${defaultW}px`);
+        try { localStorage.removeItem(storageKey); } catch {}
     });
 }
 

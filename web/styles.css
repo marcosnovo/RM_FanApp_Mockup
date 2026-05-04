@@ -58,14 +58,17 @@ html, body {
 }
 
 /* ── Layout ──────────────────────────────────────────────────── */
-/* El ancho del panel lateral se controla vía CSS var `--side-panel-w`
-   que JS persiste en localStorage. Se puede ajustar con ratón
-   arrastrando el borde derecho del panel. */
-:root { --side-panel-w: 320px; }
+/* Anchos persistidos por JS en localStorage. Los paneles laterales
+   se redimensionan arrastrando el borde interior (derecho del izquierdo
+   o izquierdo del derecho). Estilo Figma: dos paneles, stage al medio. */
+:root {
+    --side-panel-w: 320px;
+    --side-panel-right-w: 340px;
+}
 
 .app-layout {
     display: grid;
-    grid-template-columns: var(--side-panel-w) minmax(0, 1fr);
+    grid-template-columns: var(--side-panel-w) minmax(0, 1fr) var(--side-panel-right-w);
     height: 100vh;
     height: 100dvh;
     width: 100%;
@@ -138,6 +141,72 @@ body.resizing-side * {
 .side-resize-cue svg {
     width: 10px !important;
     height: 10px !important;
+}
+
+/* ── Right side panel (Funcionalidades) ──────────────────────── */
+.side-panel-right {
+    border-right: 0;
+    border-left: 1px solid #ffffff0f;
+    background: linear-gradient(180deg, #0a0c1a 0%, var(--side-bg) 100%);
+}
+
+.side-right-head {
+    padding: 22px 20px 14px;
+    border-bottom: 1px solid #ffffff0a;
+    flex-shrink: 0;
+}
+.side-right-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--side-text);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+}
+.side-right-sub {
+    font-size: 11.5px;
+    color: var(--side-text-muted);
+    margin-top: 4px;
+}
+
+/* The flags container fills the right panel rather than being bottom-anchored. */
+.side-panel-right #sideFlags {
+    margin-top: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.side-panel-right .flags-panel {
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+/* Hide the duplicate accordion head — the panel header already says
+   "Funcionalidades" and the body should stay open. Power users can
+   still collapse via the head if it's visible. */
+.side-panel-right .flags-head {
+    border-radius: 0;
+    border-bottom: 1px solid #ffffff0a;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Resize handle on the LEFT edge of the right panel */
+.side-resize-handle-right {
+    right: auto;
+    left: -3px;
+}
+/* Cue arrow pops out toward the stage (i.e. the LEFT) */
+.side-resize-cue-right {
+    right: auto;
+    left: -14px;
 }
 
 .side-header {
@@ -2901,6 +2970,15 @@ body.resizing-side * {
     text-align: center;
     color: var(--rm-text-secondary);
     font-size: 14px;
+}
+
+@media (max-width: 1280px) {
+    /* Cuando no hay sitio para los dos sidebars + el móvil, escondemos
+       el panel derecho. Las funcionalidades siguen accesibles toggleando
+       la visibilidad desde fuera (no implementado todavía) — por ahora
+       priorizamos que el móvil quede bien centrado. */
+    .app-layout { grid-template-columns: var(--side-panel-w) minmax(0, 1fr); }
+    .side-panel-right { display: none; }
 }
 
 @media (max-width: 900px) {

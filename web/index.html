@@ -16,7 +16,7 @@
 
     <!-- Cibeles Design System tokens (Madridistas) -->
     <link rel="stylesheet" href="tokens/cibeles-tokens.css">
-    <link rel="stylesheet" href="styles.css?v=47">
+    <link rel="stylesheet" href="styles.css?v=48">
 
     <!-- RM Neue is the brand font; fall back to Inter (Cibeles uses near-identical metrics) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -59,9 +59,6 @@
 
             <!-- Sidebar navigation (populated dynamically) -->
             <nav class="side-nav" id="sideNav"></nav>
-
-            <!-- Feature flags panel (per app, populated dynamically) -->
-            <div class="side-flags" id="sideFlags"></div>
 
             <!-- User + Settings section (bottom) -->
             <div class="side-user" id="sideUser"></div>
@@ -140,6 +137,26 @@
                 Traducción HTML/CSS/JS del mockup SwiftUI — incluye carrusel de partidos, sub-tabs y flujos originales.
             </div>
         </main>
+
+        <!-- ── Right side panel: Funcionalidades / experiments ───────
+             Inspirado en apps tipo Figma con paneles a ambos lados.
+             El contenido (flags) lo puebla JS en `#sideFlags`. -->
+        <aside class="side-panel side-panel-right" id="sidePanelRight">
+            <div class="side-right-head">
+                <div class="side-right-title">Funcionalidades</div>
+                <div class="side-right-sub" id="sideRightSubtitle">Experimentos activos por app</div>
+            </div>
+
+            <!-- Feature flags panel (populated dynamically by JS) -->
+            <div class="side-flags" id="sideFlags"></div>
+
+            <!-- Handle para redimensionar el panel desde el borde IZQUIERDO -->
+            <div class="side-resize-handle side-resize-handle-right" id="sideResizeHandleRight" aria-label="Ajustar ancho del panel derecho"></div>
+            <div class="side-resize-cue side-resize-cue-right" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,6 9,12 15,18"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>
+            </div>
+        </aside>
     </div>
 
     <!-- Auth overlay (login / forgot / reset / setup)
@@ -183,11 +200,11 @@
          don't keep a stale copy (Python http.server and GH Pages both respect
          a different query string as a different cache entry). -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script defer src="auth.js?v=47"></script>
-    <script defer src="flags.js?v=47"></script>
-    <script defer src="data.js?v=47"></script>
-    <script defer src="app.js?v=47"></script>
-    <script defer src="flow_exporter.js?v=47"></script>
-    <script defer src="jira_initiatives.js?v=47"></script>
+    <script defer src="auth.js?v=48"></script>
+    <script defer src="flags.js?v=48"></script>
+    <script defer src="data.js?v=48"></script>
+    <script defer src="app.js?v=48"></script>
+    <script defer src="flow_exporter.js?v=48"></script>
+    <script defer src="jira_initiatives.js?v=48"></script>
 </body>
 </html>
