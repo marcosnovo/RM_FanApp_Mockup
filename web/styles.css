@@ -33,12 +33,21 @@
     --rm-text-tertiary: var(--color-grayscale-placehold); /* #8C95A6 */
     --rm-separator: var(--color-grayscale-line);        /* #E1E5EA */
 
-    /* Sidebar (dark chrome of the demo site itself) */
-    --side-bg: #0F2145;          /* Cibeles socios navy */
-    --side-bg-2: #14142B;        /* Cibeles off-black */
-    --side-text: #ffffff;
-    --side-text-dim: #ffffffa8;
-    --side-text-muted: #ffffff55;
+    /* Sidebar — light Figma-style chrome.
+       Reusable tokens for both side panels. The sidebar moved from a
+       Cibeles navy fill to a near-white canvas to improve contrast,
+       legibility (WCAG AA on labels) and let the iPhone mockup pop in
+       the centre. */
+    --side-bg: #f7f8fa;          /* base panel — very pale gray */
+    --side-bg-2: #ffffff;        /* slightly raised cards inside */
+    --side-text: #0F2145;        /* deep navy — primary text */
+    --side-text-dim: #4d5876;    /* secondary labels (>4.5:1 on bg) */
+    --side-text-muted: #7d869a;  /* tertiary / hints (>3:1) */
+    --side-border: rgba(15, 33, 69, 0.08);    /* subtle borders */
+    --side-border-strong: rgba(15, 33, 69, 0.16);
+    --side-hover: rgba(15, 33, 69, 0.045);    /* hover wash */
+    --side-hover-strong: rgba(15, 33, 69, 0.08);
+    --side-tint: rgba(15, 33, 69, 0.06);      /* chips / scrollbar */
 
     /* Card shadow w/ Cibeles violet tint */
     --rm-card-shadow: var(--shadow-light-small);
@@ -85,8 +94,9 @@ body.resizing-side * {
 
 /* ── Left side panel ─────────────────────────────────────────── */
 .side-panel {
-    background: linear-gradient(180deg, var(--side-bg) 0%, #090a18 100%);
-    border-right: 1px solid #ffffff0f;
+    background: linear-gradient(180deg, #ffffff 0%, var(--side-bg) 100%);
+    border-right: 1px solid var(--side-border);
+    color: var(--side-text);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -146,13 +156,13 @@ body.resizing-side * {
 /* ── Right side panel (Funcionalidades) ──────────────────────── */
 .side-panel-right {
     border-right: 0;
-    border-left: 1px solid #ffffff0f;
-    background: linear-gradient(180deg, #0a0c1a 0%, var(--side-bg) 100%);
+    border-left: 1px solid var(--side-border);
+    background: linear-gradient(180deg, var(--side-bg) 0%, #ffffff 100%);
 }
 
 .side-right-head {
     padding: 22px 20px 14px;
-    border-bottom: 1px solid #ffffff0a;
+    border-bottom: 1px solid var(--side-border);
     flex-shrink: 0;
 }
 .side-right-title {
@@ -168,11 +178,14 @@ body.resizing-side * {
     margin-top: 4px;
 }
 
-/* The flags container fills the right panel rather than being bottom-anchored. */
+/* The flags container fills the right panel rather than being bottom-anchored,
+   so a long flag list uses the entire vertical space (no max-height cap). */
 .side-panel-right #sideFlags {
     margin-top: 0;
     flex: 1 1 auto;
     min-height: 0;
+    max-height: none;
+    border-top: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -184,18 +197,19 @@ body.resizing-side * {
     padding: 0;
     flex: 1 1 auto;
     min-height: 0;
+    max-height: none;       /* override the half-screen cap from the legacy
+                                left-sidebar layout */
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
-/* Hide the duplicate accordion head — the panel header already says
-   "Funcionalidades" and the body should stay open. Power users can
-   still collapse via the head if it's visible. */
+/* Inline accordion head sits flush above the body — the right panel
+   already exposes "Funcionalidades" as its primary title. */
 .side-panel-right .flags-head {
     border-radius: 0;
-    border-bottom: 1px solid #ffffff0a;
+    border-bottom: 1px solid var(--side-border);
     padding: 10px 16px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--side-tint);
 }
 
 /* Resize handle on the LEFT edge of the right panel */
@@ -214,7 +228,7 @@ body.resizing-side * {
     display: flex;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid #ffffff0a;
+    border-bottom: 1px solid var(--side-border);
 }
 
 .side-logo {
@@ -248,8 +262,8 @@ body.resizing-side * {
 .app-switcher {
     margin: 0 16px;
     padding: 4px;
-    background: #ffffff0a;
-    border: 1px solid #ffffff10;
+    background: var(--side-tint);
+    border: 1px solid var(--side-border);
     border-radius: 12px;
     display: flex;
     gap: 4px;
@@ -260,7 +274,7 @@ body.resizing-side * {
     padding: 9px 10px;
     border: 0;
     background: transparent;
-    color: var(--side-text-muted);
+    color: var(--side-text-dim);
     font-family: inherit;
     font-size: 12.5px;
     font-weight: 600;
@@ -275,7 +289,7 @@ body.resizing-side * {
 
 .app-switch-btn:hover {
     color: var(--side-text);
-    background: #ffffff05;
+    background: var(--side-hover);
 }
 
 .app-switch-btn.active {
@@ -308,8 +322,8 @@ body.resizing-side * {
     display: inline-block;
     padding: 6px 10px;
     border-radius: 6px;
-    background: #ffffff0a;
-    border: 1px solid #ffffff0f;
+    background: var(--side-tint);
+    border: 1px solid var(--side-border);
 }
 
 .side-nav {
@@ -325,7 +339,7 @@ body.resizing-side * {
     -webkit-overflow-scrolling: touch;
     padding: 4px 12px 20px;
     scrollbar-width: thin;
-    scrollbar-color: #ffffff20 transparent;
+    scrollbar-color: var(--side-border-strong) transparent;
 }
 
 /* The flags container is pushed toward the bottom of the side-panel and
@@ -341,8 +355,8 @@ body.resizing-side * {
 
 .side-nav::-webkit-scrollbar { width: 6px; }
 .side-nav::-webkit-scrollbar-track { background: transparent; }
-.side-nav::-webkit-scrollbar-thumb { background: #ffffff20; border-radius: 3px; }
-.side-nav::-webkit-scrollbar-thumb:hover { background: #ffffff35; }
+.side-nav::-webkit-scrollbar-thumb { background: var(--side-border-strong); border-radius: 3px; }
+.side-nav::-webkit-scrollbar-thumb:hover { background: rgba(15, 33, 69, 0.28); }
 
 .nav-section {
     margin-bottom: 4px;
@@ -368,8 +382,8 @@ body.resizing-side * {
 }
 
 .nav-tab:hover {
-    background: #ffffff08;
-    color: white;
+    background: var(--side-hover);
+    color: var(--side-text);
 }
 
 .nav-tab:focus-visible,
@@ -396,7 +410,7 @@ body.resizing-side * {
 .nav-subitems {
     margin: 2px 0 2px 22px;
     padding-left: 14px;
-    border-left: 1px solid #ffffff14;
+    border-left: 1px solid var(--side-border-strong);
     display: none;
     flex-direction: column;
     gap: 1px;
@@ -424,26 +438,26 @@ body.resizing-side * {
 }
 
 .nav-sub:hover {
-    background: #ffffff06;
-    color: #ffffffcc;
+    background: var(--side-hover);
+    color: var(--side-text);
 }
 
 .nav-sub.active {
-    background: #ffffff10;
-    color: white;
+    background: var(--side-hover-strong);
+    color: var(--side-text);
     font-weight: 600;
 }
 
 .nav-sub.divider-top {
     margin-top: 6px;
-    border-top: 1px dashed #ffffff1a;
+    border-top: 1px dashed var(--side-border-strong);
     padding-top: 12px;
     border-radius: 0 0 7px 7px;
 }
 
 .side-footer {
     padding: 16px 20px 22px;
-    border-top: 1px solid #ffffff0a;
+    border-top: 1px solid var(--side-border);
 }
 
 .side-version {
@@ -459,10 +473,11 @@ body.resizing-side * {
 }
 
 .side-note code {
-    background: #ffffff10;
+    background: var(--side-tint);
     padding: 1px 6px;
     border-radius: 4px;
     font-size: 10.5px;
+    color: var(--side-text-dim);
 }
 
 /* ── Center stage ────────────────────────────────────────────── */
@@ -4718,14 +4733,14 @@ body.auth-mode .app-layout { visibility: hidden; }
 
 .side-user {
     padding: 12px 14px;
-    border-top: 1px solid #ffffff0a;
+    border-top: 1px solid var(--side-border);
 }
 
 .side-user-row {
     width: 100%;
     padding: 8px 10px;
     border: 0;
-    background: #ffffff07;
+    background: var(--side-tint);
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -4735,7 +4750,7 @@ body.auth-mode .app-layout { visibility: hidden; }
     transition: background 0.15s;
 }
 
-.side-user-row:hover { background: #ffffff0e; }
+.side-user-row:hover { background: var(--side-hover-strong); }
 
 .side-user-avatar {
     width: 32px;
@@ -4760,7 +4775,7 @@ body.auth-mode .app-layout { visibility: hidden; }
 .side-user-name {
     font-size: 12.5px;
     font-weight: 600;
-    color: white;
+    color: var(--side-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -4768,12 +4783,12 @@ body.auth-mode .app-layout { visibility: hidden; }
 
 .side-user-role {
     font-size: 10.5px;
-    color: #ffffff80;
+    color: var(--side-text-muted);
     margin-top: 1px;
 }
 
 .side-user-chev {
-    color: #ffffff70;
+    color: var(--side-text-muted);
     flex-shrink: 0;
 }
 
@@ -14061,4 +14076,146 @@ body.auth-mode .app-layout { visibility: hidden; }
 .vip-match-player .meta span {
     font-size: 11.5px;
     color: var(--vip-text-secondary);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   LIGHT-THEME OVERRIDES — sidebars (#sideFlags is in the right panel)
+   ────────────────────────────────────────────────────────────────
+   The flags panel was originally designed against a dark navy chrome.
+   Now that both side panels are light, we re-tint hover/border/text
+   in one place to keep things accessible without rewriting every
+   rule above.
+   ════════════════════════════════════════════════════════════════ */
+
+.side-flags { border-top: 1px solid var(--side-border) !important; }
+
+.flags-head {
+    color: var(--side-text-dim) !important;
+}
+.flags-head:hover { background: var(--side-hover) !important; }
+.flags-head-icon { color: var(--side-text-muted) !important; }
+.flags-head-app {
+    background: rgba(62, 49, 250, 0.10) !important;
+    color: var(--rm-primary) !important;
+}
+.flags-head-count {
+    background: var(--side-tint) !important;
+    color: var(--side-text-dim) !important;
+}
+
+.flags-body {
+    scrollbar-color: var(--side-border-strong) transparent !important;
+}
+
+.flags-search {
+    background: #ffffff !important;
+    border: 1px solid var(--side-border-strong) !important;
+}
+.flags-search > svg { color: var(--side-text-muted) !important; }
+.flags-search input {
+    color: var(--side-text) !important;
+}
+.flags-search input::placeholder { color: var(--side-text-muted) !important; }
+.flags-search-clear { color: var(--side-text-muted) !important; }
+.flags-search-clear:hover { color: var(--side-text) !important; }
+
+.flags-filter {
+    background: var(--side-tint) !important;
+}
+.flags-filter-btn { color: var(--side-text-dim) !important; }
+.flags-filter-btn:hover { color: var(--side-text) !important; }
+.flags-filter-btn.active {
+    background: #ffffff !important;
+    color: var(--side-text) !important;
+    box-shadow: 0 1px 3px rgba(15, 33, 69, 0.08), 0 0 0 1px var(--side-border) !important;
+}
+.flags-filter-btn span {
+    background: var(--side-tint) !important;
+    color: var(--side-text-dim) !important;
+}
+.flags-filter-btn.active span {
+    background: var(--rm-primary) !important;
+    color: #fff !important;
+}
+
+.flags-scroll::-webkit-scrollbar-thumb {
+    background: var(--side-border-strong) !important;
+}
+
+.flags-empty {
+    color: var(--side-text-dim) !important;
+    background: var(--side-tint) !important;
+    border-color: var(--side-border-strong) !important;
+}
+
+.flags-group-head {
+    color: var(--side-text-dim) !important;
+}
+.flags-group-head:hover {
+    color: var(--side-text) !important;
+    background: var(--side-hover) !important;
+}
+.flags-group-chev { color: var(--side-text-muted) !important; }
+.flags-group-count {
+    background: var(--side-tint) !important;
+    color: var(--side-text-dim) !important;
+}
+
+.flags-tree-children::before { background: var(--side-border-strong) !important; }
+
+.flag-row {
+    background: #ffffff !important;
+    border: 1px solid var(--side-border) !important;
+    box-shadow: 0 1px 2px rgba(15, 33, 69, 0.04);
+}
+.flag-row:hover {
+    background: #ffffff !important;
+    border-color: var(--side-border-strong) !important;
+    box-shadow: 0 1px 3px rgba(15, 33, 69, 0.10) !important;
+}
+.flag-row.is-child::before { background: var(--side-border-strong) !important; }
+.flag-row.has-active,
+.flags-tree:has(> .flag-row .flag-toggle.on) > .flag-row,
+.flag-row:has(.flag-toggle.on) {
+    border-color: rgba(62, 49, 250, 0.45) !important;
+    background: rgba(62, 49, 250, 0.05) !important;
+}
+
+.flag-row-title { color: var(--side-text) !important; }
+.flag-row-scope {
+    background: rgba(62, 49, 250, 0.10) !important;
+    color: var(--rm-primary) !important;
+}
+.flag-row-desc { color: var(--side-text-dim) !important; }
+
+.flag-chip.off {
+    background: var(--side-tint) !important;
+    color: var(--side-text-muted) !important;
+}
+
+/* Toggle switch — keep purple "on" but lighter "off" track */
+.flag-toggle {
+    background: rgba(15, 33, 69, 0.18) !important;
+}
+.flag-toggle-knob {
+    background: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(15, 33, 69, 0.20) !important;
+}
+
+.flags-foot { border-top: 1px solid var(--side-border) !important; }
+.flags-foot-btn {
+    background: #ffffff !important;
+    border: 1px solid var(--side-border-strong) !important;
+    color: var(--side-text-dim) !important;
+}
+.flags-foot-btn:hover {
+    background: var(--side-hover) !important;
+    color: var(--side-text) !important;
+    border-color: rgba(15, 33, 69, 0.24) !important;
+}
+
+/* Resize cue — softer purple over the new light background */
+.side-resize-handle:hover,
+.side-resize-handle.active {
+    background: rgba(62, 49, 250, 0.20);
 }
