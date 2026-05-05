@@ -99,6 +99,15 @@ const FLAGS = [
         default: true,
         requires: 'fan.hoy.team-tabs'
     },
+    {
+        app: 'fan',
+        key: 'fan.hoy.team-tabs.reorder',
+        label: 'Reordenación de equipos',
+        description: 'Añade un asa con tres rayas (≡) en cada fila del editor de pestañas para arrastrar y soltar los equipos. El nuevo orden se refleja en las pestañas por equipo del Hoy.',
+        category: 'Hoy',
+        default: false,
+        requires: 'fan.hoy.team-tabs.editor'
+    },
 
     // ── Side menu v2 — padre y sub-funcionalidades anidadas ───────
     {

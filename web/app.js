@@ -43,8 +43,10 @@ const state = {
     // Persistidas en localStorage vía HoyTeamTabs.
     hoyTeamFilter: 'all',                                // 'all' | 'masc' | 'fem' | 'basket'
     hoyTabsVisible: { masc: true, fem: true, basket: true },
+    hoyTabsOrder: ['masc', 'fem', 'basket'],             // user-defined order (flag 'fan.hoy.team-tabs.reorder')
     hoyTabsEmoji: false,
     hoyEditorOpen: false,
+    hoyTabsDragKey: null,                                // drag&drop transient state
 
     // Side menu v2 (flag 'fan.sidemenu.v2')
     sideMenuSearch: '',
@@ -1367,15 +1369,29 @@ const HOY_TABS_STORAGE_KEY   = 'rm_hoy_team_tabs_v1';
 
 const HoyTeamTabs = {
     DEFAULT_VISIBLE: { masc: true, fem: true, basket: true },
+    DEFAULT_ORDER: ['masc', 'fem', 'basket'],
 
-    /** { filter, visible, emojiMode } con defaults aplicados. */
+    /** { filter, visible, order, emojiMode } con defaults aplicados. */
     load() {
         let raw = {};
         try { raw = JSON.parse(localStorage.getItem(HOY_TABS_STORAGE_KEY) || '{}'); }
         catch {}
+        // Sanitise the persisted order — drop unknown keys, keep distinct,
+        // and append any missing default keys at the end so we never lose
+        // a team if the storage is corrupted or partial.
+        const persistedOrder = Array.isArray(raw.order) ? raw.order : this.DEFAULT_ORDER;
+        const seen = new Set();
+        const order = [];
+        for (const k of persistedOrder) {
+            if (this.DEFAULT_ORDER.includes(k) && !seen.has(k)) { order.push(k); seen.add(k); }
+        }
+        for (const k of this.DEFAULT_ORDER) {
+            if (!seen.has(k)) order.push(k);
+        }
         return {
-            filter: raw.filter || 'all',   // 'all' | 'masc' | 'fem' | 'basket'
+            filter: raw.filter || 'all',
             visible: { ...this.DEFAULT_VISIBLE, ...(raw.visible || {}) },
+            order,
             emojiMode: !!raw.emojiMode
         };
     },
@@ -1389,6 +1405,7 @@ const HoyTeamTabs = {
         const s = this.load();
         state.hoyTeamFilter   = s.filter;
         state.hoyTabsVisible  = s.visible;
+        state.hoyTabsOrder    = s.order;
         state.hoyTabsEmoji    = s.emojiMode;
     },
 
@@ -1396,8 +1413,34 @@ const HoyTeamTabs = {
         this.save({
             filter: state.hoyTeamFilter,
             visible: state.hoyTabsVisible,
+            order: state.hoyTabsOrder,
             emojiMode: state.hoyTabsEmoji
         });
+    },
+
+    /** Effective team order. When the reorder flag is off we fall back to
+     *  the canonical order so toggling the flag never changes "Todo, masc,
+     *  fem, basket" silently. */
+    effectiveOrder() {
+        const reorderOn = typeof Flags !== 'undefined'
+            && Flags.isEnabled('fan.hoy.team-tabs.reorder');
+        const order = reorderOn ? state.hoyTabsOrder : this.DEFAULT_ORDER;
+        // Defensive: ensure all team keys present.
+        const seen = new Set(order);
+        return order.concat(this.DEFAULT_ORDER.filter(k => !seen.has(k)));
+    },
+
+    /** Move a team key to a new position in the order. */
+    reorder(fromKey, toKey) {
+        if (fromKey === toKey) return;
+        const order = state.hoyTabsOrder.slice();
+        const fromIdx = order.indexOf(fromKey);
+        const toIdx   = order.indexOf(toKey);
+        if (fromIdx < 0 || toIdx < 0) return;
+        order.splice(fromIdx, 1);
+        order.splice(toIdx, 0, fromKey);
+        state.hoyTabsOrder = order;
+        this.persist();
     },
 
     /** Etiqueta visible para una categoría según el modo.
@@ -1417,12 +1460,13 @@ const HoyTeamTabs = {
         return key;
     },
 
-    /** Lista de tabs a renderizar según la configuración. */
+    /** Lista de tabs a renderizar según la configuración. "Todo" siempre
+     *  va primero; el resto sigue el orden definido por el usuario. */
     visibleTabKeys() {
         const list = ['all'];
-        if (state.hoyTabsVisible.masc)   list.push('masc');
-        if (state.hoyTabsVisible.fem)    list.push('fem');
-        if (state.hoyTabsVisible.basket) list.push('basket');
+        for (const k of this.effectiveOrder()) {
+            if (state.hoyTabsVisible[k]) list.push(k);
+        }
         return list;
     },
 
@@ -1543,18 +1587,44 @@ function renderHoyTabsEditorSheet() {
     const v = state.hoyTabsVisible;
     // El modo emoji está en el flag — editor y panel comparten estado.
     const emoji = HoyTeamTabs.isEmojiMode();
+    const reorderOn = Flags.isEnabled('fan.hoy.team-tabs.reorder');
+    const dragKey = state.hoyTabsDragKey;
 
-    const row = (teamKey, description) => `
-        <label class="hoy-tabs-editor-row">
-            <div class="hoy-tabs-editor-row-main">
-                <div class="hoy-tabs-editor-row-title">${HoyTeamTabs.labelFor(teamKey)}</div>
-                <div class="hoy-tabs-editor-row-sub">${description}</div>
-            </div>
-            <span class="hoy-tabs-editor-toggle ${v[teamKey] ? 'on' : ''}" data-editor-toggle="${teamKey}">
-                <span class="hoy-tabs-editor-knob"></span>
-            </span>
-        </label>
+    // Three-line drag handle icon (≡) — universal "drag me" affordance.
+    const dragHandle = `
+        <span class="hoy-tabs-editor-drag" aria-label="Arrastrar para reordenar" title="Arrastrar para reordenar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="5" y1="8"  x2="19" y2="8"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <line x1="5" y1="16" x2="19" y2="16"/>
+            </svg>
+        </span>
     `;
+
+    const TEAM_DESC = {
+        masc:   'Primer equipo · Fútbol masculino',
+        fem:    'Primer equipo · Fútbol femenino',
+        basket: 'Primer equipo · Baloncesto'
+    };
+
+    const row = (teamKey) => {
+        const isDragging = dragKey === teamKey;
+        return `
+            <label class="hoy-tabs-editor-row ${reorderOn ? 'is-draggable' : ''} ${isDragging ? 'is-dragging' : ''}"
+                   ${reorderOn ? `draggable="true" data-team-row="${teamKey}"` : ''}>
+                ${reorderOn ? dragHandle : ''}
+                <div class="hoy-tabs-editor-row-main">
+                    <div class="hoy-tabs-editor-row-title">${HoyTeamTabs.labelFor(teamKey)}</div>
+                    <div class="hoy-tabs-editor-row-sub">${TEAM_DESC[teamKey] || ''}</div>
+                </div>
+                <span class="hoy-tabs-editor-toggle ${v[teamKey] ? 'on' : ''}" data-editor-toggle="${teamKey}">
+                    <span class="hoy-tabs-editor-knob"></span>
+                </span>
+            </label>
+        `;
+    };
+
+    const orderedKeys = HoyTeamTabs.effectiveOrder();
 
     return `
         <div class="hoy-tabs-editor-overlay" id="hoyTabsEditorOverlay">
@@ -1565,13 +1635,14 @@ function renderHoyTabsEditorSheet() {
                     <button class="hoy-tabs-editor-done" data-editor-close>Hecho</button>
                 </div>
 
-                <div class="hoy-tabs-editor-section-title">Pestañas visibles en Hoy</div>
-                <div class="hoy-tabs-editor-group">
-                    ${row('masc',   'Primer equipo · Fútbol masculino')}
-                    ${row('fem',    'Primer equipo · Fútbol femenino')}
-                    ${row('basket', 'Primer equipo · Baloncesto')}
+                <div class="hoy-tabs-editor-section-title">
+                    Pestañas visibles en Hoy
+                    ${reorderOn ? '<span class="hoy-tabs-editor-hint">Arrastra ≡ para reordenar</span>' : ''}
                 </div>
-                <div class="hoy-tabs-editor-foot">La pestaña «Todo» siempre se muestra.</div>
+                <div class="hoy-tabs-editor-group" id="hoyTabsEditorGroup">
+                    ${orderedKeys.map(row).join('')}
+                </div>
+                <div class="hoy-tabs-editor-foot">La pestaña «Todo» siempre se muestra primero.</div>
 
                 <div class="hoy-tabs-editor-section-title">Apariencia</div>
                 <div class="hoy-tabs-editor-group">
@@ -7542,8 +7613,54 @@ function attachListeners() {
     // Cerrar editor (botón Hecho / tap en el dim)
     $$('[data-editor-close]').forEach(el => el.addEventListener('click', () => {
         state.hoyEditorOpen = false;
+        state.hoyTabsDragKey = null;
         render();
     }));
+
+    // ── Drag&drop reorder de pestañas (flag 'fan.hoy.team-tabs.reorder') ──
+    // HTML5 native drag-and-drop. We track the dragged team key on
+    // `state.hoyTabsDragKey` so the dragged row gets a "lifted" style and
+    // the drop target gets a focus ring. On drop we call HoyTeamTabs.reorder
+    // and persist to localStorage; the team-tabs bar re-renders in the new order.
+    $$('[data-team-row]').forEach(row => {
+        row.addEventListener('dragstart', e => {
+            const key = row.dataset.teamRow;
+            state.hoyTabsDragKey = key;
+            try {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', key);
+            } catch {}
+            // Style the row as "lifted" — applied via class so we don't fight
+            // with the browser's translucent drag image.
+            row.classList.add('is-dragging');
+        });
+        row.addEventListener('dragend', () => {
+            state.hoyTabsDragKey = null;
+            // Clean up any hover affordance left on siblings.
+            $$('[data-team-row]').forEach(r => r.classList.remove('is-drop-target'));
+            row.classList.remove('is-dragging');
+            render();
+        });
+        row.addEventListener('dragover', e => {
+            // Necessary to enable a drop on this element.
+            e.preventDefault();
+            try { e.dataTransfer.dropEffect = 'move'; } catch {}
+            $$('[data-team-row]').forEach(r => r.classList.toggle('is-drop-target', r === row && state.hoyTabsDragKey && state.hoyTabsDragKey !== row.dataset.teamRow));
+        });
+        row.addEventListener('dragleave', () => {
+            row.classList.remove('is-drop-target');
+        });
+        row.addEventListener('drop', e => {
+            e.preventDefault();
+            const fromKey = state.hoyTabsDragKey
+                || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+            const toKey = row.dataset.teamRow;
+            if (!fromKey || fromKey === toKey) return;
+            HoyTeamTabs.reorder(fromKey, toKey);
+            state.hoyTabsDragKey = null;
+            render();
+        });
+    });
 
     // Toggle visibilidad de una pestaña de equipo
     $$('[data-editor-toggle]').forEach(sw => sw.addEventListener('click', e => {
