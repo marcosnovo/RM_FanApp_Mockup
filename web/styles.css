@@ -4749,6 +4749,214 @@ body.auth-mode .app-layout { visibility: hidden; }
     padding-top: 6px;
 }
 
+/* ── Auth UX upgrades — show/hide pwd, strength meter, etc. ─── */
+
+/* Step indicator pill at the top of multi-step flows */
+.auth-step-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    background: rgba(62, 49, 250, 0.10);
+    border: 1px solid rgba(62, 49, 250, 0.28);
+    border-radius: 999px;
+    margin-bottom: 16px;
+    align-self: flex-start;
+    font-size: 11.5px;
+    color: #c0c2ff;
+}
+.auth-step-num {
+    background: linear-gradient(135deg, #4a3de8, #6c5ee8);
+    color: #fff;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    letter-spacing: 0.3px;
+}
+.auth-step-label {
+    font-weight: 500;
+    color: #d4d5e5;
+    letter-spacing: 0.1px;
+}
+
+/* Big circle hero icon for the "email sent" confirmation screen */
+.auth-icon-hero {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(62, 49, 250, 0.20), rgba(62, 49, 250, 0.04));
+    border: 1px solid rgba(62, 49, 250, 0.36);
+    color: #b9b9ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 0 18px;
+}
+.auth-icon-hero svg { width: 32px; height: 32px; }
+
+/* Numbered checklist for next-step guidance */
+.auth-checklist {
+    list-style: none;
+    margin: 0 0 22px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.auth-checklist li {
+    position: relative;
+    padding-left: 22px;
+    font-size: 12.5px;
+    color: #ffffffa0;
+    line-height: 1.5;
+}
+.auth-checklist li strong { color: #ffffffd0; font-weight: 600; }
+.auth-checklist li::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6c5ee8;
+    box-shadow: 0 0 0 3px rgba(108, 94, 232, 0.18);
+}
+
+/* Password input wrapper that hosts the eye toggle on the right edge */
+.auth-pw-wrap {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+.auth-pw-wrap input {
+    /* Reserve room for the eye button so the caret never collides with it */
+    padding-right: 48px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.auth-pw-toggle {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border: 0;
+    background: transparent;
+    color: #ffffff80;
+    cursor: pointer;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.12s ease, background 0.12s ease;
+}
+.auth-pw-toggle:hover {
+    color: #fff;
+    background: #ffffff0d;
+}
+.auth-pw-toggle:focus-visible {
+    outline: 2px solid var(--rm-primary);
+    outline-offset: 2px;
+}
+
+/* Caps lock warning — small inline cue under the password field */
+.auth-pw-caps {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #f0b955;
+}
+.auth-pw-caps[hidden] { display: none; }
+.auth-pw-caps svg { color: currentColor; }
+
+/* Mismatch indicator — pops between password2 and the submit button */
+.auth-pw-match {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: -6px 0 -2px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-danger-darkmode, #FA9ABC);
+}
+.auth-pw-match[hidden] { display: none; }
+.auth-pw-match svg { color: currentColor; }
+
+input.has-mismatch {
+    border-color: var(--color-danger-default, #ca024f) !important;
+    box-shadow: 0 0 0 4px rgba(202, 2, 79, 0.12) !important;
+}
+
+/* Strength meter — 4 segmented bars + label */
+.auth-pw-meter {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.auth-pw-meter-bars {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+.auth-pw-meter-bars span {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: #ffffff15;
+    transition: background 0.18s ease;
+}
+.auth-pw-meter[data-strength="1"] .auth-pw-meter-bars span.on { background: #f04545; }
+.auth-pw-meter[data-strength="2"] .auth-pw-meter-bars span.on { background: #f29e3f; }
+.auth-pw-meter[data-strength="3"] .auth-pw-meter-bars span.on { background: #c9b75a; }
+.auth-pw-meter[data-strength="4"] .auth-pw-meter-bars span.on { background: #5fd28a; }
+.auth-pw-meter-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffff85;
+    min-width: 64px;
+    text-align: right;
+    letter-spacing: 0.2px;
+}
+.auth-pw-meter[data-strength="1"] .auth-pw-meter-label { color: #f0a0a0; }
+.auth-pw-meter[data-strength="2"] .auth-pw-meter-label { color: #f2c389; }
+.auth-pw-meter[data-strength="3"] .auth-pw-meter-label { color: #d4cf94; }
+.auth-pw-meter[data-strength="4"] .auth-pw-meter-label { color: #9bd9b3; }
+
+/* Inline spinner for submit buttons during async ops */
+.auth-btn-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    animation: auth-spin 0.85s linear infinite;
+    margin-right: 8px;
+    vertical-align: -2px;
+}
+@keyframes auth-spin {
+    to { transform: rotate(360deg); }
+}
+.auth-primary-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    width: 100%;
+}
+.auth-btn-label { font-weight: inherit; }
+
+/* On the forgot-sent screen the link button sits below the primary CTA;
+   give it a bit of margin so it's not glued to the button. */
+.auth-link-btn { margin-top: 4px; }
+
 /* ================================================================
    USER BOX (sidebar bottom, above version)
    ================================================================ */
@@ -14277,4 +14485,228 @@ body.auth-mode .app-layout { visibility: hidden; }
 .side-resize-handle:hover,
 .side-resize-handle.active {
     background: rgba(62, 49, 250, 0.20);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   USER ADMIN PANEL — UX upgrades
+   Toolbar (search + filter chips), inline delete confirmation,
+   empty state, refined section title with counts.
+   ════════════════════════════════════════════════════════════════ */
+
+.settings-section-count {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: #ffffff60;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    margin-left: 6px;
+}
+
+.settings-logout {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.settings-logout svg { color: currentColor; }
+
+.settings-add-form button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+/* Search + filter toolbar above the user list */
+.settings-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 10px 0 12px;
+}
+.settings-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 8px 0 30px;
+    border-radius: 8px;
+    background: #ffffff0a;
+    border: 1px solid #ffffff14;
+    transition: border-color 0.12s ease, background 0.12s ease;
+}
+.settings-search:focus-within {
+    border-color: rgba(62, 49, 250, 0.55);
+    background: #ffffff10;
+    box-shadow: 0 0 0 3px rgba(62, 49, 250, 0.18);
+}
+.settings-search > svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ffffff80;
+    width: 14px;
+    height: 14px;
+}
+.settings-search input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    color: #fff;
+    font-family: inherit;
+    font-size: 12.5px;
+    padding: 0;
+}
+.settings-search input::placeholder { color: #ffffff70; }
+.settings-search-clear {
+    background: transparent;
+    border: 0;
+    color: #ffffff90;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 6px;
+    line-height: 1;
+}
+.settings-search-clear:hover { color: #fff; }
+
+.settings-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.settings-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid #ffffff14;
+    background: transparent;
+    color: #ffffffbf;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.settings-filter-chip:hover {
+    background: #ffffff0a;
+    color: #fff;
+    border-color: #ffffff24;
+}
+.settings-filter-chip.active {
+    background: rgba(62, 49, 250, 0.20);
+    color: #fff;
+    border-color: rgba(62, 49, 250, 0.55);
+    font-weight: 600;
+}
+.settings-filter-chip-count {
+    font-size: 10px;
+    font-weight: 700;
+    background: #ffffff14;
+    padding: 1px 6px;
+    border-radius: 999px;
+    color: #ffffffd0;
+    font-variant-numeric: tabular-nums;
+}
+.settings-filter-chip.active .settings-filter-chip-count {
+    background: rgba(255, 255, 255, 0.20);
+    color: #fff;
+}
+
+/* Inline delete confirmation slides over the row contents */
+.settings-user-row {
+    position: relative;
+    overflow: hidden;
+}
+.settings-user-confirm {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(202, 2, 79, 0.22) 0%, rgba(202, 2, 79, 0.30) 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    z-index: 2;
+    animation: settings-confirm-in 0.18s ease-out;
+}
+@keyframes settings-confirm-in {
+    from { transform: translateX(20px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+.settings-user-confirm[hidden] { display: none; }
+.settings-user-confirm-text {
+    flex: 1;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #fff;
+}
+.settings-user-confirm-yes,
+.settings-user-confirm-no {
+    border: 0;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.settings-user-confirm-yes {
+    background: var(--color-danger-default, #ca024f);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(202, 2, 79, 0.35);
+}
+.settings-user-confirm-yes:hover { filter: brightness(1.1); }
+.settings-user-confirm-yes:disabled { opacity: 0.6; cursor: not-allowed; }
+.settings-user-confirm-no {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+}
+.settings-user-confirm-no:hover { background: rgba(255, 255, 255, 0.22); }
+
+/* Highlight the row visually when its confirm overlay is open */
+.settings-user-row.is-confirming-delete {
+    border-color: rgba(202, 2, 79, 0.42);
+}
+
+/* Empty state for the user list */
+.settings-empty {
+    text-align: center;
+    padding: 32px 18px;
+    background: #ffffff05;
+    border: 1px dashed #ffffff18;
+    border-radius: 12px;
+    color: #ffffff90;
+}
+.settings-empty-icon {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 10px;
+    border-radius: 50%;
+    background: #ffffff0d;
+    border: 1px solid #ffffff14;
+    color: #ffffffa0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.settings-empty-icon svg { width: 20px; height: 20px; }
+.settings-empty-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+}
+.settings-empty-sub {
+    font-size: 11.5px;
+    color: #ffffff80;
+    line-height: 1.5;
+    max-width: 280px;
+    margin: 0 auto;
 }

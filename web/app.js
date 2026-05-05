@@ -8425,96 +8425,164 @@ function renderAuthOverlay() {
     if (authScreen === 'invite-link') attachInviteLinkListeners();
 }
 
+// ── Auth UI helpers ─────────────────────────────────────────────
+// Reusable bits that turn the plain inputs into a more accessible,
+// less error-prone experience: show/hide eye, password strength meter,
+// real-time match indicator, caps lock warning. All purely cosmetic,
+// the underlying form data is unchanged.
+const AUTH_EYE_OPEN = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12 s4-7 11-7 11 7 11 7 -4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const AUTH_EYE_OFF  = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94 A10.07 10.07 0 0 1 12 20 c-7 0-11-8-11-8 a18.45 18.45 0 0 1 5.06-5.94 M9.9 4.24 A9.12 9.12 0 0 1 12 4 c7 0 11 8 11 8 a18.5 18.5 0 0 1-2.16 3.19 m-6.72-1.07 a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+const AUTH_SPINNER  = `<span class="auth-btn-spinner" aria-hidden="true"></span>`;
+
+/** Password input with show/hide eye + caps-lock warning slot. */
+function authPasswordField({ name, label, placeholder = 'mínimo 6 caracteres', autofocus = false, withMeter = false, autocomplete = 'new-password' }) {
+    return `
+        <label class="auth-field" data-auth-pw-field>
+            <span>${label}</span>
+            <div class="auth-pw-wrap">
+                <input type="password" name="${name}" placeholder="${placeholder}"
+                       autocomplete="${autocomplete}" required
+                       ${autofocus ? 'autofocus' : ''}
+                       data-auth-pw-input>
+                <button type="button" class="auth-pw-toggle"
+                        data-auth-pw-toggle aria-label="Mostrar contraseña"
+                        title="Mostrar contraseña">${AUTH_EYE_OPEN}</button>
+            </div>
+            ${withMeter ? `
+                <div class="auth-pw-meter" data-auth-pw-meter aria-hidden="true">
+                    <div class="auth-pw-meter-bars">
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                    <span class="auth-pw-meter-label" data-auth-pw-meter-label>Empieza a escribir…</span>
+                </div>
+            ` : ''}
+            <div class="auth-pw-caps" data-auth-pw-caps hidden>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18,11 12,5 6,11"/><line x1="6" y1="19" x2="18" y2="19"/></svg>
+                Bloq Mayús activado
+            </div>
+        </label>
+    `;
+}
+
+/** Mismatch warning that lights up when the two password fields differ. */
+function authPasswordMatch() {
+    return `<div class="auth-pw-match" data-auth-pw-match hidden>
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        Las contraseñas no coinciden
+    </div>`;
+}
+
+/** "Step 1 of 2" pill at the top of multi-step auth flows. */
+function authStepBadge(current, total, label) {
+    return `<div class="auth-step-badge">
+        <span class="auth-step-num">Paso ${current} de ${total}</span>
+        <span class="auth-step-label">${label}</span>
+    </div>`;
+}
+
 function renderLoginScreen() {
-    const err = authCtx.error ? `<div class="auth-error">${authCtx.error}</div>` : '';
-    const msg = authCtx.message ? `<div class="auth-ok">${authCtx.message}</div>` : '';
+    const err = authCtx.error ? `<div class="auth-error" role="alert">${authCtx.error}</div>` : '';
+    const msg = authCtx.message ? `<div class="auth-ok" role="status">${authCtx.message}</div>` : '';
     return `
         <h1 class="auth-title">Iniciar sesión</h1>
         <p class="auth-subtitle">Accede al panel de mockups de la app</p>
         ${err}${msg}
-        <form class="auth-form" data-auth-form="login">
+        <form class="auth-form" data-auth-form="login" novalidate>
             <label class="auth-field">
                 <span>Email</span>
-                <input type="email" name="email" placeholder="tu@email.com" value="${authCtx.email || ''}" required autofocus>
+                <input type="email" name="email" placeholder="tu@email.com"
+                       value="${authCtx.email || ''}" required autofocus
+                       autocomplete="email" inputmode="email">
             </label>
-            <label class="auth-field">
-                <span>Contraseña</span>
-                <input type="password" name="password" placeholder="••••••••" required>
-            </label>
-            <button type="submit" class="auth-primary-btn">Entrar</button>
+            ${authPasswordField({ name: 'password', label: 'Contraseña', autocomplete: 'current-password', placeholder: '••••••••' })}
+            <button type="submit" class="auth-primary-btn" data-auth-submit>
+                <span class="auth-btn-label">Entrar</span>
+            </button>
             <button type="button" class="auth-link-btn" data-auth-go="forgot">¿Has olvidado tu contraseña?</button>
         </form>
     `;
 }
 
 function renderForgotScreen() {
-    const err = authCtx.error ? `<div class="auth-error">${authCtx.error}</div>` : '';
+    const err = authCtx.error ? `<div class="auth-error" role="alert">${authCtx.error}</div>` : '';
     return `
+        ${authStepBadge(1, 2, 'Solicitar enlace')}
         <h1 class="auth-title">Recuperar contraseña</h1>
-        <p class="auth-subtitle">Introduce tu email y te enviaremos un enlace para establecer una nueva contraseña.</p>
+        <p class="auth-subtitle">Introduce tu email y te enviaremos un enlace seguro para crear una nueva contraseña.</p>
         ${err}
-        <form class="auth-form" data-auth-form="forgot">
+        <form class="auth-form" data-auth-form="forgot" novalidate>
             <label class="auth-field">
                 <span>Email</span>
-                <input type="email" name="email" placeholder="tu@email.com" required autofocus>
+                <input type="email" name="email" placeholder="tu@email.com" required autofocus
+                       value="${authCtx.email || ''}"
+                       autocomplete="email" inputmode="email">
             </label>
-            <button type="submit" class="auth-primary-btn">Enviar enlace</button>
+            <button type="submit" class="auth-primary-btn" data-auth-submit>
+                <span class="auth-btn-label">Enviar enlace</span>
+            </button>
             <button type="button" class="auth-link-btn" data-auth-go="login">← Volver al login</button>
         </form>
     `;
 }
 
 function renderForgotSentScreen() {
+    const email = authCtx.email || '';
     return `
-        <h1 class="auth-title">Email enviado</h1>
+        ${authStepBadge(2, 2, 'Email enviado')}
+        <div class="auth-icon-hero">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3,7 12,13 21,7"/></svg>
+        </div>
+        <h1 class="auth-title">Revisa tu correo</h1>
         <p class="auth-subtitle">
-            Si el email está dado de alta, recibirás un enlace en unos segundos para restablecer tu contraseña.
-            Revisa tu bandeja de entrada (y la carpeta de spam, por si acaso).
+            Si <strong>${email || 'ese email'}</strong> está dado de alta, recibirás un enlace en unos segundos para
+            restablecer tu contraseña. Revisa también la carpeta de <strong>spam</strong> por si acaso.
         </p>
+        <ul class="auth-checklist">
+            <li>El enlace expira en <strong>una hora</strong> por seguridad.</li>
+            <li>Si no llega, vuelve a la pantalla anterior y reintenta.</li>
+        </ul>
         <button type="button" class="auth-primary-btn" data-auth-go="login">Volver al login</button>
+        <button type="button" class="auth-link-btn" data-auth-go="forgot">Reenviar a otro email</button>
     `;
 }
 
 function renderResetScreen() {
-    const err = authCtx.error ? `<div class="auth-error">${authCtx.error}</div>` : '';
+    const err = authCtx.error ? `<div class="auth-error" role="alert">${authCtx.error}</div>` : '';
     return `
+        ${authStepBadge(2, 2, 'Crear nueva contraseña')}
         <h1 class="auth-title">Nueva contraseña</h1>
-        <p class="auth-subtitle">Elige una contraseña nueva para tu cuenta.</p>
+        <p class="auth-subtitle">Elige una contraseña fuerte para tu cuenta. Mínimo 6 caracteres; mejor si mezclas letras, números y símbolos.</p>
         ${err}
-        <form class="auth-form" data-auth-form="reset">
-            <label class="auth-field">
-                <span>Nueva contraseña</span>
-                <input type="password" name="password" placeholder="mínimo 6 caracteres" required autofocus>
-            </label>
-            <label class="auth-field">
-                <span>Repite la contraseña</span>
-                <input type="password" name="password2" required>
-            </label>
-            <button type="submit" class="auth-primary-btn">Guardar y entrar</button>
+        <form class="auth-form" data-auth-form="reset" novalidate>
+            ${authPasswordField({ name: 'password',  label: 'Nueva contraseña', autofocus: true, withMeter: true })}
+            ${authPasswordField({ name: 'password2', label: 'Repite la contraseña' })}
+            ${authPasswordMatch()}
+            <button type="submit" class="auth-primary-btn" data-auth-submit>
+                <span class="auth-btn-label">Guardar y entrar</span>
+            </button>
         </form>
     `;
 }
 
 function renderSetupScreen() {
-    const err = authCtx.error ? `<div class="auth-error">${authCtx.error}</div>` : '';
+    const err = authCtx.error ? `<div class="auth-error" role="alert">${authCtx.error}</div>` : '';
     return `
+        ${authStepBadge(1, 1, 'Bienvenido')}
         <h1 class="auth-title">Configura tu cuenta</h1>
-        <p class="auth-subtitle">Has sido invitado a acceder al panel. Elige una contraseña para continuar.</p>
+        <p class="auth-subtitle">Has sido invitado al panel. Pon tu nombre y elige una contraseña para continuar.</p>
         ${err}
-        <form class="auth-form" data-auth-form="setup">
+        <form class="auth-form" data-auth-form="setup" novalidate>
             <label class="auth-field">
                 <span>Nombre</span>
-                <input type="text" name="name" placeholder="Tu nombre" value="${authCtx.name || ''}">
+                <input type="text" name="name" placeholder="Tu nombre completo"
+                       value="${authCtx.name || ''}" autocomplete="name" autofocus>
             </label>
-            <label class="auth-field">
-                <span>Contraseña</span>
-                <input type="password" name="password" placeholder="mínimo 6 caracteres" required>
-            </label>
-            <label class="auth-field">
-                <span>Repite la contraseña</span>
-                <input type="password" name="password2" required>
-            </label>
-            <button type="submit" class="auth-primary-btn">Crear cuenta</button>
+            ${authPasswordField({ name: 'password',  label: 'Contraseña', withMeter: true })}
+            ${authPasswordField({ name: 'password2', label: 'Repite la contraseña' })}
+            ${authPasswordMatch()}
+            <button type="submit" class="auth-primary-btn" data-auth-submit>
+                <span class="auth-btn-label">Crear cuenta</span>
+            </button>
         </form>
     `;
 }
@@ -8716,37 +8784,115 @@ function attachAuthListeners() {
         await bootApp();
     }));
 
+    // ── Password show/hide toggle (eye icon) ──────────────────────
+    $$('[data-auth-pw-toggle]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const wrap = btn.closest('.auth-pw-wrap');
+            const input = wrap && wrap.querySelector('input');
+            if (!input) return;
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            btn.innerHTML = isHidden ? AUTH_EYE_OFF : AUTH_EYE_OPEN;
+            btn.setAttribute('aria-label', isHidden ? 'Ocultar contraseña' : 'Mostrar contraseña');
+            btn.setAttribute('title',      isHidden ? 'Ocultar contraseña' : 'Mostrar contraseña');
+            // Keep focus on the input so the user keeps typing
+            try { input.focus({ preventScroll: true }); } catch {}
+        });
+    });
+
+    // ── Caps Lock detector — show inline warning while typing pwd ──
+    $$('[data-auth-pw-input]').forEach(input => {
+        const updateCaps = (e) => {
+            const field = input.closest('[data-auth-pw-field]');
+            const cue = field && field.querySelector('[data-auth-pw-caps]');
+            if (!cue) return;
+            const on = !!(e.getModifierState && e.getModifierState('CapsLock'));
+            cue.hidden = !on;
+        };
+        input.addEventListener('keydown', updateCaps);
+        input.addEventListener('keyup',   updateCaps);
+        input.addEventListener('blur', () => {
+            const field = input.closest('[data-auth-pw-field]');
+            const cue = field && field.querySelector('[data-auth-pw-caps]');
+            if (cue) cue.hidden = true;
+        });
+    });
+
+    // ── Password strength meter (only on fields with `withMeter`) ──
+    const meterField = document.querySelector('[data-auth-pw-meter]')?.closest('[data-auth-pw-field]');
+    const meterInput = meterField && meterField.querySelector('input');
+    if (meterInput) {
+        const meter = meterField.querySelector('[data-auth-pw-meter]');
+        const label = meter.querySelector('[data-auth-pw-meter-label]');
+        const bars  = meter.querySelectorAll('.auth-pw-meter-bars span');
+        const update = () => {
+            const score = scorePassword(meterInput.value);
+            // 0 (none) | 1 (weak) | 2 (fair) | 3 (good) | 4 (strong)
+            meter.dataset.strength = String(score);
+            bars.forEach((b, i) => b.classList.toggle('on', i < score));
+            const labels = ['Empieza a escribir…', 'Muy débil', 'Débil', 'Aceptable', 'Fuerte'];
+            label.textContent = meterInput.value.length === 0 ? labels[0] : labels[score];
+        };
+        meterInput.addEventListener('input', update);
+        update();
+    }
+
+    // ── Real-time password match indicator ────────────────────────
     const form = $('[data-auth-form]');
+    if (form) {
+        const p1 = form.querySelector('input[name="password"]');
+        const p2 = form.querySelector('input[name="password2"]');
+        const matchEl = form.querySelector('[data-auth-pw-match]');
+        if (p1 && p2 && matchEl) {
+            const update = () => {
+                const both = p1.value && p2.value;
+                const matches = p1.value === p2.value;
+                matchEl.hidden = !both || matches;
+                p2.classList.toggle('has-mismatch', both && !matches);
+            };
+            p1.addEventListener('input', update);
+            p2.addEventListener('input', update);
+        }
+    }
+
     if (!form) return;
     form.addEventListener('submit', async e => {
         e.preventDefault();
         const fd = new FormData(form);
         const kind = form.dataset.authForm;
 
-        // Disable submit during request
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Un momento…'; }
+        // Loading state on the submit button — replace label with spinner
+        const submitBtn = form.querySelector('[data-auth-submit]');
+        const labelEl   = submitBtn && submitBtn.querySelector('.auth-btn-label');
+        const restoreBtn = (() => {
+            if (!submitBtn) return () => {};
+            const originalHTML = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `${AUTH_SPINNER}<span class="auth-btn-label">Un momento…</span>`;
+            return () => { submitBtn.innerHTML = originalHTML; submitBtn.disabled = false; };
+        })();
 
         if (kind === 'login') {
             const r = await Auth.login(fd.get('email'), fd.get('password'));
-            if (!r.ok) return openAuthOverlay('login', { error: r.error, email: fd.get('email') });
+            if (!r.ok) { restoreBtn(); return openAuthOverlay('login', { error: r.error, email: fd.get('email') }); }
             closeAuthOverlay();
             await bootApp();
             return;
         }
 
         if (kind === 'forgot') {
-            await Auth.requestPasswordReset(fd.get('email'));
-            openAuthOverlay('forgot-sent');
+            const email = fd.get('email');
+            await Auth.requestPasswordReset(email);
+            openAuthOverlay('forgot-sent', { email });
             return;
         }
 
         if (kind === 'reset') {
             const p = fd.get('password');
             const p2 = fd.get('password2');
-            if (p !== p2) return openAuthOverlay('reset', { error: 'Las contraseñas no coinciden' });
+            if (p !== p2) { restoreBtn(); return openAuthOverlay('reset', { error: 'Las contraseñas no coinciden' }); }
             const r = await Auth.completeReset(p);
-            if (!r.ok) return openAuthOverlay('reset', { error: r.error });
+            if (!r.ok) { restoreBtn(); return openAuthOverlay('reset', { error: r.error }); }
             // After completing reset, log out so they sign in fresh
             await Auth.logout();
             openAuthOverlay('login', { message: 'Contraseña actualizada. Inicia sesión.' });
@@ -8756,14 +8902,29 @@ function attachAuthListeners() {
         if (kind === 'setup') {
             const p = fd.get('password');
             const p2 = fd.get('password2');
-            if (p !== p2) return openAuthOverlay('setup', { error: 'Las contraseñas no coinciden', name: fd.get('name') });
+            if (p !== p2) { restoreBtn(); return openAuthOverlay('setup', { error: 'Las contraseñas no coinciden', name: fd.get('name') }); }
             const r = await Auth.completeSetup(p, fd.get('name'));
-            if (!r.ok) return openAuthOverlay('setup', { error: r.error, name: fd.get('name') });
+            if (!r.ok) { restoreBtn(); return openAuthOverlay('setup', { error: r.error, name: fd.get('name') }); }
             closeAuthOverlay();
             await bootApp();
             return;
         }
     });
+}
+
+/**
+ * Heuristic password strength score 0–4. Doesn't replace zxcvbn but is good
+ * enough for a "give me a hint" indicator: rewards length + character classes.
+ */
+function scorePassword(pw) {
+    if (!pw) return 0;
+    let score = 0;
+    if (pw.length >= 6)  score++;
+    if (pw.length >= 10) score++;
+    const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].reduce((n, r) => n + (r.test(pw) ? 1 : 0), 0);
+    if (classes >= 2) score++;
+    if (classes >= 3 && pw.length >= 8) score++;
+    return Math.min(4, score);
 }
 
 // ================================================================
@@ -8892,6 +9053,14 @@ function closeSettings() {
     }
 }
 
+// In-memory state for the user admin panel — search query, filter and
+// the id/email of the row currently in inline-confirm-delete mode.
+const settingsUI = {
+    query: '',
+    filter: 'all',         // 'all' | 'active' | 'pending' | 'admin' | 'viewer'
+    confirmingDelete: null // string: userId for active rows, 'pending:<email>' for invitations
+};
+
 async function renderSettings() {
     const dr = $('#settingsDrawer');
     if (!dr || dr.hidden) return;
@@ -8904,7 +9073,7 @@ async function renderSettings() {
     dr.innerHTML = `
         <div class="settings-header">
             <h2>Ajustes</h2>
-            <button class="settings-close" id="settingsCloseBtn">
+            <button class="settings-close" id="settingsCloseBtn" aria-label="Cerrar ajustes">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
             </button>
         </div>
@@ -8917,7 +9086,10 @@ async function renderSettings() {
                 <div class="settings-self-role ${isAdmin ? 'admin' : 'viewer'}">${isAdmin ? 'Admin' : 'Viewer'}</div>
             </div>
         </div>
-        <button class="settings-logout" id="settingsLogoutBtn">Cerrar sesión</button>
+        <button class="settings-logout" id="settingsLogoutBtn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21 H5 a2 2 0 0 1-2-2 V5 a2 2 0 0 1 2-2 h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Cerrar sesión
+        </button>
         <div class="settings-loading">Cargando usuarios…</div>
     `;
 
@@ -8940,6 +9112,27 @@ async function renderSettings() {
 
     const users = await Auth.listUsers();
 
+    // Aggregate counts for the section title + filter chips.
+    const counts = {
+        all:     users.length,
+        active:  users.filter(u => u.status !== 'pending').length,
+        pending: users.filter(u => u.status === 'pending').length,
+        admin:   users.filter(u => u.role === 'admin').length,
+        viewer:  users.filter(u => u.role === 'viewer').length
+    };
+
+    // Apply search + filter to get the list we actually render.
+    const q = (settingsUI.query || '').trim().toLowerCase();
+    const filter = settingsUI.filter;
+    const filtered = users.filter(u => {
+        if (q && !(u.email || '').toLowerCase().includes(q)) return false;
+        if (filter === 'active'  && u.status === 'pending') return false;
+        if (filter === 'pending' && u.status !== 'pending') return false;
+        if (filter === 'admin'   && u.role !== 'admin')     return false;
+        if (filter === 'viewer'  && u.role !== 'viewer')    return false;
+        return true;
+    });
+
     // Renderiza un chip visual a partir de la key del tag.
     const renderTagChip = (tagKey) => {
         const m = UserTags.meta(tagKey);
@@ -8956,9 +9149,18 @@ async function renderSettings() {
         </select>
     `;
 
+    // Filter chips definition — same order on screen.
+    const FILTER_CHIPS = [
+        { key: 'all',     label: 'Todos' },
+        { key: 'active',  label: 'Activos' },
+        { key: 'pending', label: 'Pendientes' },
+        { key: 'admin',   label: 'Admins' },
+        { key: 'viewer',  label: 'Viewers' }
+    ];
+
     const usersBlock = `
         <div class="settings-section-title settings-section-title-row">
-            <span>Usuarios</span>
+            <span>Usuarios <span class="settings-section-count">${counts.active} activos · ${counts.pending} pendientes</span></span>
             <button class="settings-refresh-btn" id="settingsRefreshBtn" title="Actualizar ahora">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.3-6.9"/><polyline points="21 3 21 8 16 8"/></svg>
                 Actualizar
@@ -8966,28 +9168,64 @@ async function renderSettings() {
         </div>
         <div class="settings-add-user">
             <form id="addUserForm" class="settings-add-form">
-                <input type="email" name="email" placeholder="email@dominio.com" required>
+                <input type="email" name="email" placeholder="email@dominio.com" required autocomplete="off">
                 <select name="role">
                     <option value="viewer">Viewer</option>
                     <option value="admin">Admin</option>
                 </select>
                 ${tagSelect('', 'name="tag"')}
-                <button type="submit">Invitar</button>
+                <button type="submit">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    Invitar
+                </button>
             </form>
         </div>
+
+        <!-- Search + filter chips -->
+        <div class="settings-toolbar">
+            <div class="settings-search">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="19" y1="19" x2="15" y2="15"/></svg>
+                <input type="search" id="settingsSearch" placeholder="Buscar por email…"
+                       value="${escapeHtml(settingsUI.query || '')}"
+                       autocomplete="off">
+                ${settingsUI.query ? '<button class="settings-search-clear" id="settingsSearchClear" aria-label="Limpiar">×</button>' : ''}
+            </div>
+            <div class="settings-filter-chips" role="tablist">
+                ${FILTER_CHIPS.map(c => `
+                    <button class="settings-filter-chip ${settingsUI.filter === c.key ? 'active' : ''}"
+                            data-settings-filter="${c.key}" role="tab"
+                            aria-selected="${settingsUI.filter === c.key}">
+                        ${c.label}
+                        <span class="settings-filter-chip-count">${counts[c.key]}</span>
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+
         <div class="settings-users">
-            ${users.map(u => {
+            ${filtered.length === 0 ? `
+                <div class="settings-empty">
+                    <div class="settings-empty-icon">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16" y2="16"/></svg>
+                    </div>
+                    <div class="settings-empty-title">${q ? 'Sin resultados' : 'No hay usuarios en este filtro'}</div>
+                    <div class="settings-empty-sub">${q
+                        ? `Prueba a buscar otro email o limpia el filtro actual.`
+                        : `Cambia de filtro arriba o invita a un nuevo usuario.`}</div>
+                </div>
+            ` : filtered.map(u => {
                 const tagKey = UserTags.get(u.email);
                 const isPending = u.status === 'pending';
                 const isSelf    = u.id === session.userId;
-                // Dataset para routing del borrado: los pending no tienen
-                // fila en `profiles` — usamos el email para borrarlos de
-                // `pending_invitations`.
+                // Routing del borrado: pending no tiene fila en `profiles`,
+                // así que usamos el email; activos usan el userId.
+                const rowKey = isPending ? `pending:${u.email}` : u.id;
+                const isConfirming = settingsUI.confirmingDelete === rowKey;
                 const delAttrs = isPending
                     ? `data-del-pending-email="${u.email}"`
                     : `data-del-user-id="${u.id}"`;
                 return `
-                <div class="settings-user-row ${isSelf ? 'is-self' : ''} ${isPending ? 'is-pending' : ''}">
+                <div class="settings-user-row ${isSelf ? 'is-self' : ''} ${isPending ? 'is-pending' : ''} ${isConfirming ? 'is-confirming-delete' : ''}">
                     <div class="settings-user-avatar">${(u.name || u.email).slice(0,2).toUpperCase()}</div>
                     <div class="settings-user-meta">
                         <div class="settings-user-email">${u.email}${isSelf ? ' <span class="settings-user-self">(tú)</span>' : ''}</div>
@@ -9007,15 +9245,59 @@ async function renderSettings() {
                     <button class="settings-user-invite" title="${isPending ? 'Reenviar invitación' : 'Ver / reenviar invitación'}" data-invite-email="${u.email}" data-invite-role="${u.role}" ${isSelf ? 'disabled' : ''}>
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4 h16 v16 H4z"/><polyline points="4,4 12,13 20,4"/></svg>
                     </button>
-                    <button class="settings-user-del" ${delAttrs} title="${isPending ? 'Cancelar invitación' : 'Eliminar usuario'}" ${isSelf ? 'disabled' : ''}>
+                    <button class="settings-user-del" ${delAttrs} data-del-row="${rowKey}" title="${isPending ? 'Cancelar invitación' : 'Eliminar usuario'}" ${isSelf ? 'disabled' : ''}>
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="4,7 20,7"/><path d="M6 7 v12 a2 2 0 0 0 2 2 h8 a2 2 0 0 0 2-2 V7"/><path d="M9 7 V4 a1 1 0 0 1 1-1 h4 a1 1 0 0 1 1 1 v3"/></svg>
                     </button>
+
+                    <!-- Inline confirmation overlay (slides in over the row) -->
+                    <div class="settings-user-confirm" ${isConfirming ? '' : 'hidden'}>
+                        <span class="settings-user-confirm-text">
+                            ${isPending ? '¿Cancelar invitación?' : '¿Eliminar este usuario?'}
+                        </span>
+                        <button class="settings-user-confirm-yes" data-confirm-del="${rowKey}" ${isPending ? 'data-pending-email="' + u.email + '"' : 'data-user-id="' + u.id + '"'}>
+                            ${isPending ? 'Sí, cancelar' : 'Sí, eliminar'}
+                        </button>
+                        <button class="settings-user-confirm-no" data-confirm-cancel>No</button>
+                    </div>
                 </div>
             `;
             }).join('')}
         </div>
     `;
     $('.settings-loading').outerHTML = usersBlock;
+
+    // ── Search input (live filter, no submit) ────────────────────
+    const searchInput = $('#settingsSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', e => {
+            settingsUI.query = e.target.value;
+            settingsUI.confirmingDelete = null;
+            const caret = e.target.selectionStart;
+            renderSettings().then(() => {
+                const again = $('#settingsSearch');
+                if (again) {
+                    again.focus();
+                    try { again.setSelectionRange(caret, caret); } catch {}
+                }
+            });
+        });
+    }
+    const searchClear = $('#settingsSearchClear');
+    if (searchClear) {
+        searchClear.addEventListener('click', () => {
+            settingsUI.query = '';
+            renderSettings();
+        });
+    }
+
+    // Filter chips
+    $$('[data-settings-filter]').forEach(chip => {
+        chip.addEventListener('click', () => {
+            settingsUI.filter = chip.dataset.settingsFilter;
+            settingsUI.confirmingDelete = null;
+            renderSettings();
+        });
+    });
 
     // Botón manual "Actualizar" en la cabecera de Usuarios.
     const refreshBtn = $('#settingsRefreshBtn');
@@ -9074,28 +9356,53 @@ async function renderSettings() {
         });
     }));
 
-    $$('[data-del-user-id]').forEach(btn => btn.addEventListener('click', async () => {
-        if (btn.disabled) return;
-        if (!confirm('¿Eliminar este usuario? Ya no podrá acceder a la app.')) return;
+    // ── Delete buttons trigger inline confirmation, not the global
+    //    `confirm()` dialog. Clicking once arms the row; clicking
+    //    "Sí, eliminar" inside the row commits.
+    $$('[data-del-user-id], [data-del-pending-email]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.disabled) return;
+            settingsUI.confirmingDelete = btn.dataset.delRow;
+            renderSettings();
+        });
+    });
+    // Cancel confirmation
+    $$('[data-confirm-cancel]').forEach(btn => btn.addEventListener('click', () => {
+        settingsUI.confirmingDelete = null;
+        renderSettings();
+    }));
+    // Commit deletion (active user OR pending invitation)
+    $$('[data-confirm-del]').forEach(btn => btn.addEventListener('click', async () => {
+        const userId = btn.dataset.userId;
+        const pendingEmail = btn.dataset.pendingEmail;
         btn.disabled = true;
-        const r = await Auth.deleteUser(btn.dataset.delUserId);
-        if (!r.ok) alert(r.error);
+        btn.textContent = 'Borrando…';
+        let r;
+        if (pendingEmail) {
+            r = await Auth.deletePendingInvitation(pendingEmail);
+            if (r.ok) UserTags.set(pendingEmail, '');
+        } else if (userId) {
+            r = await Auth.deleteUser(userId);
+        }
+        settingsUI.confirmingDelete = null;
+        if (r && !r.ok) alert(r.error);
         await renderSettings();
     }));
 
-    // Borrar invitación pendiente (no hay fila en `profiles` todavía —
-    // la fila vive en `pending_invitations` y se borra por email).
-    $$('[data-del-pending-email]').forEach(btn => btn.addEventListener('click', async () => {
-        if (btn.disabled) return;
-        if (!confirm('¿Cancelar la invitación? El enlace dejará de ser válido.')) return;
-        btn.disabled = true;
-        const email = btn.dataset.delPendingEmail;
-        const r = await Auth.deletePendingInvitation(email);
-        if (!r.ok) { alert(r.error); btn.disabled = false; return; }
-        // Limpia también la etiqueta local asociada al email.
-        UserTags.set(email, '');
-        await renderSettings();
-    }));
+    // Esc / click-away dismisses the confirmation. We add a one-shot
+    // listener so it doesn't pile up on each render.
+    if (settingsUI.confirmingDelete && !settingsUI._dismissArmed) {
+        settingsUI._dismissArmed = true;
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                settingsUI.confirmingDelete = null;
+                document.removeEventListener('keydown', onKey);
+                settingsUI._dismissArmed = false;
+                renderSettings();
+            }
+        };
+        document.addEventListener('keydown', onKey);
+    }
 }
 
 // ================================================================
