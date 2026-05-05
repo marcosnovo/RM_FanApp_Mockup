@@ -39,6 +39,9 @@ const state = {
     predictionDraft: {},        // { [matchId]: { home, away } } working values
     openRanking: false,
 
+    // Hoy V2 Pro — pack de mejoras (flag `fan.hoy.home-pro`)
+    hoy2PromoIndex: 0,    // current promo-hero slide
+
     // Hoy — pestañas por equipo (flag 'fan.hoy.team-tabs')
     // Persistidas en localStorage vía HoyTeamTabs.
     hoyTeamFilter: 'all',                                // 'all' | 'masc' | 'fem' | 'basket'
@@ -453,6 +456,16 @@ function renderHoyV2() {
     const surveys = (typeof SURVEY_ITEMS !== 'undefined' ? SURVEY_ITEMS : []);
     const survey = surveys[0];
 
+    // Hoy V2 Pro pack flags (each one independently toggleable below
+    // the parent `fan.hoy.home-pro`). When the parent is OFF, all
+    // sub-flags are effectively OFF too via Flags.isEnabled cascade.
+    const compactNews    = Flags.isEnabled('fan.hoy.news.compact');
+    const showShorts     = Flags.isEnabled('fan.hoy.shorts');
+    const showPromoHero  = Flags.isEnabled('fan.hoy.promo-hero');
+    const showQuickActs  = Flags.isEnabled('fan.hoy.quick-actions');
+    const showLiveRail   = Flags.isEnabled('fan.hoy.live-rail');
+    const showContWatch  = Flags.isEnabled('fan.hoy.continue-watching');
+
     return `
         <div class="hoy2-wrap">
 
@@ -471,18 +484,34 @@ function renderHoyV2() {
 
             <div class="hoy2-scroll">
 
+                <!-- ══════════ HOY V2 PRO — High-impact modules ═══════════
+                     Quick actions + Live rail + Promo hero sit at the top
+                     when the pack is on. Order is intentional: high-intent
+                     shortcuts → live content → promo. -->
+                ${showQuickActs ? renderHoyV2QuickActions() : ''}
+                ${showLiveRail  ? renderHoyV2LiveRail()    : ''}
+                ${showPromoHero ? renderHoyV2PromoHero()   : ''}
+
                 <!-- ── Stories carousel (flag 'fan.hoy.stories') ── -->
                 ${Flags.isEnabled('fan.hoy.stories') ? renderHoyV2Stories() : ''}
+
+                <!-- ── Shorts verticales (flag 'fan.hoy.shorts') ── -->
+                ${showShorts ? renderHoyV2Shorts(filter) : ''}
 
                 <!-- ── Próximos partidos ─────────
                      En "Todo" se muestran los 3 equipos; filtrando por uno
                      concreto, sólo el partido de ese equipo. -->
                 ${renderHoyV2NextMatches(filter)}
 
+                <!-- ── Continue watching (flag 'fan.hoy.continue-watching') ── -->
+                ${showContWatch ? renderHoyV2ContinueWatching() : ''}
+
                 <!-- ── Gamificación: predicciones (flag) ───────── -->
                 ${showPrediction ? renderHoyV2Prediction() : ''}
 
-                <!-- ── Noticias (con etiqueta de equipo en "Todo") ── -->
+                <!-- ── Noticias (con etiqueta de equipo en "Todo") ──
+                     Variante compacta cuando el flag fan.hoy.news.compact
+                     está on: thumb más pequeño, título a 1 línea, sin sub. -->
                 <section class="hoy2-section">
                     <div class="hoy2-section-head">
                         <h2 class="hoy2-section-title">Noticias</h2>
@@ -490,7 +519,7 @@ function renderHoyV2() {
                             Ver todas
                         </button>
                     </div>
-                    <div class="hoy2-news-list">
+                    <div class="hoy2-news-list ${compactNews ? 'is-compact' : ''}">
                         ${news.length === 0 ? `
                             <div class="hoy2-news-empty">
                                 No hay noticias publicadas de este equipo.
@@ -507,7 +536,9 @@ function renderHoyV2() {
                                             : (item.kind ? `<span class="hoy2-news-kind">${item.kind}</span>` : '')}
                                     </div>
                                     <div class="hoy2-news-title">${item.title}</div>
-                                    <div class="hoy2-news-sub">${(item.subtitle || '').slice(0, 80)}${(item.subtitle || '').length > 80 ? '…' : ''}</div>
+                                    ${compactNews ? '' : `
+                                        <div class="hoy2-news-sub">${(item.subtitle || '').slice(0, 80)}${(item.subtitle || '').length > 80 ? '…' : ''}</div>
+                                    `}
                                 </div>
                             </button>
                         `).join('')}
@@ -534,6 +565,164 @@ function renderHoyV2() {
 
         ${renderSideMenu()}
         ${state.hoyEditorOpen ? renderHoyTabsEditorSheet() : ''}
+    `;
+}
+
+// ════════════════════════════════════════════════════════════════
+// HOY V2 PRO — New section renderers
+// (each gated behind its own flag inside `fan.hoy.home-pro`)
+// ════════════════════════════════════════════════════════════════
+
+const HOY2_PRO_ICONS = {
+    tickets:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8 a2 2 0 0 1 2-2 h14 a2 2 0 0 1 2 2 v2 a2 2 0 0 0 0 4 v2 a2 2 0 0 1-2 2 H5 a2 2 0 0 1-2-2 v-2 a2 2 0 0 0 0-4 z"/><line x1="12" y1="7" x2="12" y2="17" stroke-dasharray="2 2"/></svg>`,
+    store:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
+    stadium:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="5"/><ellipse cx="12" cy="12" rx="5" ry="2.6"/><path d="M3 12 v3 a9 5 0 0 0 18 0 v-3"/></svg>`,
+    play:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><polygon points="10,9 16,12 10,15" fill="currentColor" stroke="none"/></svg>`,
+    fork:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3 v8 a3 3 0 0 0 6 0 V3 M10 3 v6 M16 3 c-2 0-3 2-3 5 s1 4 3 4 v9"/></svg>`
+};
+
+function renderHoyV2QuickActions() {
+    const actions = (typeof QUICK_ACTIONS !== 'undefined' ? QUICK_ACTIONS : []);
+    if (actions.length === 0) return '';
+    return `
+        <section class="hoy2-section hoy2-quickactions-section">
+            <div class="hoy2-quickactions">
+                ${actions.map(a => `
+                    <button class="hoy2-qa" data-quick-action="${a.id}">
+                        <span class="hoy2-qa-icon">${HOY2_PRO_ICONS[a.icon] || ''}</span>
+                        <span class="hoy2-qa-label">${a.label}</span>
+                    </button>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+function renderHoyV2LiveRail() {
+    const items = (typeof LIVE_UPCOMING_ITEMS !== 'undefined' ? LIVE_UPCOMING_ITEMS : []);
+    if (items.length === 0) return '';
+    return `
+        <section class="hoy2-section">
+            <div class="hoy2-section-head">
+                <h2 class="hoy2-section-title">En directo y próximamente</h2>
+                <button class="hoy2-section-cta" data-go-tab="rmtv">Ver todo</button>
+            </div>
+            <div class="hoy2-live-scroll">
+                ${items.map(it => {
+                    const badge = it.kind === 'live'
+                        ? `<span class="hoy2-live-badge live">+ LIVE</span>`
+                        : it.kind === 'replay'
+                            ? `<span class="hoy2-live-badge replay">FULL MATCH<br>► REPLAY</span>`
+                            : `<span class="hoy2-live-badge upcoming">+ PRÓXIMO</span>`;
+                    return `
+                        <button class="hoy2-live-card hoy2-live-${it.kind}" data-live-id="${it.id}">
+                            <div class="hoy2-live-card-top">${badge}</div>
+                            <div class="hoy2-live-crests">
+                                <div class="hoy2-live-shield" style="background: ${it.homeC}">${initialsOf(it.home)}</div>
+                                <div class="hoy2-live-shield" style="background: ${it.awayC}">${initialsOf(it.away)}</div>
+                            </div>
+                            <div class="hoy2-live-meta">${it.league}</div>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        </section>
+    `;
+}
+
+function initialsOf(name) {
+    return (name || '').split(/\s+/).map(s => s[0]).filter(Boolean).slice(0, 3).join('').toUpperCase();
+}
+
+function renderHoyV2PromoHero() {
+    const items = (typeof PROMO_HERO_ITEMS !== 'undefined' ? PROMO_HERO_ITEMS : []);
+    if (items.length === 0) return '';
+    const idx = Math.min(state.hoy2PromoIndex || 0, items.length - 1);
+    return `
+        <section class="hoy2-section hoy2-promo-section">
+            <div class="hoy2-promo-track" data-hoy2-promo-track style="transform: translateX(-${idx * 100}%)">
+                ${items.map(p => `
+                    <button class="hoy2-promo-card" data-promo-id="${p.id}"
+                            style="background: linear-gradient(135deg, ${p.c1} 0%, ${p.c2} 100%)">
+                        <div class="hoy2-promo-kicker">${p.kicker}</div>
+                        <div class="hoy2-promo-title">${p.title}</div>
+                        <div class="hoy2-promo-sub">${p.subtitle}</div>
+                        <span class="hoy2-promo-cta">${p.cta} ${I.arrowRight}</span>
+                    </button>
+                `).join('')}
+            </div>
+            <div class="hoy2-promo-dots">
+                ${items.map((_, i) => `
+                    <button class="hoy2-promo-dot ${i === idx ? 'active' : ''}" data-promo-dot="${i}" aria-label="Promo ${i + 1}"></button>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+function renderHoyV2Shorts(filter = 'all') {
+    const items = (typeof SHORTS_ITEMS !== 'undefined' ? SHORTS_ITEMS : []);
+    if (items.length === 0) return '';
+    return `
+        <section class="hoy2-section hoy2-shorts-section">
+            <div class="hoy2-section-head">
+                <h2 class="hoy2-section-title">Shorts <span class="hoy2-shorts-emoji">🎥</span></h2>
+                <button class="hoy2-section-cta" data-go-tab="rmtv">Ver todos</button>
+            </div>
+            <div class="hoy2-shorts-grid">
+                ${items.slice(0, 6).map(s => `
+                    <button class="hoy2-short-card" data-short-id="${s.id}"
+                            style="background: linear-gradient(160deg, ${s.c1} 0%, ${s.c2} 100%)">
+                        ${s.isNew ? `<span class="hoy2-short-badge">NEW</span>` : ''}
+                        <span class="hoy2-short-play">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+                        </span>
+                        <span class="hoy2-short-dur">${s.duration}</span>
+                        <span class="hoy2-short-title">${s.title}</span>
+                    </button>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+function renderHoyV2ContinueWatching() {
+    const items = (typeof CONTINUE_WATCHING_ITEMS !== 'undefined' ? CONTINUE_WATCHING_ITEMS : []);
+    // Apply persisted progress overrides (0..1) so a user revisiting the
+    // section sees their current progress instead of the seed value.
+    let store = {};
+    try { store = JSON.parse(localStorage.getItem('hoy2_continue_v1') || '{}'); } catch {}
+    const enriched = items
+        .map(it => ({ ...it, progress: typeof store[it.id] === 'number' ? store[it.id] : it.progress }))
+        .filter(it => it.progress > 0 && it.progress < 0.95);
+    if (enriched.length === 0) return '';
+    return `
+        <section class="hoy2-section">
+            <div class="hoy2-section-head">
+                <h2 class="hoy2-section-title">Continúa viendo</h2>
+                <button class="hoy2-section-cta" data-go-tab="rmtv">Ver todo</button>
+            </div>
+            <div class="hoy2-cw-scroll">
+                ${enriched.map(it => `
+                    <button class="hoy2-cw-card" data-cw-id="${it.id}">
+                        <div class="hoy2-cw-thumb"
+                             style="background: linear-gradient(135deg, ${it.c1} 0%, ${it.c2} 100%)">
+                            <span class="hoy2-cw-play">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+                            </span>
+                            <span class="hoy2-cw-dur">${it.duration}</span>
+                        </div>
+                        <div class="hoy2-cw-progress">
+                            <div class="hoy2-cw-progress-fill" style="width: ${Math.round(it.progress * 100)}%"></div>
+                        </div>
+                        <div class="hoy2-cw-info">
+                            <div class="hoy2-cw-title">${it.title}</div>
+                            <div class="hoy2-cw-sub">${it.kind} · ${Math.round(it.progress * 100)}% visto</div>
+                        </div>
+                    </button>
+                `).join('')}
+            </div>
+        </section>
     `;
 }
 
@@ -7362,6 +7551,30 @@ function renderSidebar() {
 }
 
 // ── Home scroll morph (expanded ↔ collapsed top row) ────────────
+// Auto-rotate the Hoy V2 Pro promo hero carousel. We use a single
+// global timer and clear it on every render so we don't pile up
+// listeners. The timer only ticks when the promo track is visible.
+let _hoy2PromoTimer = null;
+function setupHoyV2PromoAutoRotate() {
+    if (_hoy2PromoTimer) { clearInterval(_hoy2PromoTimer); _hoy2PromoTimer = null; }
+    const track = document.querySelector('[data-hoy2-promo-track]');
+    if (!track) return;
+    const items = (typeof PROMO_HERO_ITEMS !== 'undefined' ? PROMO_HERO_ITEMS : []);
+    if (items.length <= 1) return;
+    _hoy2PromoTimer = setInterval(() => {
+        // Stop if the promo track has been removed by a re-render.
+        if (!document.body.contains(track)) {
+            clearInterval(_hoy2PromoTimer);
+            _hoy2PromoTimer = null;
+            return;
+        }
+        state.hoy2PromoIndex = ((state.hoy2PromoIndex || 0) + 1) % items.length;
+        track.style.transform = `translateX(-${state.hoy2PromoIndex * 100}%)`;
+        document.querySelectorAll('[data-promo-dot]').forEach((d, i) =>
+            d.classList.toggle('active', i === state.hoy2PromoIndex));
+    }, 5000);
+}
+
 function setupHomeScrollMorph() {
     if (state.tab !== 'hoy') return;
     const scroller = $('#screenBody');
@@ -7751,6 +7964,54 @@ function attachListeners() {
         const tab = btn.dataset.goTab;
         state.tab = tab;
         if (tab === 'noticias') state.newsId = null;
+        render();
+    }));
+
+    // ── Hoy V2 Pro: Quick actions ────────────────────────────────
+    $$('[data-quick-action]').forEach(btn => btn.addEventListener('click', () => {
+        const id = btn.dataset.quickAction;
+        const QA_TO_TAB = {
+            tickets:    'tienda',     // mockup: tickets viven en la sección de tienda
+            store:      'tienda',
+            rmplay:     'rmtv',
+            bernabeu:   'tienda',
+            restaurant: 'tienda'
+        };
+        const tab = QA_TO_TAB[id] || 'tienda';
+        state.tab = tab;
+        render();
+    }));
+
+    // Live rail: clicks open the user's RMTV-equivalent section in the
+    // mockup. In a real app each id would deep-link to its match page.
+    $$('[data-live-id]').forEach(btn => btn.addEventListener('click', () => {
+        state.tab = 'rmtv';
+        render();
+    }));
+
+    // Promo hero — dots and auto-rotate
+    $$('[data-promo-dot]').forEach(dot => dot.addEventListener('click', () => {
+        state.hoy2PromoIndex = parseInt(dot.dataset.promoDot, 10);
+        // Lightweight DOM update so we don't tear down the whole tree.
+        const track = document.querySelector('[data-hoy2-promo-track]');
+        if (track) track.style.transform = `translateX(-${state.hoy2PromoIndex * 100}%)`;
+        $$('[data-promo-dot]').forEach((d, i) => d.classList.toggle('active', i === state.hoy2PromoIndex));
+    }));
+    $$('[data-promo-id]').forEach(card => card.addEventListener('click', () => {
+        // Mock: send the user to the store (closest sensible target for the
+        // mock promos: tour, jersey, RM Play+, camp).
+        state.tab = 'tienda';
+        render();
+    }));
+    // Auto-rotate the promo carousel every 5s. We arm a single timer per
+    // render and store it on the promo-track element so a re-render clears it.
+    setupHoyV2PromoAutoRotate();
+
+    // Shorts and continue-watching cards reuse the same mock player
+    // overlay used by other Hoy V2 highlights — for the mockup, they
+    // just navigate the user to RMTV.
+    $$('[data-short-id], [data-cw-id]').forEach(btn => btn.addEventListener('click', () => {
+        state.tab = 'rmtv';
         render();
     }));
 

@@ -14710,3 +14710,425 @@ input.has-mismatch {
     max-width: 280px;
     margin: 0 auto;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   HOY V2 PRO — Pack de mejoras de la home (flag fan.hoy.home-pro)
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Noticias compactas (flag fan.hoy.news.compact) ────────── */
+/* Override de la card original cuando el contenedor lleva .is-compact:
+   thumb más pequeño, padding menor, sin subtítulo, título a 1 línea.
+   Resultado: cada card pasa de ~92px a ~64px de alto.            */
+.hoy2-news-list.is-compact .hoy2-news-row {
+    padding: 8px 10px;
+    gap: 10px;
+    border-radius: 12px;
+}
+.hoy2-news-list.is-compact .hoy2-news-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+}
+.hoy2-news-list.is-compact .hoy2-news-thumb svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+.hoy2-news-list.is-compact .hoy2-news-title {
+    font-size: 13.5px;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+}
+.hoy2-news-list.is-compact .hoy2-news-body {
+    gap: 2px;
+}
+.hoy2-news-list.is-compact .hoy2-news-kicker {
+    margin-bottom: 0;
+}
+
+/* ── 2. Quick actions row (flag fan.hoy.quick-actions) ───────── */
+.hoy2-quickactions-section {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+.hoy2-quickactions {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    padding: 0 12px;
+}
+.hoy2-qa {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 4px;
+    border-radius: 14px;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+.hoy2-qa:hover { background: var(--rm-separator); }
+.hoy2-qa:active { transform: scale(0.96); }
+.hoy2-qa-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #4a3de8 0%, #806ff8 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(74, 61, 232, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.hoy2-qa-icon svg { width: 22px !important; height: 22px !important; }
+.hoy2-qa-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--rm-dark);
+    letter-spacing: 0.1px;
+}
+
+/* ── 3. Live & Upcoming rail (flag fan.hoy.live-rail) ────────── */
+.hoy2-live-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 16px 10px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.hoy2-live-scroll::-webkit-scrollbar { display: none; }
+.hoy2-live-card {
+    flex: 0 0 130px;
+    height: 170px;
+    border: 0;
+    border-radius: 14px;
+    background: var(--color-grayscale-off-white);
+    box-shadow: var(--shadow-light-small);
+    cursor: pointer;
+    font-family: inherit;
+    padding: 12px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    overflow: hidden;
+    position: relative;
+}
+.hoy2-live-card:hover { box-shadow: var(--shadow-light-medium); }
+
+/* The card has a soft tinted edge depending on the badge kind */
+.hoy2-live-live    { background: linear-gradient(180deg, rgba(255, 64, 196, 0.08), #fff 60%); }
+.hoy2-live-replay  { background: linear-gradient(180deg, rgba(255, 224, 60, 0.10), #fff 60%); }
+.hoy2-live-upcoming{ background: linear-gradient(180deg, rgba(80, 180, 255, 0.10), #fff 60%); }
+
+.hoy2-live-card-top { width: 100%; display: flex; }
+.hoy2-live-badge {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    line-height: 1.15;
+    text-align: left;
+}
+.hoy2-live-badge.live    { background: #ff2bb5; color: #fff; box-shadow: 0 4px 12px rgba(255, 43, 181, 0.40); }
+.hoy2-live-badge.replay  { background: #ffe93c; color: #1a1a1a; }
+.hoy2-live-badge.upcoming{ background: rgba(80, 180, 255, 0.20); color: #1d4ed8; }
+
+.hoy2-live-crests {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+.hoy2-live-shield {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.hoy2-live-meta {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--rm-dark);
+    line-height: 1.3;
+    margin-top: auto;
+}
+
+/* ── 4. Hero promo carousel (flag fan.hoy.promo-hero) ────────── */
+.hoy2-promo-section {
+    overflow: hidden;
+    padding: 0 16px;
+}
+.hoy2-promo-track {
+    display: flex;
+    transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.hoy2-promo-card {
+    flex: 0 0 100%;
+    width: 100%;
+    border: 0;
+    border-radius: 18px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    padding: 22px 22px 24px;
+    color: #fff;
+    min-height: 168px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    overflow: hidden;
+    position: relative;
+}
+/* Subtle vignette + decorative diagonal gleam (no extra DOM needed) */
+.hoy2-promo-card::after {
+    content: "";
+    position: absolute;
+    top: -40%;
+    right: -30%;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.10), transparent 70%);
+    pointer-events: none;
+}
+.hoy2-promo-kicker {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    color: rgba(255, 255, 255, 0.78);
+    text-transform: uppercase;
+}
+.hoy2-promo-title {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    line-height: 1.1;
+    color: #fff;
+}
+.hoy2-promo-sub {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 10px;
+}
+.hoy2-promo-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    backdrop-filter: blur(4px);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #fff;
+}
+.hoy2-promo-cta svg { width: 14px !important; height: 14px !important; }
+
+.hoy2-promo-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+}
+.hoy2-promo-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--rm-text-tertiary, #c5c8d2);
+    cursor: pointer;
+    padding: 0;
+    transition: width 0.18s ease, background 0.18s ease;
+}
+.hoy2-promo-dot.active {
+    width: 18px;
+    border-radius: 999px;
+    background: var(--rm-primary);
+}
+
+/* ── 5. Vertical Shorts grid (flag fan.hoy.shorts) ───────────── */
+.hoy2-shorts-emoji { font-size: 16px; vertical-align: middle; }
+.hoy2-shorts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 0 16px;
+}
+.hoy2-short-card {
+    border: 0;
+    border-radius: 14px;
+    aspect-ratio: 9 / 14;     /* close to 9:16 but a bit taller for the title strip */
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.hoy2-short-card:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0, 0, 0, 0.30); }
+.hoy2-short-card::after {
+    /* Bottom gradient so the title is always legible */
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 60%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.78), transparent);
+    pointer-events: none;
+}
+.hoy2-short-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #4ec3ff;
+    color: #062644;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 999px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 6px rgba(78, 195, 255, 0.48);
+    z-index: 2;
+}
+.hoy2-short-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    opacity: 0.85;
+    pointer-events: none;
+    z-index: 1;
+}
+.hoy2-short-play svg { width: 36px !important; height: 36px !important; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4)); }
+.hoy2-short-dur {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 2;
+}
+.hoy2-short-title {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #fff;
+    z-index: 2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ── 6. Continue watching (flag fan.hoy.continue-watching) ───── */
+.hoy2-cw-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 16px 10px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.hoy2-cw-scroll::-webkit-scrollbar { display: none; }
+.hoy2-cw-card {
+    flex: 0 0 220px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.hoy2-cw-thumb {
+    position: relative;
+    height: 120px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.20);
+}
+.hoy2-cw-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.92);
+}
+.hoy2-cw-play svg { width: 30px !important; height: 30px !important; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4)); }
+.hoy2-cw-dur {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.hoy2-cw-progress {
+    height: 3px;
+    background: var(--rm-separator);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: -3px;
+    position: relative;
+    z-index: 2;
+}
+.hoy2-cw-progress-fill {
+    height: 100%;
+    background: var(--rm-primary);
+    border-radius: 2px;
+}
+.hoy2-cw-info {
+    padding: 0 2px;
+}
+.hoy2-cw-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rm-dark);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.hoy2-cw-sub {
+    font-size: 11px;
+    color: var(--color-grayscale-label, #5E6A83);
+    margin-top: 2px;
+}

@@ -1371,3 +1371,52 @@ const VIP_MATCH_DETAIL_NEXT = {
     highlights: [],
     summary: null
 };
+
+// ════════════════════════════════════════════════════════════════
+// HOY V2 PRO — Mocks for the new home sections
+// (flag `fan.hoy.home-pro` and its 6 sub-feature flags)
+// ════════════════════════════════════════════════════════════════
+
+// Vertical "Shorts" — 9:16 clips (flag fan.hoy.shorts).
+const SHORTS_ITEMS = [
+    { id: 'sh1', title: 'Bellingham 1v1 Bayern',     duration: '0:32', isNew: true,  c1: '#3a2978', c2: '#1b1244' },
+    { id: 'sh2', title: 'Caicedo gol vs Atleti',     duration: '0:24', isNew: true,  c1: '#341147', c2: '#18081f' },
+    { id: 'sh3', title: 'Mbappé · entrevista exc.',  duration: '0:48', isNew: false, c1: '#291447', c2: '#130a22' },
+    { id: 'sh4', title: 'Vinicius regateando',       duration: '0:18', isNew: true,  c1: '#5a4380', c2: '#28184a' },
+    { id: 'sh5', title: 'Campazzo triple vs FCB',    duration: '0:14', isNew: false, c1: '#1b3a72', c2: '#0a1a38' },
+    { id: 'sh6', title: 'Calentamiento Bernabéu',    duration: '0:42', isNew: true,  c1: '#2c4e82', c2: '#0a1a38' }
+];
+
+// Hero promo banners (flag fan.hoy.promo-hero).
+const PROMO_HERO_ITEMS = [
+    { id: 'p1', kicker: 'EXPERIENCIA', title: 'Tour Bernabéu',          subtitle: 'Vive el estadio por dentro · VR + tour real',  cta: 'Reserva ya',     c1: '#0f2145', c2: '#3a2978' },
+    { id: 'p2', kicker: 'NUEVO',       title: 'Camiseta 25 / 26',       subtitle: 'Equipación oficial · Adidas',                  cta: 'Comprar ahora',  c1: '#5a4380', c2: '#28184a' },
+    { id: 'p3', kicker: 'STREAMING',   title: 'RM Play+',               subtitle: 'Acceso ilimitado a partidos y documentales',    cta: 'Suscríbete',     c1: '#341147', c2: '#18081f' },
+    { id: 'p4', kicker: 'CAMP',        title: 'Real Madrid Camp 2026',  subtitle: 'Plazas abiertas para verano',                   cta: 'Apúntate',       c1: '#1a3a72', c2: '#0a1a38' }
+];
+
+// Quick action shortcuts (flag fan.hoy.quick-actions).
+const QUICK_ACTIONS = [
+    { id: 'tickets',    label: 'Entradas',    icon: 'tickets' },
+    { id: 'store',      label: 'Tienda',      icon: 'store'   },
+    { id: 'bernabeu',   label: 'Bernabéu',    icon: 'stadium' },
+    { id: 'rmplay',     label: 'RM Play',     icon: 'play'    },
+    { id: 'restaurant', label: 'Restaurantes', icon: 'fork'   }
+];
+
+// Live + upcoming + replay rail (flag fan.hoy.live-rail).
+const LIVE_UPCOMING_ITEMS = [
+    { id: 'lu1', kind: 'live',     league: 'Premier League U18', home: 'Stoke',         homeC: '#cd2027', away: 'Real Madrid',       awayC: '#0F2145' },
+    { id: 'lu2', kind: 'replay',   league: 'Premier League U18', home: 'Stoke',         homeC: '#cd2027', away: 'Real Madrid',       awayC: '#0F2145' },
+    { id: 'lu3', kind: 'live',     league: 'Liga F · Femenino',  home: 'Atlético Fem.', homeC: '#d92626', away: 'Real Madrid Fem.',  awayC: '#0F2145' },
+    { id: 'lu4', kind: 'upcoming', league: 'EuroLeague',         home: 'Real Madrid',   homeC: '#0F2145', away: 'Panathinaikos',     awayC: '#005826' },
+    { id: 'lu5', kind: 'replay',   league: 'LaLiga · J31',       home: 'Bayern',        homeC: '#dc052d', away: 'Real Madrid',       awayC: '#0F2145' }
+];
+
+// Continue-watching items (flag fan.hoy.continue-watching).
+// Progress is a 0..1 fraction, persisted in localStorage at runtime.
+const CONTINUE_WATCHING_ITEMS = [
+    { id: 'cw1', title: 'Resumen Mallorca 2-1 Real Madrid', duration: '4:18', progress: 0.42, c1: '#8b1010', c2: '#3a0808', kind: 'Resumen' },
+    { id: 'cw2', title: 'Bellingham · entrevista completa', duration: '6:22', progress: 0.78, c1: '#2c2978', c2: '#151244', kind: 'Entrevista' },
+    { id: 'cw3', title: 'Ancelotti rueda de prensa Bayern', duration: '7:53', progress: 0.15, c1: '#0f2145', c2: '#06101f', kind: 'Prensa' }
+];

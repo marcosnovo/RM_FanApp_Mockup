@@ -109,6 +109,73 @@ const FLAGS = [
         requires: 'fan.hoy.team-tabs.editor'
     },
 
+    // ── Hoy v2 Pro — Pack de mejoras de la home ─────────────────
+    // Flag padre con sub-features anidadas: cada una se puede
+    // activar/desactivar independientemente para comparar el impacto.
+    {
+        app: 'fan',
+        key: 'fan.hoy.home-pro',
+        label: 'Hoy v2 Pro — pack de mejoras de la home',
+        description: 'Activa el pack completo: noticias compactas, shorts verticales, hero promocional, quick actions, live rail y continue watching. Cada sub-feature se puede tunear independientemente debajo.',
+        category: 'Hoy',
+        default: false,
+        requires: 'fan.hoy.v2-structure'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.news.compact',
+        label: 'Noticias compactas',
+        description: 'Reduce la noticia: thumb 68→52px, una línea de título, sin subtítulo. 5 noticias pasan de 480px a ~320px de scroll (-30%).',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.home-pro'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.shorts',
+        label: 'Shorts verticales (9:16)',
+        description: 'Grid 2xN de vídeos cortos verticales con badge NEW, estilo "City Shorts" del Manchester City o Reels/TikTok. Reaprovecha los gradientes de los highlights.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.home-pro'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.promo-hero',
+        label: 'Hero promocional rotativo',
+        description: 'Banner full-bleed gigante con CTA (Tour Bernabéu, Tienda, RM Play+, Camp). Carrusel automático cada 5s con indicador de paginación.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.home-pro'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.quick-actions',
+        label: 'Atajos (Quick actions)',
+        description: 'Fila horizontal de 5 atajos justo bajo el topbar: Entradas · Tienda · Bernabéu · RM Play · Restaurantes. Cada chip navega a la sección correspondiente.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.home-pro'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.live-rail',
+        label: 'Live & Upcoming rail',
+        description: 'Carrusel horizontal de mini-cards de partidos con badge LIVE (magenta) o FULL MATCH REPLAY (amarillo). Patrón Man City / Sky Sports.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.home-pro'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.continue-watching',
+        label: 'Continue watching',
+        description: 'Carrusel de vídeos a medio ver con barra de progreso debajo del thumb. Aparece solo si hay vídeos con progreso > 0% < 95%.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.home-pro'
+    },
+
     // ── Side menu v2 — padre y sub-funcionalidades anidadas ───────
     {
         app: 'fan',
