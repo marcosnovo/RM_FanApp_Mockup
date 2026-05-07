@@ -15334,15 +15334,6 @@ input.has-mismatch {
     border: 1px solid rgba(255,255,255,0.1);
 }
 
-/* Sin la banda de identidad dentro del frame, las cabeceras de cada
-   concepto necesitan un buffer arriba para no quedar tapadas por el
-   status-bar absolute (52px). 56px de padding-top a las cabeceras de
-   A, B y C: el header del concepto queda como en la app real, pegado
-   bajo el reloj. */
-.hv2-a-header { padding-top: 56px; }
-.hv2-b-strip  { padding-top: 56px; }
-.hv2-c-header { padding-top: 56px; }
-
 /* ── Noticias compactas en los conceptos (hv2-news) ───────────── */
 .hv2-news { padding: 14px 14px 6px; }
 .hv2-news-head {
@@ -15586,7 +15577,10 @@ input.has-mismatch {
 .hv2-a-header {
     background: linear-gradient(180deg, #0B1220 0%, #0B1A33 100%);
     color: #fff;
-    padding: 14px 16px 18px;
+    /* padding-top alto (64px) para dejar respiro respecto al status-bar
+       absolute (52px) + dynamic island del frame; el contenido empieza
+       sin solaparse con el reloj/iconos. */
+    padding: 64px 16px 18px;
 }
 .hv2-a-header-row {
     display: flex;
@@ -15874,7 +15868,9 @@ input.has-mismatch {
     display: flex; align-items: center; gap: 8px;
     background: #0B1220;
     color: #fff;
-    padding: 10px 12px;
+    /* 64px de padding-top: el strip se queda visualmente bajo el
+       status-bar y la dynamic island, sin solaparse con el reloj. */
+    padding: 64px 12px 12px;
 }
 .hv2-b-side {
     width: 32px; height: 32px;
@@ -16348,7 +16344,8 @@ input.has-mismatch {
 .hv2-c-header {
     background: linear-gradient(180deg, #1E1B4B 0%, #00529F 100%);
     color: #fff;
-    padding: 14px 16px;
+    /* 64px de padding-top para esquivar status-bar + dynamic island. */
+    padding: 64px 16px 14px;
     display: flex; align-items: center; gap: 12px;
 }
 .hv2-c-header.is-md {
