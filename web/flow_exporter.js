@@ -51,7 +51,8 @@ function hasFlow(flagKey) { return !!FLOWS[flagKey]; }
 window.FlowExporter = {
     register: registerFlow,
     has: hasFlow,
-    run: runFlow
+    run: runFlow,
+    capturePhoneToPNG
 };
 
 // ── Capture overlay (small status pill) ─────────────────────────
@@ -102,6 +103,99 @@ async function captureNode(node) {
     // size. Background gradient still looks fine because the .phone
     // mockup paints its own dark backdrop inside the frame.
     return canvas.toDataURL('image/jpeg', 0.88);
+}
+
+// ── Public: full-screen capture of the phone (with scroll) ───────
+//
+// Toma el `.phone-screen` (sin el bisel exterior) y captura TODO su
+// contenido scrollable como un PNG vertical. El truco:
+//   1. Marcamos el body con la clase `capture-mode` que en CSS reescribe
+//      los scrollers anidados a layout estático (height auto, overflow
+//      visible) para que el contenido se despliegue verticalmente.
+//   2. Dejamos un frame para que Safari/Chrome reflowen.
+//   3. Capturamos el .phone-screen con html2canvas, pidiendo la altura
+//      total del scroll (scrollHeight) en vez de la altura visible.
+//   4. Restauramos.
+//
+// Devuelve el blob PNG y dispara la descarga automática.
+async function capturePhoneToPNG({ filename } = {}) {
+    const screen = document.querySelector('.phone-screen');
+    if (!screen) throw new Error('No phone screen to capture');
+
+    showOverlay('Cargando libreria de captura…');
+    await ensureLibs();
+
+    showOverlay('Preparando captura…');
+
+    // Recolecta los scrollers anidados que tendremos que neutralizar y
+    // guarda su scrollTop para restaurarlo después.
+    const scrollers = [
+        screen.querySelector('#screenBody'),
+        screen.querySelector('#hv2Scroll')
+    ].filter(Boolean);
+    const scrollSnap = scrollers.map(el => ({ el, top: el.scrollTop }));
+
+    const tabBar = screen.querySelector('.tab-bar-slot');
+    const homeInd = screen.querySelector('.home-indicator');
+
+    // Activa modo captura: el CSS asociado deshace el clipping y deja
+    // que todo el contenido fluya hacia abajo.
+    document.body.classList.add('capture-mode');
+
+    // Restablece scroll a 0 dentro de los scrollers para que el
+    // despliegue empiece arriba (si el usuario tenía scroll a mitad,
+    // queremos la captura desde el origen).
+    scrollers.forEach(s => { s.scrollTop = 0; });
+
+    // Espera 2 frames para que el reflow termine y las animaciones
+    // CSS se asienten.
+    await wait(60);
+
+    // Calcula la altura total que debe tener el canvas: la pantalla
+    // del iPhone como base + el extra del scroll desplegado.
+    const fullHeight = Math.max(screen.scrollHeight, screen.offsetHeight);
+
+    let canvas;
+    try {
+        canvas = await window.html2canvas(screen, {
+            backgroundColor: '#0B1220',
+            scale: 2,                      // doble densidad: imprimible en presentaciones
+            logging: false,
+            useCORS: false,
+            allowTaint: true,
+            imageTimeout: 5000,
+            foreignObjectRendering: false,
+            width: screen.offsetWidth,
+            height: fullHeight,
+            windowWidth: screen.offsetWidth,
+            windowHeight: fullHeight
+        });
+    } finally {
+        // Restaura SIEMPRE, incluso si la captura falla.
+        document.body.classList.remove('capture-mode');
+        scrollSnap.forEach(({ el, top }) => { el.scrollTop = top; });
+        // Intencionalmente referenciamos tabBar/homeInd para evitar
+        // que el linter avise de var no usada; el CSS de capture-mode
+        // ya los oculta durante la captura.
+        void tabBar; void homeInd;
+    }
+
+    showOverlay('Generando PNG…');
+    const blob = await new Promise(resolve =>
+        canvas.toBlob(b => resolve(b), 'image/png')
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    a.download = filename || `rm-fanapp-captura-${stamp}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    hideOverlay();
+    return { blob, filename: a.download };
 }
 
 // ── PDF assembler ────────────────────────────────────────────────
@@ -565,6 +659,81 @@ registerFlow('vip.tickets.multi-share', {
                         state.vipShare.step = 'preview';
                     }
                 }
+            ]
+        }
+    ]
+});
+
+// ── Fan · Hoy v2 — 3 conceptos del PRD (A/B/C) ───────────────────
+registerFlow('fan.hoy.v2-options', {
+    title: 'Hoy v2 · 3 conceptos (A/B/C)',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() {
+        fanInit({ tab: 'hoy', sub: 'directo',
+                  flags: ['fan.hoy.v2-options'] });
+        // Reset transient state to baseline para que el primer step de
+        // cada path empiece igual.
+        state.hoyV2Concept = 'A';
+        state.hoyV2Matchday = false;
+        state.hoyV2FeedIndex = 0;
+        state.hoyV2FeedFilter = 'all';
+        state.hoyV2Prediction = null;
+        state.hoyV2InfoOpen = false;
+        state.hoyV2PipOpen = true;
+    },
+    paths: [
+        {
+            label: 'Concepto A · The Madrid Times (conservador)',
+            steps: [
+                { caption: '1 · Selector + sello editorial',     async run() { state.hoyV2Concept = 'A'; scrollScreen(0); } },
+                { caption: '2 · Racha Madridista (7 días)',      async run() { state.hoyV2Concept = 'A'; scrollScreen(180); } },
+                { caption: '3 · Hoy en el Club + Próximos',      async run() { state.hoyV2Concept = 'A'; scrollScreen(420); } },
+                { caption: '4 · Banner Tienda (-15%)',           async run() { state.hoyV2Concept = 'A'; scrollScreen(900); } }
+            ]
+        },
+        {
+            label: 'Concepto B · Madrid Live (recomendado, non-matchday)',
+            steps: [
+                { caption: '1 · Match strip + chips Para ti',    async run() {
+                    state.hoyV2Concept = 'B'; state.hoyV2Matchday = false;
+                    state.hoyV2FeedIndex = 0; state.hoyV2FeedFilter = 'all'; scrollScreen(0);
+                } },
+                { caption: '2 · Feed vertical 9:16 dominante',   async run() {
+                    state.hoyV2Concept = 'B'; state.hoyV2Matchday = false; scrollScreen(160);
+                } },
+                { caption: '3 · Filtro Mbappé activo',           async run() {
+                    state.hoyV2Concept = 'B'; state.hoyV2FeedFilter = 'mbappe';
+                    state.hoyV2FeedIndex = 0; scrollScreen(160);
+                } },
+                { caption: '4 · Predictor: 2-1 enviada (#428)',  async run() {
+                    state.hoyV2Concept = 'B'; state.hoyV2FeedFilter = 'all';
+                    state.hoyV2Prediction = '2-1'; scrollScreen(580);
+                } },
+                { caption: '5 · Tiles: Tienda · Bernabéu · RMTV', async run() { scrollScreen(900); } }
+            ]
+        },
+        {
+            label: 'Concepto B · Modo Día de Partido',
+            steps: [
+                { caption: '1 · Marcador en directo 0-1 · 64\'',  async run() {
+                    state.hoyV2Concept = 'B'; state.hoyV2Matchday = true;
+                    state.hoyV2Prediction = null; scrollScreen(0);
+                } },
+                { caption: '2 · Pin audio Carrusel + eventos',    async run() { scrollScreen(180); } },
+                { caption: '3 · Madridismo Live (chat moderado)', async run() { scrollScreen(320); } },
+                { caption: '4 · Stats en directo + Feed',         async run() { scrollScreen(540); } }
+            ]
+        },
+        {
+            label: 'Concepto C · Madrid Universe (ambicioso)',
+            steps: [
+                { caption: '1 · Identidad: 🔥27 · 🪙142',         async run() {
+                    state.hoyV2Concept = 'C'; state.hoyV2Matchday = false;
+                    state.hoyV2PipOpen = true; scrollScreen(0);
+                } },
+                { caption: '2 · Stories + Feed ML',               async run() { scrollScreen(120); } },
+                { caption: '3 · PiP RMTV + Tu Peña Lavapiés',     async run() { scrollScreen(420); } },
+                { caption: '4 · Bernabéu hoy + Coleccionables',   async run() { scrollScreen(720); } }
             ]
         }
     ]

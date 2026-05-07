@@ -7841,7 +7841,19 @@ function renderHoyV2Options() {
                 ` : ''}
             </div>
 
-            <div class="hv2-scroll" id="hv2Scroll">
+            <!-- Banda de identidad del concepto activo: refuerza qué
+                 estamos viendo en cada momento y le da un sello visual
+                 propio (newspaper / streaming / metaverse). -->
+            <div class="hv2-identity hv2-identity-${concept}">
+                <div class="hv2-identity-letter">${meta.short}</div>
+                <div class="hv2-identity-text">
+                    <div class="hv2-identity-mast">${HV2_MAST[meta.key]}</div>
+                    <div class="hv2-identity-tag">${meta.tag} · Build ${meta.build} · DAU ${meta.lift}</div>
+                </div>
+                <div class="hv2-identity-deco">${HV2_DECO[meta.key]}</div>
+            </div>
+
+            <div class="hv2-scroll" id="hv2Scroll" data-hv2-concept-bg="${concept}">
                 ${conceptBody}
                 <div style="height: 28px"></div>
             </div>
@@ -7855,6 +7867,23 @@ const HV2_INFO_TEXT = {
     A: 'Reorganización inteligente. Match center compacto, contenido fresco arriba del fold y racha que engancha. NO incluye: feed vertical infinito, predictor, comunidad. Apto para evolución obvia de la home actual.',
     B: 'Feed vertical 9:16 dominante + match strip + predictor + briefing. La app deja de ser sobre partidos y empieza a ser sobre Madrid 365 días. Modo Día de Partido con marcador grande, audio en pin, eventos timeline y chat moderado.',
     C: 'El metaverso oficial del fan. Personalización ML, peñas digitales, fan tokens, Bernabéu hub, PiP RMTV draggable y coleccionables sin financialización. Madrid 24/7. Requiere equipo audiovisual dedicado y moderación 24/7.'
+};
+
+// Sello (mast) de cada concepto — lo pintamos en grande dentro de la
+// banda de identidad para que el concepto se reconozca de un vistazo.
+const HV2_MAST = {
+    A: 'THE MADRID TIMES',
+    B: 'MADRID·LIVE',
+    C: 'MADRID UNIVERSE'
+};
+
+// Decoración tipográfica de la banda: una micro-firma del concepto
+// (edición editorial, on air, trofeo) que añade textura visual sin
+// ruido funcional.
+const HV2_DECO = {
+    A: '<span class="hv2-deco-edition">Edición · Mié 15 abr</span>',
+    B: '<span class="hv2-deco-onair"><span class="hv2-deco-onair-dot"></span>ON AIR</span>',
+    C: '<span class="hv2-deco-trophy">★ Champions · Lvl 27</span>'
 };
 
 // ────────────────────────────────────────────────────────────────
@@ -9189,6 +9218,36 @@ function attachAppSwitcher() {
         state.vipEventId = null;
         render();
     }));
+}
+
+// ── Stage toolbar: "Captura PNG" sobre el frame ─────────────────
+// El botón vive fuera del frame y no se reescribe en cada render(),
+// por eso lo wireamos una sola vez al boot.
+function setupStageToolbar() {
+    const btn = document.querySelector('[data-capture-png]');
+    if (!btn || !window.FlowExporter || !window.FlowExporter.capturePhoneToPNG) return;
+
+    const original = btn.innerHTML;
+    btn.addEventListener('click', async () => {
+        if (btn.classList.contains('is-busy')) return;
+        btn.classList.add('is-busy');
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="12" cy="12" r="9" stroke-opacity="0.25"/>
+                <path d="M12 3 a9 9 0 0 1 9 9"/>
+            </svg>
+            <span>Capturando…</span>
+        `;
+        try {
+            await window.FlowExporter.capturePhoneToPNG();
+        } catch (err) {
+            console.error('[stage-toolbar] capture failed:', err);
+            alert('No se ha podido generar la captura. Revisa la consola.');
+        } finally {
+            btn.classList.remove('is-busy');
+            btn.innerHTML = original;
+        }
+    });
 }
 
 function handleSideNavTab(tab) {
@@ -10959,6 +11018,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── 2) Rest of the boot, guarded so nothing blocks the login ────
     try {
         attachAppSwitcher();
+        setupStageToolbar();
         setupTouchSimulation();
 
         // Rehydrate feature-flag state that lives in localStorage

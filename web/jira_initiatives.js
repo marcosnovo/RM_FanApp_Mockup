@@ -245,6 +245,76 @@ function escapeHTML(s) {
 
 // ── Fan App ─────────────────────────────────────────────────────
 
+register('fan.hoy.v2-options', {
+    flagKey: 'fan.hoy.v2-options',
+    title: 'Hoy v2 · 3 conceptos alternativos (A/B/C) para discovery interno',
+    epic: 'Fan App · Hoy',
+    estimate: 'XL (8-16 sprints, multi-fase)',
+    priority: 'Alta',
+    context: 'La pantalla "Hoy" actual es la primera impresión que tiene un madridista al abrir la app. Necesitamos validar internamente con stakeholders qué dirección estratégica tomar antes de invertir en un rediseño grande: ¿evolución obvia, plataforma OTT-feed, o metaverso del fan? Para forzar esa decisión se construye un mockup interactivo con 3 conceptos lado a lado, navegables sin salir de la pantalla.',
+    problem: 'Los stakeholders sólo deciden entre slides, no entre experiencias jugables. Las decisiones de roadmap del Hoy se aplazan ronda tras ronda porque "no se puede sentir" la diferencia entre un rediseño conservador y uno ambicioso. Esto bloquea sprints de iOS/Android y desalinea el plan editorial.',
+    objective: 'Entregar un mockup interactivo en HTML/CSS/JS vanilla con tres conceptos alternativos de la HOME — A "Madrid Times" (conservador), B "Madrid Live" (recomendado), C "Madrid Universe" (ambicioso) — seleccionables desde dentro del frame del iPhone con un toggle Matchday/Non-matchday adicional, para que cualquier stakeholder los compare en 30 segundos y dé feedback antes de comprometerse a un build.',
+    inScope: [
+        'Selector A/B/C dentro del frame con identidad visual fuerte por concepto (newspaper / streaming / metaverse).',
+        'Toggle Matchday/Non-matchday que afecta a B (cambio fuerte) y a C (cambio sutil); en A se deshabilita con tooltip.',
+        'Concepto A — Madrid Times: header compacto, racha de 7 días con día actual pulsante, "Hoy en el Club" (clip + noticia editorial), próximos partidos Femenino/Basket, banner Tienda con descuento.',
+        'Concepto B — Madrid Live: match strip, chips horizontales con filtro por jugador, feed vertical 9:16 dominante con navegación ↑/↓, predictor del Madridista interactivo (4 opciones, posición #428), mini-tiles comerciales. Modo Día de Partido con marcador grande, pin de audio del Carrusel, eventos timeline, chat Madridismo Live (auto-ticker cada 4s) y stats en directo.',
+        'Concepto C — Madrid Universe: saludo + racha 🔥 + tokens 🪙, stories circulares con borde holo, feed ML "Personalizado para ti", peña digital "Madridistas Lavapiés", Bernabéu hoy (Tour + Concierto), coleccionables sin valor financiero con efecto holo, PiP RMTV draggable.',
+        'Tarjeta lateral por concepto con build estimado, lift esperado y riesgo (para que el stakeholder decida con datos).',
+        'Botón "Captura PNG" sobre el frame que exporta la vista actual con scroll desplegado, para compartir vía Slack/Confluence.'
+    ],
+    outOfScope: [
+        'Datos reales: todo es mock (Mbappé, Vinícius, Bayern, etc.) sin llamadas a API ni persistencia.',
+        'Funcionalidad real de Calendario, Noticias, RMTV o Tienda — sólo se mockea la pestaña Hoy.',
+        'Tokens financieros / NFTs en C: los coleccionables son sin valor financiero, sólo identidad.',
+        'AR / mundo virtual del Bernabéu en C — fuera del scope del discovery.',
+        'Gamificación profunda con leaderboards globales y rewards reales.',
+        'Login/sign-up real, push notifications, deep linking.'
+    ],
+    userStories: [
+        'Como PM, quiero abrir un link y mostrarle al CMO los 3 conceptos en 30 segundos sin abrir 60 slides.',
+        'Como Director Digital, quiero comparar A vs B vs C tocando los mismos elementos en el mismo frame.',
+        'Como Diseñador, quiero ver mis 3 propuestas vivas antes de comprometerme a Figma final.',
+        'Como Stakeholder, quiero ver el modo "Día de Partido" del concepto B sin tener que esperar al partido real.',
+        'Como PM, quiero exportar una captura PNG del frame con scroll completo para pegarla en Confluence / Jira.'
+    ],
+    acceptanceCriteria: [
+        'El selector A/B/C cambia el contenido del frame con cross-fade de 220ms.',
+        'Cada concepto tiene un sello/banda de identidad propio (Madrid Times serif / Madrid·Live ON AIR / Madrid Universe gold) inmediatamente reconocible.',
+        'El toggle Matchday transforma el header de B (marcador grande, pin audio, eventos, chat, stats) y se aplica de forma sutil al header de C.',
+        'En B no-matchday, las flechas ↑/↓ del feed cambian de clip; en B matchday hay 4 mensajes iniciales en el chat y se añade uno nuevo cada 4s.',
+        'En C, el botón "▶ RMTV PiP" abre un reproductor flotante que se puede arrastrar por el frame.',
+        'El predictor de B acepta una opción y muestra "Posición #428 de 121.300", deshabilitando las otras opciones.',
+        'En A, el toggle Matchday está deshabilitado con tooltip "Concepto A no varía con el matchday".',
+        'El botón "Captura PNG" sobre el frame genera un PNG con TODO el scroll de la vista actual desplegado verticalmente.',
+        'prefers-reduced-motion desactiva pulsos, audio bars, holo y broadcast del PiP, manteniendo cambios de estado.'
+    ],
+    uxNotes: [
+        'A debe sentirse a "newspaper editorial" (cream, serif), B a "Twitch/TikTok" (oscuro + magenta ON AIR), C a "Champions premium" (purpura + dorado).',
+        'El stakeholder NO debe necesitar leer documentación: la banda de identidad arriba del scroll deja claro qué concepto está activo.',
+        'Las cards en B y C son oscuras a propósito (tema OTT); en A son blancas sobre fondo cream (tema editorial).',
+        'Los toggles deben recordar tu última elección al volver a "Hoy" (vive en `state`, se pierde al recargar; eso es aceptable para un mockup).',
+        'En A no debe aparecer ni feed vertical, ni predictor, ni peñas — el pitch es justo "lo mínimo para pelear con la home actual".'
+    ],
+    metrics: [
+        'Decisión de concepto firmada por la junta del Club ≤ 2 semanas tras lanzar el mockup (hoy: indefinido).',
+        'Asistentes a la demo interna que tocan los 3 conceptos: ≥ 90% (medible con observación directa, no analytics).',
+        'PDF/PNG exportados desde el mockup y compartidos en Confluence: ≥ 1 por concepto.',
+        'Reducción de slides de discovery siguientes: -50% (porque ya hay un mockup que sustituye 30 wireframes).'
+    ],
+    dependencies: [
+        'Hosting en GitHub Pages activado (Settings → Pages, branch `main`, folder `/`).',
+        'Supabase para auth de stakeholders (ya existente en el repo) o `?dev=1` bypass para demos.',
+        'html2canvas + jsPDF cargados desde CDN para los exportes (lazy-load).'
+    ],
+    risks: [
+        'Los stakeholders pueden enamorarse del concepto C (más espectacular) sin entender que es 6-9 meses de build con moderación 24/7. Mitigación: side-card con build/lift/riesgo siempre visible.',
+        'El feed vertical de B se ve "demasiado TikTok" para un sector conservador del Club. Mitigación: dejar a B como recomendado con datos del PRD (+30-40% DAU non-matchday).',
+        'La captura PNG depende de html2canvas y puede ahogar Safari iOS si el scroll es enorme. Mitigación: scale: 2 (no 3), JPEG fallback si el blob > 5MB.',
+        'Si lo abre alguien en móvil, el frame del iPhone "envuelto" se queda raro — usar viewport directo en <768px (ya hecho).'
+    ]
+});
+
 register('fan.hoy.v2-structure', {
     title: 'Hoy v2 · estructura modular con scroll vertical',
     epic: 'Fan App · Hoy',
