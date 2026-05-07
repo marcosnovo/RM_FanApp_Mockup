@@ -8004,8 +8004,8 @@ function renderHV2Recap() {
                     </div>
                     <ul class="hv2-recap-mods">
                         ${onFlags.map(f => `
-                            <li class="is-on" title="${(f.description || '').replace(/"/g, '&quot;')}">
-                                <span class="hv2-recap-mark">✓</span>
+                            <li title="${(f.description || '').replace(/"/g, '&quot;')}">
+                                <span class="hv2-recap-mark" aria-hidden="true">·</span>
                                 <span>${f.label}</span>
                             </li>
                         `).join('')}
