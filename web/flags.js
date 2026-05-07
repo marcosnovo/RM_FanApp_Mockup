@@ -248,6 +248,93 @@ const FLAGS = [
         default: true,
         requires: 'fan.hoy.concept-c'
     },
+
+    // ── Concepto D — Mi Mix (mezcla curada) ────────────────────────
+    // El Cliente del Club elige sus features preferidas de A/B/C y
+    // las pone juntas. El selector tiene editor en 3 pasos para
+    // configurar equipos y jugadores favoritos (persistido en LS).
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-mix',
+        label: 'D · Mi Mix (curado por el PM)',
+        description: 'Mezcla a medida: cabecera login, selector configurable de equipos y jugadores favoritos (3 pasos), próximos partidos compactos, feed vertical, racha, predictor, mini-noticias y Bernabéu hoy. Pensado para activarse de un golpe y comparar con A/B/C.',
+        category: 'Hoy',
+        default: false,
+        requires: 'fan.hoy.v2-options',
+        exclusive: 'hv2-concept'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-mix.login-header',
+        label: 'D · Cabecera de bienvenida / login',
+        description: 'Cabecera persistente arriba con saludo + tier (Visitante / Socio / Madridista / Junior / Premium / Platinum). Tap cicla los estados.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-mix'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-mix.selector',
+        label: 'D · Selector de equipos y jugadores',
+        description: 'Chips horizontales con tus equipos y jugadores favoritos. Botón "Configurar" abre editor en 3 pasos: 1) equipos · 2) jugadores · 3) lista reordenable. Persistido en localStorage.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-mix'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-mix.upcoming',
+        label: 'D · Próximos partidos (cards compactos)',
+        description: 'Carrusel horizontal de próximos partidos de los 3 equipos con cards más pequeñas que la Estructura modular. Una card por equipo con escudos, hora y competición.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-mix'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-mix.feed',
+        label: 'D · Feed vertical 9:16',
+        description: 'Reusa el feed dominante del Concepto B. Filtra por el chip activo del selector cuando se toca un jugador o equipo.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-mix'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-mix.streak',
+        label: 'D · Racha Madridista',
+        description: 'Tile con 7 cuadritos representando los últimos 7 días, día actual con anillo dorado pulsante. Mismo patrón que Concepto A.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-mix'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-mix.predictor',
+        label: 'D · Predictor del Madridista',
+        description: '4 pills con resultado + leaderboard mensual. Mismo patrón que Concepto B.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-mix'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-mix.news',
+        label: 'D · Mini Noticias',
+        description: 'Listado de 4 noticias en formato compacto (thumb 52px + título + kicker). Tap abre detalle.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-mix'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-mix.bernabeu',
+        label: 'D · Bernabéu hoy',
+        description: 'Tour Bernabéu (16:00) + Concierto (21:00) con CTAs Reservar / Cómo llegar.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-mix'
+    },
     {
         app: 'fan',
         key: 'fan.hoy.stories',
