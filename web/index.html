@@ -16,7 +16,7 @@
 
     <!-- Cibeles Design System tokens (Madridistas) -->
     <link rel="stylesheet" href="tokens/cibeles-tokens.css">
-    <link rel="stylesheet" href="styles.css?v=56">
+    <link rel="stylesheet" href="styles.css?v=59">
 
     <!-- RM Neue is the brand font; fall back to Inter (Cibeles uses near-identical metrics) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -85,6 +85,20 @@
             <div class="stage-title">
                 <h1 id="stageTitle">Real Madrid Fan App</h1>
                 <p id="stageSubtitle">Hoy · Directo</p>
+            </div>
+
+            <!-- Toolbar encima del frame: utilidades sobre la vista actual.
+                 Al pulsar "Captura PNG" se exporta la pantalla del iPhone con
+                 todo su contenido scrollable (no solo el viewport visible). -->
+            <div class="stage-toolbar" id="stageToolbar">
+                <button class="stage-tool-btn" data-capture-png aria-label="Capturar pantalla completa en PNG">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
+                        <circle cx="12" cy="13" r="3.5"/>
+                    </svg>
+                    <span>Captura PNG</span>
+                </button>
+                <span class="stage-tool-hint">Exporta la vista actual del frame con todo el scroll</span>
             </div>
 
             <div class="stage-row">
@@ -200,11 +214,11 @@
          don't keep a stale copy (Python http.server and GH Pages both respect
          a different query string as a different cache entry). -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script defer src="auth.js?v=56"></script>
-    <script defer src="flags.js?v=56"></script>
-    <script defer src="data.js?v=56"></script>
-    <script defer src="app.js?v=56"></script>
-    <script defer src="flow_exporter.js?v=56"></script>
-    <script defer src="jira_initiatives.js?v=56"></script>
+    <script defer src="auth.js?v=59"></script>
+    <script defer src="flags.js?v=59"></script>
+    <script defer src="data.js?v=59"></script>
+    <script defer src="app.js?v=59"></script>
+    <script defer src="flow_exporter.js?v=59"></script>
+    <script defer src="jira_initiatives.js?v=59"></script>
 </body>
 </html>

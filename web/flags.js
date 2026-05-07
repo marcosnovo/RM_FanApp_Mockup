@@ -44,6 +44,14 @@ const FLAGS = [
     },
     {
         app: 'fan',
+        key: 'fan.hoy.v2-options',
+        label: 'Hoy v2 — 3 conceptos (A/B/C)',
+        description: 'Activa la vista de 3 conceptos alternativos del Hoy: A "Madrid Times" (conservador), B "Madrid Live" (recomendado) y C "Madrid Universe" (ambicioso). Selector A/B/C dentro del frame + toggle Matchday/Non-matchday. Reemplaza el Hoy actual.',
+        category: 'Hoy',
+        default: true
+    },
+    {
+        app: 'fan',
         key: 'fan.hoy.stories',
         label: 'Stories + Tras las cámaras',
         description: 'Carrusel de stories tipo Instagram en la parte superior y sección "Tras las cámaras" con galería de fotos tras las noticias.',
