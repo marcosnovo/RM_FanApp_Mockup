@@ -98,6 +98,15 @@ const FLAGS = [
         default: true,
         requires: 'fan.hoy.concept-a'
     },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-a.news',
+        label: 'A · Noticias compactas',
+        description: 'Listado de 4 noticias en formato compacto (thumb 52px + título a una línea + kicker). Tap abre el detalle.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-a'
+    },
 
     // ── Concepto B — Madrid Live (recomendado) ─────────────────────
     {
@@ -151,6 +160,15 @@ const FLAGS = [
         key: 'fan.hoy.concept-b.tiles',
         label: 'B · Mini-tiles (Tienda · Bernabéu · RMTV)',
         description: '3 tiles horizontales al final del scroll en vez de un único banner promocional.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-b'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-b.news',
+        label: 'B · Noticias compactas',
+        description: 'Listado de 4 noticias en formato compacto debajo del predictor. Aporta el editorial que el feed vertical no cubre.',
         category: 'Hoy',
         default: true,
         requires: 'fan.hoy.concept-b'
@@ -217,6 +235,15 @@ const FLAGS = [
         key: 'fan.hoy.concept-c.collectibles',
         label: 'C · Coleccionables holo',
         description: '3 cards "tipo carta" con efecto rotación 3D + shimmer dorado. Disclaimer: sin valor financiero.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-c'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-c.news',
+        label: 'C · Noticias compactas',
+        description: 'Listado de 4 noticias en formato compacto entre el feed ML y la peña digital. Mantiene el editorial sin romper el ritmo del feed.',
         category: 'Hoy',
         default: true,
         requires: 'fan.hoy.concept-c'
