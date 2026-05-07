@@ -7427,6 +7427,11 @@ function updateStatusBarStyle() {
 function render() {
     const body = $('#screenBody');
     const oldScroll = body.scrollTop;
+    // Hoy V2 (3 conceptos) usa un scroller anidado #hv2Scroll dentro
+    // del frame; al re-renderizar (predictor, swipe del feed, etc.) hay
+    // que preservar también su scrollTop o el usuario salta arriba del
+    // todo perdiendo el contexto del control que acaba de tocar.
+    const oldHv2Scroll = $('#hv2Scroll')?.scrollTop ?? 0;
 
     let content = '';
     let tabBarHTML = '';
@@ -7523,6 +7528,11 @@ function render() {
     }
 
     body.scrollTop = oldScroll;
+    // Restaura la posición del scroller anidado de Hoy V2 si sigue en la
+    // pantalla tras el re-render (cambio de concepto / matchday no lo
+    // preserva intencionadamente porque el contenido ha cambiado).
+    const hv2 = $('#hv2Scroll');
+    if (hv2 && oldHv2Scroll > 0) hv2.scrollTop = oldHv2Scroll;
 }
 
 // ── Sidebar dynamic renderer ─────────────────────────────────────
