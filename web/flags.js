@@ -46,9 +46,180 @@ const FLAGS = [
         app: 'fan',
         key: 'fan.hoy.v2-options',
         label: 'Hoy v2 — 3 conceptos (A/B/C)',
-        description: 'Activa la vista de 3 conceptos alternativos del Hoy: A "Madrid Times" (conservador), B "Madrid Live" (recomendado) y C "Madrid Universe" (ambicioso). Selector A/B/C dentro del frame + toggle Matchday/Non-matchday. Reemplaza el Hoy actual.',
+        description: 'Activa el laboratorio de los 3 conceptos del Hoy. Debajo aparecen los sub-flags de cada concepto: Madrid Times (A), Madrid Live (B) y Madrid Universe (C). Activa uno y se desactivan los otros (mutuamente excluyentes). Cada concepto trae sus propios módulos toggleables.',
         category: 'Hoy',
         default: true
+    },
+
+    // ── Concepto A — The Madrid Times (conservador) ────────────────
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-a',
+        label: 'A · The Madrid Times (conservador)',
+        description: 'Reorganización editorial: header compacto, racha que engancha, "Hoy en el Club" curado, próximos partidos de tus equipos y banner Tienda. Build 6–10 semanas, lift +15-20%, riesgo bajo.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.v2-options',
+        exclusive: 'hv2-concept'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-a.streak',
+        label: 'A · Racha Madridista (7 días)',
+        description: 'Tile con 7 cuadritos representando los últimos 7 días, día actual con anillo dorado pulsante.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-a'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-a.today-club',
+        label: 'A · "Hoy en el Club" editorial',
+        description: 'Card con clip 16:9 + titular + 1 noticia secundaria. Reemplaza el feed algorítmico por curación editorial.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-a'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-a.upcoming',
+        label: 'A · Próximos partidos de tus equipos',
+        description: 'Tiles equivalentes para los 3 equipos del Club: Femenino y Basket junto al masculino.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-a'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-a.store-banner',
+        label: 'A · Banner Tienda (-15%)',
+        description: 'Banner comercial bajado en jerarquía respecto a la home actual. Click → tienda.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-a'
+    },
+
+    // ── Concepto B — Madrid Live (recomendado) ─────────────────────
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-b',
+        label: 'B · Madrid Live (recomendado)',
+        description: 'Feed vertical 9:16 dominante + match strip + predictor + briefing. La app deja de ser sobre partidos y empieza a ser sobre Madrid 365 días. Build 16–24 semanas, lift +30-40%, riesgo medio.',
+        category: 'Hoy',
+        default: false,
+        requires: 'fan.hoy.v2-options',
+        exclusive: 'hv2-concept'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-b.chips',
+        label: 'B · Chips horizontales (Para ti / jugadores)',
+        description: 'Stream navigator estilo Bleacher Report. Filtra el feed por jugador, Femenino, Basket o Para ti.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-b'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-b.feed',
+        label: 'B · Feed vertical 9:16 (BLOQUE ESTRELLA)',
+        description: 'Aspect 9:16 con overlays de player, like y comentarios; flechas ↑/↓ cambian de clip. Indicador de progreso lateral.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-b'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-b.predictor',
+        label: 'B · Predictor del Madridista',
+        description: '4 pills clickables (1-0, 2-1, 2-2, 0-1) + leaderboard mensual con racha. Top 10: camiseta firmada.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-b'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-b.matchday',
+        label: 'B · Modo Día de Partido',
+        description: 'Transforma el header en marcador grande "EN DIRECTO 0-1 · 64\'", añade pin de audio del Carrusel, eventos timeline y chat Madridismo Live (auto-ticker cada 4s + escudo de moderación).',
+        category: 'Hoy',
+        default: false,
+        requires: 'fan.hoy.concept-b'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-b.tiles',
+        label: 'B · Mini-tiles (Tienda · Bernabéu · RMTV)',
+        description: '3 tiles horizontales al final del scroll en vez de un único banner promocional.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-b'
+    },
+
+    // ── Concepto C — Madrid Universe (ambicioso) ───────────────────
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-c',
+        label: 'C · Madrid Universe (ambicioso)',
+        description: 'El metaverso oficial del fan: ML, peñas digitales, fan tokens, Bernabéu hub, PiP RMTV draggable y coleccionables. Build 6–9 meses (multi-fase), lift +50-70%, riesgo alto.',
+        category: 'Hoy',
+        default: false,
+        requires: 'fan.hoy.v2-options',
+        exclusive: 'hv2-concept'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-c.stories',
+        label: 'C · Stories circulares con borde holo',
+        description: 'Carrusel horizontal estilo Instagram con anillo gradient: Mbappé, Vinícius, Femenino, Bernabéu, Academia, Basket, Bellingham, Rodrygo.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-c'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-c.feed-ml',
+        label: 'C · Feed ML "Personalizado para ti"',
+        description: 'Feed vertical con badge ✨ ML. Reorder algorítmico simulado: el primer clip es del jugador con más interacciones.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-c'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-c.pip',
+        label: 'C · PiP RMTV draggable',
+        description: 'Botón flotante PiP que abre un reproductor 192×108 arrastrable por el frame. Drag con inertia + cierre con ×.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-c'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-c.pena',
+        label: 'C · Tu Peña digital',
+        description: 'Card con avatares apilados, métricas (287 en línea · 12 nuevos posts), preview del último mensaje y CTA "Entrar".',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-c'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-c.bernabeu',
+        label: 'C · Bernabéu hoy (eventos)',
+        description: 'Tour Bernabéu (16:00) + Concierto (21:00) con CTAs Reservar / Cómo llegar.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-c'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.concept-c.collectibles',
+        label: 'C · Coleccionables holo',
+        description: '3 cards "tipo carta" con efecto rotación 3D + shimmer dorado. Disclaimer: sin valor financiero.',
+        category: 'Hoy',
+        default: true,
+        requires: 'fan.hoy.concept-c'
     },
     {
         app: 'fan',
@@ -115,73 +286,6 @@ const FLAGS = [
         category: 'Hoy',
         default: false,
         requires: 'fan.hoy.team-tabs.editor'
-    },
-
-    // ── Hoy v2 Pro — Pack de mejoras de la home ─────────────────
-    // Flag padre con sub-features anidadas: cada una se puede
-    // activar/desactivar independientemente para comparar el impacto.
-    {
-        app: 'fan',
-        key: 'fan.hoy.home-pro',
-        label: 'Hoy v2 Pro — pack de mejoras de la home',
-        description: 'Activa el pack completo: noticias compactas, shorts verticales, hero promocional, quick actions, live rail y continue watching. Cada sub-feature se puede tunear independientemente debajo.',
-        category: 'Hoy',
-        default: false,
-        requires: 'fan.hoy.v2-structure'
-    },
-    {
-        app: 'fan',
-        key: 'fan.hoy.news.compact',
-        label: 'Noticias compactas',
-        description: 'Reduce la noticia: thumb 68→52px, una línea de título, sin subtítulo. 5 noticias pasan de 480px a ~320px de scroll (-30%).',
-        category: 'Hoy',
-        default: true,
-        requires: 'fan.hoy.home-pro'
-    },
-    {
-        app: 'fan',
-        key: 'fan.hoy.shorts',
-        label: 'Shorts verticales (9:16)',
-        description: 'Grid 2xN de vídeos cortos verticales con badge NEW, estilo "City Shorts" del Manchester City o Reels/TikTok. Reaprovecha los gradientes de los highlights.',
-        category: 'Hoy',
-        default: true,
-        requires: 'fan.hoy.home-pro'
-    },
-    {
-        app: 'fan',
-        key: 'fan.hoy.promo-hero',
-        label: 'Hero promocional rotativo',
-        description: 'Banner full-bleed gigante con CTA (Tour Bernabéu, Tienda, RM Play+, Camp). Carrusel automático cada 5s con indicador de paginación.',
-        category: 'Hoy',
-        default: true,
-        requires: 'fan.hoy.home-pro'
-    },
-    {
-        app: 'fan',
-        key: 'fan.hoy.quick-actions',
-        label: 'Atajos (Quick actions)',
-        description: 'Fila horizontal de 5 atajos justo bajo el topbar: Entradas · Tienda · Bernabéu · RM Play · Restaurantes. Cada chip navega a la sección correspondiente.',
-        category: 'Hoy',
-        default: true,
-        requires: 'fan.hoy.home-pro'
-    },
-    {
-        app: 'fan',
-        key: 'fan.hoy.live-rail',
-        label: 'Live & Upcoming rail',
-        description: 'Carrusel horizontal de mini-cards de partidos con badge LIVE (magenta) o FULL MATCH REPLAY (amarillo). Patrón Man City / Sky Sports.',
-        category: 'Hoy',
-        default: true,
-        requires: 'fan.hoy.home-pro'
-    },
-    {
-        app: 'fan',
-        key: 'fan.hoy.continue-watching',
-        label: 'Continue watching',
-        description: 'Carrusel de vídeos a medio ver con barra de progreso debajo del thumb. Aparece solo si hay vídeos con progreso > 0% < 95%.',
-        category: 'Hoy',
-        default: true,
-        requires: 'fan.hoy.home-pro'
     },
 
     // ── Side menu v2 — padre y sub-funcionalidades anidadas ───────
@@ -330,6 +434,10 @@ const Flags = {
      * Toggle a flag on / off, cascading sensibly:
      *   - Turning a CHILD on auto-enables its parent (convenience)
      *   - Turning a PARENT off auto-disables all children (safety)
+     *   - If the flag declares `exclusive: '<group>'`, turning it ON
+     *     auto-disables every other flag in the same exclusive group
+     *     (radio-button behaviour for siblings like the 3 conceptos
+     *     A/B/C del Hoy).
      */
     set(key, value) {
         const ov = _load();
@@ -340,6 +448,29 @@ const Flags = {
         // Turning a child ON → ensure parent is ON too
         if (value && def && def.requires) {
             ov[def.requires] = true;
+        }
+
+        // Turning an exclusive flag ON → disable the other siblings
+        // of the same exclusive group. This makes A/B/C del Hoy
+        // mutuamente excluyentes desde el panel de funcionalidades.
+        if (value && def && def.exclusive) {
+            for (const sib of FLAGS) {
+                if (sib.key !== key && sib.exclusive === def.exclusive) {
+                    ov[sib.key] = false;
+                    // También cascadeamos: hijos del sibling se apagan.
+                    for (const grand of FLAGS.filter(f => f.requires === sib.key)) {
+                        ov[grand.key] = false;
+                    }
+                }
+            }
+            // Y limpiamos los overrides de los hijos del flag que
+            // acabamos de encender para que vuelvan a sus defaults
+            // (si en una vuelta anterior los habíamos apagado por
+            // cascada, ahora deberían reaparecer al reactivar el
+            // concepto).
+            for (const child of FLAGS.filter(f => f.requires === key)) {
+                delete ov[child.key];
+            }
         }
 
         // Turning a parent OFF → disable all its direct children

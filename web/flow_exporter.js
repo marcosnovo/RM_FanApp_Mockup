@@ -665,49 +665,50 @@ registerFlow('vip.tickets.multi-share', {
 });
 
 // ── Fan · Hoy v2 — 3 conceptos del PRD (A/B/C) ───────────────────
+// El concepto activo se controla con flags mutuamente excluyentes:
+// `fan.hoy.concept-{a,b,c}`. Toggleamos el flag adecuado en cada step
+// para que la identidad/cuerpo del frame cambie al cambiar de path.
+const _setConcept = (k) => {
+    Flags.set('fan.hoy.v2-options', true);
+    Flags.set(`fan.hoy.concept-${k}`, true);  // exclusive: apaga las otras
+};
 registerFlow('fan.hoy.v2-options', {
     title: 'Hoy v2 · 3 conceptos (A/B/C)',
     snapshot: genericSnapshot, restore: genericRestore,
     init() {
         fanInit({ tab: 'hoy', sub: 'directo',
                   flags: ['fan.hoy.v2-options'] });
-        // Reset transient state to baseline para que el primer step de
-        // cada path empiece igual.
-        state.hoyV2Concept = 'A';
-        state.hoyV2Matchday = false;
+        _setConcept('a');
+        // Reset transient state para que el primer step empiece limpio.
         state.hoyV2FeedIndex = 0;
         state.hoyV2FeedFilter = 'all';
         state.hoyV2Prediction = null;
-        state.hoyV2InfoOpen = false;
         state.hoyV2PipOpen = true;
     },
     paths: [
         {
             label: 'Concepto A · The Madrid Times (conservador)',
             steps: [
-                { caption: '1 · Selector + sello editorial',     async run() { state.hoyV2Concept = 'A'; scrollScreen(0); } },
-                { caption: '2 · Racha Madridista (7 días)',      async run() { state.hoyV2Concept = 'A'; scrollScreen(180); } },
-                { caption: '3 · Hoy en el Club + Próximos',      async run() { state.hoyV2Concept = 'A'; scrollScreen(420); } },
-                { caption: '4 · Banner Tienda (-15%)',           async run() { state.hoyV2Concept = 'A'; scrollScreen(900); } }
+                { caption: '1 · Sello editorial + match center',  async run() { _setConcept('a'); scrollScreen(0); } },
+                { caption: '2 · Racha Madridista (7 días)',       async run() { _setConcept('a'); scrollScreen(180); } },
+                { caption: '3 · Hoy en el Club + Próximos',       async run() { _setConcept('a'); scrollScreen(420); } },
+                { caption: '4 · Banner Tienda (-15%)',            async run() { _setConcept('a'); scrollScreen(900); } }
             ]
         },
         {
             label: 'Concepto B · Madrid Live (recomendado, non-matchday)',
             steps: [
-                { caption: '1 · Match strip + chips Para ti',    async run() {
-                    state.hoyV2Concept = 'B'; state.hoyV2Matchday = false;
-                    state.hoyV2FeedIndex = 0; state.hoyV2FeedFilter = 'all'; scrollScreen(0);
+                { caption: '1 · Match strip + chips Para ti',     async run() {
+                    _setConcept('b'); Flags.set('fan.hoy.concept-b.matchday', false);
+                    state.hoyV2FeedIndex = 0; state.hoyV2FeedFilter = 'all';
+                    state.hoyV2Prediction = null; scrollScreen(0);
                 } },
-                { caption: '2 · Feed vertical 9:16 dominante',   async run() {
-                    state.hoyV2Concept = 'B'; state.hoyV2Matchday = false; scrollScreen(160);
+                { caption: '2 · Feed vertical 9:16 dominante',    async run() { scrollScreen(160); } },
+                { caption: '3 · Filtro Mbappé activo',            async run() {
+                    state.hoyV2FeedFilter = 'mbappe'; state.hoyV2FeedIndex = 0; scrollScreen(160);
                 } },
-                { caption: '3 · Filtro Mbappé activo',           async run() {
-                    state.hoyV2Concept = 'B'; state.hoyV2FeedFilter = 'mbappe';
-                    state.hoyV2FeedIndex = 0; scrollScreen(160);
-                } },
-                { caption: '4 · Predictor: 2-1 enviada (#428)',  async run() {
-                    state.hoyV2Concept = 'B'; state.hoyV2FeedFilter = 'all';
-                    state.hoyV2Prediction = '2-1'; scrollScreen(580);
+                { caption: '4 · Predictor: 2-1 enviada (#428)',   async run() {
+                    state.hoyV2FeedFilter = 'all'; state.hoyV2Prediction = '2-1'; scrollScreen(580);
                 } },
                 { caption: '5 · Tiles: Tienda · Bernabéu · RMTV', async run() { scrollScreen(900); } }
             ]
@@ -716,7 +717,7 @@ registerFlow('fan.hoy.v2-options', {
             label: 'Concepto B · Modo Día de Partido',
             steps: [
                 { caption: '1 · Marcador en directo 0-1 · 64\'',  async run() {
-                    state.hoyV2Concept = 'B'; state.hoyV2Matchday = true;
+                    _setConcept('b'); Flags.set('fan.hoy.concept-b.matchday', true);
                     state.hoyV2Prediction = null; scrollScreen(0);
                 } },
                 { caption: '2 · Pin audio Carrusel + eventos',    async run() { scrollScreen(180); } },
@@ -728,8 +729,7 @@ registerFlow('fan.hoy.v2-options', {
             label: 'Concepto C · Madrid Universe (ambicioso)',
             steps: [
                 { caption: '1 · Identidad: 🔥27 · 🪙142',         async run() {
-                    state.hoyV2Concept = 'C'; state.hoyV2Matchday = false;
-                    state.hoyV2PipOpen = true; scrollScreen(0);
+                    _setConcept('c'); state.hoyV2PipOpen = true; scrollScreen(0);
                 } },
                 { caption: '2 · Stories + Feed ML',               async run() { scrollScreen(120); } },
                 { caption: '3 · PiP RMTV + Tu Peña Lavapiés',     async run() { scrollScreen(420); } },

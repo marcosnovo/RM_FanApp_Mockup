@@ -15237,148 +15237,33 @@ input.has-mismatch {
     background: #EEF1F6;
 }
 
-/* ── Selector A/B/C + Matchday toggle ──────────────────────────── */
-.hv2-selector {
-    flex: 0 0 auto;
-    background: #0B1220;
-    color: #fff;
-    padding: 56px 12px 12px;  /* 56px top to clear status-bar (52px) */
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+/* ── Empty state (ningún concepto activo) ─────────────────────── */
+.hv2-empty {
+    padding: 96px 32px 32px;   /* 96px top para limpiar status-bar */
+    text-align: center;
+    color: #4A5568;
 }
-.hv2-selector-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-}
-.hv2-selector-row + .hv2-selector-row-2 {
-    margin-top: 8px;
-    justify-content: space-between;
-}
-.hv2-pill {
-    flex: 1 1 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border: 1px solid rgba(255,255,255,0.16);
-    background: rgba(255,255,255,0.04);
-    color: #cdd5e6;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), background 220ms;
-    text-align: left;
-}
-.hv2-pill:hover { transform: translateY(-1px); background: rgba(255,255,255,0.08); }
-.hv2-pill.is-active {
-    background: #00529F;
-    border-color: #FEBE10;
-    color: #fff;
-    box-shadow: 0 6px 18px rgba(0,82,159,0.35);
-}
-.hv2-pill-letter {
-    width: 22px; height: 22px;
+.hv2-empty-letter {
+    width: 64px; height: 64px;
+    margin: 0 auto 16px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.18);
-    display: inline-grid; place-items: center;
-    font-weight: 800;
-    font-size: 12px;
-    flex: 0 0 auto;
+    background: #E2E8F0;
+    color: #94A3B8;
+    display: grid; place-items: center;
+    font-size: 32px;
+    font-weight: 900;
 }
-.hv2-pill.is-active .hv2-pill-letter {
-    background: #FEBE10;
-    color: #0B1220;
-}
-.hv2-pill-text { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
-.hv2-pill-name {
+.hv2-empty-title {
+    font-size: 18px;
     font-weight: 700;
-    font-size: 11px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: #0B1220;
+    margin: 0 0 10px;
 }
-.hv2-pill-tag {
-    font-size: 9px;
-    opacity: 0.75;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-}
-
-.hv2-info-btn {
-    background: rgba(255,255,255,0.08);
-    color: #cdd5e6;
-    border: 1px solid rgba(255,255,255,0.16);
-    border-radius: 999px;
-    padding: 6px 12px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 220ms;
-}
-.hv2-info-btn:hover { background: rgba(255,255,255,0.14); }
-.hv2-info-btn.is-open { background: #FEBE10; color: #0B1220; border-color: #FEBE10; }
-
-.hv2-md-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    user-select: none;
-    font-size: 11px;
-    color: #cdd5e6;
-}
-.hv2-md-toggle.is-disabled { opacity: 0.45; cursor: not-allowed; }
-.hv2-md-toggle input { display: none; }
-.hv2-md-track {
-    position: relative;
-    width: 36px;
-    height: 20px;
-    background: rgba(255,255,255,0.16);
-    border-radius: 12px;
-    transition: background 220ms;
-}
-.hv2-md-thumb {
-    position: absolute;
-    top: 2px; left: 2px;
-    width: 16px; height: 16px;
-    background: #fff;
-    border-radius: 50%;
-    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.hv2-md-toggle input:checked + .hv2-md-track { background: #FEBE10; }
-.hv2-md-toggle input:checked + .hv2-md-track .hv2-md-thumb {
-    transform: translateX(16px);
-    background: #0B1220;
-}
-.hv2-md-label { font-weight: 600; min-width: 86px; text-align: right; }
-
-.hv2-info-card {
-    margin-top: 10px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 12px;
-    padding: 12px;
-    color: #e5ebf7;
-    font-size: 12px;
-}
-.hv2-info-head {
-    font-weight: 800;
+.hv2-empty-body {
     font-size: 13px;
-    margin-bottom: 8px;
+    line-height: 1.5;
 }
-.hv2-info-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    margin-bottom: 8px;
-}
-.hv2-info-k {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    opacity: 0.6;
-}
-.hv2-info-v { font-weight: 700; font-size: 11px; }
-.hv2-info-body { line-height: 1.45; opacity: 0.9; }
+.hv2-empty-body b { color: #00529F; }
 
 .hv2-scroll {
     flex: 1 1 auto;
@@ -15454,7 +15339,9 @@ input.has-mismatch {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 14px;
+    /* 56px de top para esquivar el status-bar absoluto del frame
+       (52px). El bloque queda como sello fijo del concepto activo. */
+    padding: 56px 14px 12px;
     flex: 0 0 auto;
     border-bottom: 1px solid rgba(0,0,0,0.06);
     position: relative;

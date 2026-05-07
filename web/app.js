@@ -43,12 +43,13 @@ const state = {
     hoy2PromoIndex: 0,    // current promo-hero slide
 
     // Hoy v2 — 3 conceptos del PRD (flag `fan.hoy.v2-options`)
-    hoyV2Concept: 'B',          // 'A' | 'B' | 'C' — B recomendado por PRD
-    hoyV2Matchday: false,       // toggle Non-matchday (default) / Matchday
+    // El concepto activo (A/B/C) y el matchday viven en flags, no en
+    // state — se derivan en render() con activeHV2Concept() y
+    // Flags.isEnabled('fan.hoy.concept-b.matchday'). Esto se queda
+    // como state transitorio de la vista (lo que toca dentro del frame).
     hoyV2FeedIndex: 0,          // index del clip activo en feed vertical (B / C)
     hoyV2FeedFilter: 'all',     // chip activo en B
     hoyV2Prediction: null,      // opción del predictor seleccionada
-    hoyV2InfoOpen: false,       // tarjeta lateral con descripción del concepto
     hoyV2PipOpen: true,         // PiP RMTV abierto en C
     hoyV2PipPos: { x: 178, y: 72 },  // posición del PiP arrastrable
     hoyV2ChatTick: 0,           // contador de mensajes nuevos en chat de B matchday
@@ -7784,11 +7785,41 @@ const HV2_COLLECTIBLES = [
     { id: 'col-courtois', title: 'Parada de Courtois',         rarity: 'Común',  color: 'gray',  c1: '#3a2978', c2: '#1b1244' }
 ];
 
+// El concepto activo se deriva de los flags hijos de `fan.hoy.v2-options`.
+// Son mutuamente excluyentes (atributo `exclusive: 'hv2-concept'` en
+// flags.js), así que sólo uno puede estar ON a la vez. Si ninguno está
+// ON, no renderizamos nada — mostramos un empty-state que invita al
+// usuario a activar uno desde el panel de funcionalidades.
+function activeHV2Concept() {
+    if (Flags.isEnabled('fan.hoy.concept-a')) return 'A';
+    if (Flags.isEnabled('fan.hoy.concept-b')) return 'B';
+    if (Flags.isEnabled('fan.hoy.concept-c')) return 'C';
+    return null;
+}
+
 // ── Top-level renderer ──────────────────────────────────────────
 function renderHoyV2Options() {
-    const concept = state.hoyV2Concept;
-    const matchday = state.hoyV2Matchday;
-    const meta = HV2_CONCEPTS.find(c => c.key === concept) || HV2_CONCEPTS[1];
+    const concept = activeHV2Concept();
+
+    if (!concept) {
+        return `
+            <div class="hv2-wrap">
+                <div class="hv2-empty">
+                    <div class="hv2-empty-letter">?</div>
+                    <h3 class="hv2-empty-title">Sin concepto activo</h3>
+                    <p class="hv2-empty-body">
+                        Activa uno de los 3 conceptos del Hoy desde el panel
+                        <b>Funcionalidades</b> (a la derecha):
+                        <br>A · The Madrid Times · B · Madrid Live · C · Madrid Universe.
+                    </p>
+                </div>
+            </div>
+            ${renderSideMenu()}
+        `;
+    }
+
+    const matchday = Flags.isEnabled('fan.hoy.concept-b.matchday');
+    const meta = HV2_CONCEPTS.find(c => c.key === concept) || HV2_CONCEPTS[0];
 
     const conceptBody =
         concept === 'A' ? renderHV2ConceptA()
@@ -7798,52 +7829,10 @@ function renderHoyV2Options() {
     return `
         <div class="hv2-wrap" data-hv2-concept="${concept}" data-hv2-matchday="${matchday ? '1' : '0'}">
 
-            <!-- Selector A/B/C: dentro del frame, fijo arriba.
-                 Cada concepto se identifica claramente con su nombre y un
-                 chip-tag (Conservador / Recomendado / Ambicioso). -->
-            <div class="hv2-selector">
-                <div class="hv2-selector-row">
-                    ${HV2_CONCEPTS.map(c => `
-                        <button class="hv2-pill ${c.key === concept ? 'is-active' : ''}"
-                                data-hv2-concept="${c.key}"
-                                aria-pressed="${c.key === concept ? 'true' : 'false'}">
-                            <span class="hv2-pill-letter">${c.short}</span>
-                            <span class="hv2-pill-text">
-                                <span class="hv2-pill-name">${c.name}</span>
-                                <span class="hv2-pill-tag">${c.tag}</span>
-                            </span>
-                        </button>
-                    `).join('')}
-                </div>
-                <div class="hv2-selector-row hv2-selector-row-2">
-                    <button class="hv2-info-btn ${state.hoyV2InfoOpen ? 'is-open' : ''}"
-                            data-hv2-info-toggle aria-label="Información del concepto">
-                        ${state.hoyV2InfoOpen ? '✕' : 'ⓘ'} ${meta.name}
-                    </button>
-                    <label class="hv2-md-toggle ${concept === 'A' ? 'is-disabled' : ''}"
-                           title="${concept === 'A' ? 'Concepto A no varía con el matchday' : (matchday ? 'Modo Día de Partido (ON)' : 'Non-matchday (default)')}">
-                        <input type="checkbox" data-hv2-matchday-toggle ${matchday ? 'checked' : ''} ${concept === 'A' ? 'disabled' : ''}>
-                        <span class="hv2-md-track"><span class="hv2-md-thumb"></span></span>
-                        <span class="hv2-md-label">${matchday ? '⚽ Matchday' : 'Non-matchday'}</span>
-                    </label>
-                </div>
-
-                ${state.hoyV2InfoOpen ? `
-                    <div class="hv2-info-card">
-                        <div class="hv2-info-head">Concepto ${meta.short} — ${meta.name}</div>
-                        <div class="hv2-info-grid">
-                            <div><div class="hv2-info-k">Build</div><div class="hv2-info-v">${meta.build}</div></div>
-                            <div><div class="hv2-info-k">Lift DAU</div><div class="hv2-info-v">${meta.lift}</div></div>
-                            <div><div class="hv2-info-k">Riesgo</div><div class="hv2-info-v">${meta.risk}</div></div>
-                        </div>
-                        <div class="hv2-info-body">${HV2_INFO_TEXT[meta.key]}</div>
-                    </div>
-                ` : ''}
-            </div>
-
             <!-- Banda de identidad del concepto activo: refuerza qué
                  estamos viendo en cada momento y le da un sello visual
-                 propio (newspaper / streaming / metaverse). -->
+                 propio (newspaper / streaming / metaverse). El selector
+                 y los toggles de variantes viven en el panel derecho. -->
             <div class="hv2-identity hv2-identity-${concept}">
                 <div class="hv2-identity-letter">${meta.short}</div>
                 <div class="hv2-identity-text">
@@ -7888,8 +7877,16 @@ const HV2_DECO = {
 
 // ────────────────────────────────────────────────────────────────
 // CONCEPTO A — "The Madrid Times"
+// Cada bloque (racha, Hoy en el Club, próximos, Tienda) está gateado
+// por su propio sub-flag para que el PM pueda comparar combinaciones
+// (p.ej. A sin Tienda) sin tocar código.
 // ────────────────────────────────────────────────────────────────
 function renderHV2ConceptA() {
+    const showStreak    = Flags.isEnabled('fan.hoy.concept-a.streak');
+    const showTodayClub = Flags.isEnabled('fan.hoy.concept-a.today-club');
+    const showUpcoming  = Flags.isEnabled('fan.hoy.concept-a.upcoming');
+    const showStore     = Flags.isEnabled('fan.hoy.concept-a.store-banner');
+
     const days = [
         { d: 'L', on: true,  today: false, label: 'Lun · Conectaste' },
         { d: 'M', on: true,  today: false, label: 'Mar · Conectaste' },
@@ -7937,77 +7934,85 @@ function renderHV2ConceptA() {
                 </div>
             </header>
 
-            <!-- 1) Racha Madridista -->
-            <section class="hv2-card hv2-a-streak">
-                <div class="hv2-a-streak-head">
-                    <span>🔥 Tu racha: <b>5 días</b></span>
-                    <span class="hv2-a-streak-next">Próx. logro: 7 días</span>
-                </div>
-                <div class="hv2-a-streak-days">
-                    ${days.map(x => `
-                        <div class="hv2-a-day ${x.on ? 'is-on' : ''} ${x.today ? 'is-today' : ''}"
-                             title="${x.label}" data-hv2-streak>
-                            <span class="hv2-a-day-letter">${x.d}</span>
-                            <span class="hv2-a-day-mark">${x.on ? '✓' : '?'}</span>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="hv2-a-streak-foot">+1 cada día que abras la app. Reset el 1 de junio.</div>
-            </section>
+            ${showStreak ? `
+                <!-- 1) Racha Madridista (flag fan.hoy.concept-a.streak) -->
+                <section class="hv2-card hv2-a-streak">
+                    <div class="hv2-a-streak-head">
+                        <span>🔥 Tu racha: <b>5 días</b></span>
+                        <span class="hv2-a-streak-next">Próx. logro: 7 días</span>
+                    </div>
+                    <div class="hv2-a-streak-days">
+                        ${days.map(x => `
+                            <div class="hv2-a-day ${x.on ? 'is-on' : ''} ${x.today ? 'is-today' : ''}"
+                                 title="${x.label}" data-hv2-streak>
+                                <span class="hv2-a-day-letter">${x.d}</span>
+                                <span class="hv2-a-day-mark">${x.on ? '✓' : '?'}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="hv2-a-streak-foot">+1 cada día que abras la app. Reset el 1 de junio.</div>
+                </section>
+            ` : ''}
 
-            <!-- 2) Hoy en el Club -->
-            <section class="hv2-card hv2-a-today">
-                <div class="hv2-a-today-img" style="background:linear-gradient(135deg,#00529F 0%, #FEBE10 100%)">
-                    <span class="hv2-a-today-chip">📹 ENTRENAMIENTO</span>
-                    <button class="hv2-a-today-play" aria-label="Reproducir">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="#0B1220"><polygon points="6,4 20,12 6,20"/></svg>
+            ${showTodayClub ? `
+                <!-- 2) Hoy en el Club (flag fan.hoy.concept-a.today-club) -->
+                <section class="hv2-card hv2-a-today">
+                    <div class="hv2-a-today-img" style="background:linear-gradient(135deg,#00529F 0%, #FEBE10 100%)">
+                        <span class="hv2-a-today-chip">📹 ENTRENAMIENTO</span>
+                        <button class="hv2-a-today-play" aria-label="Reproducir">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="#0B1220"><polygon points="6,4 20,12 6,20"/></svg>
+                        </button>
+                        <span class="hv2-a-today-dur">0:18</span>
+                    </div>
+                    <div class="hv2-a-today-body">
+                        <h3 class="hv2-a-today-title">El nutmeg de Vini esta mañana en Valdebebas</h3>
+                        <div class="hv2-a-today-meta">hace 18 min · 12.4k ❤ · 320 💬</div>
+                        <div class="hv2-a-today-divider"></div>
+                        <button class="hv2-a-today-news">
+                            <span>Bellingham, baja para el sábado</span>
+                            <span class="hv2-a-today-arrow">→</span>
+                        </button>
+                    </div>
+                </section>
+            ` : ''}
+
+            ${showUpcoming ? `
+                <!-- 3) Próximos partidos (flag fan.hoy.concept-a.upcoming) -->
+                <section class="hv2-card hv2-a-list">
+                    <h3 class="hv2-a-list-title">Próximos partidos de tus equipos</h3>
+                    <button class="hv2-a-team-row">
+                        <span class="hv2-a-team-avatar" style="background:#E91E63">F</span>
+                        <span class="hv2-a-team-body">
+                            <span class="hv2-a-team-name">Femenino · vs Atleti</span>
+                            <span class="hv2-a-team-sub">Sáb 12:00 · Alfredo Di Stéfano</span>
+                        </span>
+                        <span class="hv2-a-team-arr">→</span>
                     </button>
-                    <span class="hv2-a-today-dur">0:18</span>
-                </div>
-                <div class="hv2-a-today-body">
-                    <h3 class="hv2-a-today-title">El nutmeg de Vini esta mañana en Valdebebas</h3>
-                    <div class="hv2-a-today-meta">hace 18 min · 12.4k ❤ · 320 💬</div>
-                    <div class="hv2-a-today-divider"></div>
-                    <button class="hv2-a-today-news">
-                        <span>Bellingham, baja para el sábado</span>
-                        <span class="hv2-a-today-arrow">→</span>
+                    <button class="hv2-a-team-row">
+                        <span class="hv2-a-team-avatar" style="background:#1976D2">B</span>
+                        <span class="hv2-a-team-body">
+                            <span class="hv2-a-team-name">Basket · vs Maccabi Tel Aviv</span>
+                            <span class="hv2-a-team-sub">Dom 18:30 · WiZink Center</span>
+                        </span>
+                        <span class="hv2-a-team-arr">→</span>
                     </button>
-                </div>
-            </section>
+                </section>
+            ` : ''}
 
-            <!-- 3) Próximos partidos de tus equipos -->
-            <section class="hv2-card hv2-a-list">
-                <h3 class="hv2-a-list-title">Próximos partidos de tus equipos</h3>
-                <button class="hv2-a-team-row">
-                    <span class="hv2-a-team-avatar" style="background:#E91E63">F</span>
-                    <span class="hv2-a-team-body">
-                        <span class="hv2-a-team-name">Femenino · vs Atleti</span>
-                        <span class="hv2-a-team-sub">Sáb 12:00 · Alfredo Di Stéfano</span>
-                    </span>
-                    <span class="hv2-a-team-arr">→</span>
-                </button>
-                <button class="hv2-a-team-row">
-                    <span class="hv2-a-team-avatar" style="background:#1976D2">B</span>
-                    <span class="hv2-a-team-body">
-                        <span class="hv2-a-team-name">Basket · vs Maccabi Tel Aviv</span>
-                        <span class="hv2-a-team-sub">Dom 18:30 · WiZink Center</span>
-                    </span>
-                    <span class="hv2-a-team-arr">→</span>
-                </button>
-            </section>
-
-            <!-- 4) Tienda -->
-            <section class="hv2-card hv2-a-store">
-                <div class="hv2-a-store-img" style="background:linear-gradient(135deg,#7C3AED 0%, #00529F 100%)">
-                    <span class="hv2-a-shirt" style="background:#FFFFFF">9</span>
-                    <span class="hv2-a-shirt" style="background:#0B1220;color:#fff">7</span>
-                    <span class="hv2-a-shirt" style="background:#FEBE10">5</span>
-                </div>
-                <div class="hv2-a-store-body">
-                    <div class="hv2-a-store-title">15% DTO en todas las equipaciones</div>
-                    <button class="hv2-a-store-cta">Comprar</button>
-                </div>
-            </section>
+            ${showStore ? `
+                <!-- 4) Tienda (flag fan.hoy.concept-a.store-banner) -->
+                <section class="hv2-card hv2-a-store">
+                    <div class="hv2-a-store-img" style="background:linear-gradient(135deg,#7C3AED 0%, #00529F 100%)">
+                        <span class="hv2-a-shirt" style="background:#FFFFFF">9</span>
+                        <span class="hv2-a-shirt" style="background:#0B1220;color:#fff">7</span>
+                        <span class="hv2-a-shirt" style="background:#FEBE10">5</span>
+                    </div>
+                    <div class="hv2-a-store-body">
+                        <div class="hv2-a-store-title">15% DTO en todas las equipaciones</div>
+                        <button class="hv2-a-store-cta">Comprar</button>
+                    </div>
+                </section>
+            ` : ''}
         </div>
     `;
 }
@@ -8021,7 +8026,12 @@ function renderHV2ConceptB(matchday) {
 }
 
 function renderHV2ConceptBNonMatchday() {
-    const filter = state.hoyV2FeedFilter;
+    const showChips     = Flags.isEnabled('fan.hoy.concept-b.chips');
+    const showFeed      = Flags.isEnabled('fan.hoy.concept-b.feed');
+    const showPredictor = Flags.isEnabled('fan.hoy.concept-b.predictor');
+    const showTiles     = Flags.isEnabled('fan.hoy.concept-b.tiles');
+
+    const filter = showChips ? state.hoyV2FeedFilter : 'all';
     const filtered = filter === 'all' ? HV2_CLIPS : HV2_CLIPS.filter(c => c.filter === filter);
     const clips = filtered.length ? filtered : HV2_CLIPS;
     const idx = Math.min(state.hoyV2FeedIndex, clips.length - 1);
@@ -8042,72 +8052,78 @@ function renderHV2ConceptBNonMatchday() {
                 <button class="hv2-b-side" aria-label="Radio">📡</button>
             </header>
 
-            <!-- Chips horizontales -->
-            <div class="hv2-b-chips" data-hv2-chips>
-                ${HV2_CHIPS.map(c => `
-                    <button class="hv2-b-chip ${c.key === filter ? 'is-active' : ''}" data-hv2-chip="${c.key}">${c.label}</button>
-                `).join('')}
-            </div>
-
-            <!-- Feed vertical 9:16 (bloque estrella) -->
-            <section class="hv2-b-feed-section">
-                <div class="hv2-b-feed" data-hv2-feed
-                     style="background:linear-gradient(165deg, ${clip.color1} 0%, ${clip.color2} 100%)">
-                    <div class="hv2-b-feed-top">
-                        <span class="hv2-b-feed-dur">${clip.duration}</span>
-                        <span class="hv2-b-feed-tag">${clip.tag}</span>
-                    </div>
-
-                    <button class="hv2-b-feed-play" aria-label="Reproducir">
-                        <svg viewBox="0 0 24 24" width="26" height="26" fill="#fff"><polygon points="6,4 20,12 6,20"/></svg>
-                    </button>
-
-                    <div class="hv2-b-feed-overlay">
-                        <div class="hv2-b-feed-author">
-                            <span class="hv2-b-feed-avatar" style="background:${clip.color1}">${clip.initials}</span>
-                            <span>${clip.player}</span>
-                        </div>
-                        <div class="hv2-b-feed-title">${clip.title}</div>
-                        <div class="hv2-b-feed-actions">
-                            <span>❤ ${clip.likes}</span>
-                            <span>💬 ${clip.comments}</span>
-                            <span>↗ Compartir</span>
-                        </div>
-                    </div>
-
-                    <div class="hv2-b-feed-progress">
-                        ${clips.map((_, i) => `<span class="${i === idx ? 'is-active' : ''}"></span>`).join('')}
-                    </div>
-
-                    <div class="hv2-b-feed-hint">Swipe ↑ para siguiente</div>
-
-                    <button class="hv2-b-feed-nav prev" data-hv2-feed-prev aria-label="Anterior">↑</button>
-                    <button class="hv2-b-feed-nav next" data-hv2-feed-next aria-label="Siguiente">↓</button>
-                </div>
-            </section>
-
-            <!-- Predictor -->
-            <section class="hv2-card hv2-b-pred">
-                <div class="hv2-b-pred-head">
-                    <span>🎯 <b>Predictor del Madridista</b></span>
-                    <span class="hv2-b-pred-streak">RACHA 🔥 5</span>
-                </div>
-                <div class="hv2-b-pred-q">¿Resultado RM-Bayern vuelta?</div>
-                <div class="hv2-b-pred-opts">
-                    ${HV2_PREDICTOR_OPTIONS.map(opt => `
-                        <button class="hv2-b-pred-opt ${pred === opt ? 'is-picked' : ''} ${pred && pred !== opt ? 'is-dim' : ''}"
-                                data-hv2-pred="${opt}" ${pred ? 'disabled' : ''}>
-                            ${opt}
-                        </button>
+            ${showChips ? `
+                <!-- Chips horizontales (flag fan.hoy.concept-b.chips) -->
+                <div class="hv2-b-chips" data-hv2-chips>
+                    ${HV2_CHIPS.map(c => `
+                        <button class="hv2-b-chip ${c.key === filter ? 'is-active' : ''}" data-hv2-chip="${c.key}">${c.label}</button>
                     `).join('')}
                 </div>
-                ${pred ? `
-                    <div class="hv2-b-pred-result">Tu predicción enviada · Posición <b>#428</b> de 121.300</div>
-                ` : ''}
-                <div class="hv2-b-pred-foot">Top 10 mensual: camiseta firmada por la plantilla</div>
-            </section>
+            ` : ''}
 
-            <!-- Próximos partidos -->
+            ${showFeed ? `
+                <!-- Feed vertical 9:16 (flag fan.hoy.concept-b.feed) -->
+                <section class="hv2-b-feed-section">
+                    <div class="hv2-b-feed" data-hv2-feed
+                         style="background:linear-gradient(165deg, ${clip.color1} 0%, ${clip.color2} 100%)">
+                        <div class="hv2-b-feed-top">
+                            <span class="hv2-b-feed-dur">${clip.duration}</span>
+                            <span class="hv2-b-feed-tag">${clip.tag}</span>
+                        </div>
+
+                        <button class="hv2-b-feed-play" aria-label="Reproducir">
+                            <svg viewBox="0 0 24 24" width="26" height="26" fill="#fff"><polygon points="6,4 20,12 6,20"/></svg>
+                        </button>
+
+                        <div class="hv2-b-feed-overlay">
+                            <div class="hv2-b-feed-author">
+                                <span class="hv2-b-feed-avatar" style="background:${clip.color1}">${clip.initials}</span>
+                                <span>${clip.player}</span>
+                            </div>
+                            <div class="hv2-b-feed-title">${clip.title}</div>
+                            <div class="hv2-b-feed-actions">
+                                <span>❤ ${clip.likes}</span>
+                                <span>💬 ${clip.comments}</span>
+                                <span>↗ Compartir</span>
+                            </div>
+                        </div>
+
+                        <div class="hv2-b-feed-progress">
+                            ${clips.map((_, i) => `<span class="${i === idx ? 'is-active' : ''}"></span>`).join('')}
+                        </div>
+
+                        <div class="hv2-b-feed-hint">Swipe ↑ para siguiente</div>
+
+                        <button class="hv2-b-feed-nav prev" data-hv2-feed-prev aria-label="Anterior">↑</button>
+                        <button class="hv2-b-feed-nav next" data-hv2-feed-next aria-label="Siguiente">↓</button>
+                    </div>
+                </section>
+            ` : ''}
+
+            ${showPredictor ? `
+                <!-- Predictor (flag fan.hoy.concept-b.predictor) -->
+                <section class="hv2-card hv2-b-pred">
+                    <div class="hv2-b-pred-head">
+                        <span>🎯 <b>Predictor del Madridista</b></span>
+                        <span class="hv2-b-pred-streak">RACHA 🔥 5</span>
+                    </div>
+                    <div class="hv2-b-pred-q">¿Resultado RM-Bayern vuelta?</div>
+                    <div class="hv2-b-pred-opts">
+                        ${HV2_PREDICTOR_OPTIONS.map(opt => `
+                            <button class="hv2-b-pred-opt ${pred === opt ? 'is-picked' : ''} ${pred && pred !== opt ? 'is-dim' : ''}"
+                                    data-hv2-pred="${opt}" ${pred ? 'disabled' : ''}>
+                                ${opt}
+                            </button>
+                        `).join('')}
+                    </div>
+                    ${pred ? `
+                        <div class="hv2-b-pred-result">Tu predicción enviada · Posición <b>#428</b> de 121.300</div>
+                    ` : ''}
+                    <div class="hv2-b-pred-foot">Top 10 mensual: camiseta firmada por la plantilla</div>
+                </section>
+            ` : ''}
+
+            <!-- Próximos partidos (siempre visible en B) -->
             <section class="hv2-card hv2-a-list">
                 <h3 class="hv2-a-list-title">Próximos partidos</h3>
                 <button class="hv2-a-team-row">
@@ -8128,12 +8144,14 @@ function renderHV2ConceptBNonMatchday() {
                 </button>
             </section>
 
-            <!-- Mini-tiles comerciales -->
-            <section class="hv2-b-tiles">
-                <button class="hv2-b-tile"><span>🛍</span><span>Tienda</span><span class="hv2-b-tile-arr">→</span></button>
-                <button class="hv2-b-tile"><span>🏟</span><span>Bernabéu Tour</span><span class="hv2-b-tile-arr">→</span></button>
-                <button class="hv2-b-tile"><span>▶</span><span>RMTV</span><span class="hv2-b-tile-arr">→</span></button>
-            </section>
+            ${showTiles ? `
+                <!-- Mini-tiles (flag fan.hoy.concept-b.tiles) -->
+                <section class="hv2-b-tiles">
+                    <button class="hv2-b-tile"><span>🛍</span><span>Tienda</span><span class="hv2-b-tile-arr">→</span></button>
+                    <button class="hv2-b-tile"><span>🏟</span><span>Bernabéu Tour</span><span class="hv2-b-tile-arr">→</span></button>
+                    <button class="hv2-b-tile"><span>▶</span><span>RMTV</span><span class="hv2-b-tile-arr">→</span></button>
+                </section>
+            ` : ''}
         </div>
     `;
 }
@@ -8244,8 +8262,17 @@ function renderHV2ConceptBMatchday() {
 
 // ────────────────────────────────────────────────────────────────
 // CONCEPTO C — "Madrid Universe"
+// Cada bloque (stories, feed-ML, PiP, peña, Bernabéu, coleccionables)
+// está gateado por su sub-flag en `fan.hoy.concept-c.*`.
 // ────────────────────────────────────────────────────────────────
 function renderHV2ConceptC(matchday) {
+    const showStories     = Flags.isEnabled('fan.hoy.concept-c.stories');
+    const showFeedMl      = Flags.isEnabled('fan.hoy.concept-c.feed-ml');
+    const showPip         = Flags.isEnabled('fan.hoy.concept-c.pip');
+    const showPena        = Flags.isEnabled('fan.hoy.concept-c.pena');
+    const showBernabeu    = Flags.isEnabled('fan.hoy.concept-c.bernabeu');
+    const showCollectibles= Flags.isEnabled('fan.hoy.concept-c.collectibles');
+
     const clip = HV2_CLIPS[state.hoyV2FeedIndex % HV2_CLIPS.length];
     const headerClass = matchday ? 'hv2-c-header is-md' : 'hv2-c-header';
     const liveBadge = matchday ? '<span class="hv2-c-md-pill"><span class="hv2-c-md-dot"></span>EN DIRECTO</span>' : '';
@@ -8253,7 +8280,7 @@ function renderHV2ConceptC(matchday) {
     return `
         <div class="hv2-c">
 
-            <!-- Header con identidad -->
+            <!-- Header con identidad (siempre visible en C) -->
             <header class="${headerClass}">
                 <button class="hv2-c-avatar" id="btnSideMenu" aria-label="Tu área">MN</button>
                 <div class="hv2-c-greet">
@@ -8266,119 +8293,131 @@ function renderHV2ConceptC(matchday) {
                 </div>
             </header>
 
-            <!-- Stories horizontales -->
-            <section class="hv2-c-stories">
-                <div class="hv2-c-stories-track">
-                    ${HV2_STORIES.map(s => `
-                        <button class="hv2-c-story">
-                            <span class="hv2-c-story-ring">
-                                <span class="hv2-c-story-avatar" style="background:${s.color}">${s.initials}</span>
-                            </span>
-                            <span class="hv2-c-story-label">${s.label}</span>
-                        </button>
-                    `).join('')}
-                </div>
-            </section>
-
-            <!-- Feed ML -->
-            <section class="hv2-b-feed-section">
-                <div class="hv2-b-feed hv2-c-feed" data-hv2-feed
-                     style="background:linear-gradient(165deg, ${clip.color1} 0%, ${clip.color2} 100%)">
-                    <span class="hv2-c-ml-badge">✨ Personalizado para ti</span>
-                    <div class="hv2-b-feed-top">
-                        <span class="hv2-b-feed-dur">${clip.duration}</span>
-                        <span class="hv2-b-feed-tag">${clip.tag}</span>
+            ${showStories ? `
+                <!-- Stories (flag fan.hoy.concept-c.stories) -->
+                <section class="hv2-c-stories">
+                    <div class="hv2-c-stories-track">
+                        ${HV2_STORIES.map(s => `
+                            <button class="hv2-c-story">
+                                <span class="hv2-c-story-ring">
+                                    <span class="hv2-c-story-avatar" style="background:${s.color}">${s.initials}</span>
+                                </span>
+                                <span class="hv2-c-story-label">${s.label}</span>
+                            </button>
+                        `).join('')}
                     </div>
-                    <button class="hv2-b-feed-play" aria-label="Reproducir">
-                        <svg viewBox="0 0 24 24" width="26" height="26" fill="#fff"><polygon points="6,4 20,12 6,20"/></svg>
-                    </button>
-                    <div class="hv2-b-feed-overlay">
-                        <div class="hv2-b-feed-author">
-                            <span class="hv2-b-feed-avatar" style="background:${clip.color1}">${clip.initials}</span>
-                            <span>${clip.player}</span>
+                </section>
+            ` : ''}
+
+            ${showFeedMl ? `
+                <!-- Feed ML (flag fan.hoy.concept-c.feed-ml) -->
+                <section class="hv2-b-feed-section">
+                    <div class="hv2-b-feed hv2-c-feed" data-hv2-feed
+                         style="background:linear-gradient(165deg, ${clip.color1} 0%, ${clip.color2} 100%)">
+                        <span class="hv2-c-ml-badge">✨ Personalizado para ti</span>
+                        <div class="hv2-b-feed-top">
+                            <span class="hv2-b-feed-dur">${clip.duration}</span>
+                            <span class="hv2-b-feed-tag">${clip.tag}</span>
                         </div>
-                        <div class="hv2-b-feed-title">${clip.title}</div>
-                        <div class="hv2-b-feed-actions"><span>❤ ${clip.likes}</span><span>💬 ${clip.comments}</span><span>↗</span></div>
-                    </div>
-                    <button class="hv2-b-feed-nav prev" data-hv2-feed-prev aria-label="Anterior">↑</button>
-                    <button class="hv2-b-feed-nav next" data-hv2-feed-next aria-label="Siguiente">↓</button>
-                </div>
-            </section>
-
-            <!-- Match strip + PiP -->
-            <section class="hv2-c-strip">
-                <div class="hv2-c-strip-info">
-                    <span>⚽</span>
-                    <div>
-                        <div class="hv2-c-strip-title">RM ─ Bayern</div>
-                        <div class="hv2-c-strip-sub">Mié 15 abr · 21:00</div>
-                    </div>
-                </div>
-                <button class="hv2-c-pip-trigger" data-hv2-pip-toggle>${state.hoyV2PipOpen ? '× Cerrar PiP' : '▶ RMTV PiP'}</button>
-            </section>
-
-            <!-- Tu Peña -->
-            <section class="hv2-card hv2-c-pena">
-                <div class="hv2-c-pena-head">
-                    <span>👥 <b>Tu Peña: Madridistas Lavapiés</b></span>
-                </div>
-                <div class="hv2-c-pena-body">
-                    <div class="hv2-c-pena-stack">
-                        <span class="hv2-c-pena-av" style="background:#FFD400">A</span>
-                        <span class="hv2-c-pena-av" style="background:#00B59E">L</span>
-                        <span class="hv2-c-pena-av" style="background:#E91E63">M</span>
-                        <span class="hv2-c-pena-av" style="background:#7B1FA2">P</span>
-                        <span class="hv2-c-pena-more">+283</span>
-                    </div>
-                    <div class="hv2-c-pena-stats">🔴 287 en línea · 12 nuevos posts hoy</div>
-                </div>
-                <div class="hv2-c-pena-msg">@laura92: "qué porra hacemos para mañana?"</div>
-                <button class="hv2-c-pena-cta">Entrar</button>
-            </section>
-
-            <!-- Bernabéu hoy -->
-            <section class="hv2-card hv2-c-bernabeu">
-                <h3 class="hv2-a-list-title">Bernabéu hoy</h3>
-                <div class="hv2-c-bern-row">
-                    <span class="hv2-c-bern-ico">🏟</span>
-                    <div class="hv2-c-bern-body">
-                        <div class="hv2-c-bern-title">Tour Bernabéu</div>
-                        <div class="hv2-c-bern-sub">16:00 · 8 plazas</div>
-                    </div>
-                    <button class="hv2-c-bern-cta">Reservar</button>
-                </div>
-                <div class="hv2-c-bern-row">
-                    <span class="hv2-c-bern-ico">🎤</span>
-                    <div class="hv2-c-bern-body">
-                        <div class="hv2-c-bern-title">Concierto: Sabina</div>
-                        <div class="hv2-c-bern-sub">21:00 · Sold out</div>
-                    </div>
-                    <button class="hv2-c-bern-cta hv2-c-bern-cta-ghost">Cómo llegar</button>
-                </div>
-            </section>
-
-            <!-- Coleccionables holo -->
-            <section class="hv2-c-coll">
-                <div class="hv2-c-coll-head">
-                    <h3 class="hv2-a-list-title">Tu colección · 3 nuevos esta semana</h3>
-                </div>
-                <div class="hv2-c-coll-track">
-                    ${HV2_COLLECTIBLES.map(c => `
-                        <article class="hv2-c-card hv2-c-rar-${c.color}" data-hv2-card>
-                            <div class="hv2-c-card-img" style="background:linear-gradient(165deg, ${c.c1} 0%, ${c.c2} 100%)">
-                                <span class="hv2-c-card-shine"></span>
+                        <button class="hv2-b-feed-play" aria-label="Reproducir">
+                            <svg viewBox="0 0 24 24" width="26" height="26" fill="#fff"><polygon points="6,4 20,12 6,20"/></svg>
+                        </button>
+                        <div class="hv2-b-feed-overlay">
+                            <div class="hv2-b-feed-author">
+                                <span class="hv2-b-feed-avatar" style="background:${clip.color1}">${clip.initials}</span>
+                                <span>${clip.player}</span>
                             </div>
-                            <div class="hv2-c-card-body">
-                                <div class="hv2-c-card-title">${c.title}</div>
-                                <span class="hv2-c-card-rar">${c.rarity}</span>
-                            </div>
-                        </article>
-                    `).join('')}
-                </div>
-                <div class="hv2-c-coll-foot">Coleccionables digitales sin valor financiero.</div>
-            </section>
+                            <div class="hv2-b-feed-title">${clip.title}</div>
+                            <div class="hv2-b-feed-actions"><span>❤ ${clip.likes}</span><span>💬 ${clip.comments}</span><span>↗</span></div>
+                        </div>
+                        <button class="hv2-b-feed-nav prev" data-hv2-feed-prev aria-label="Anterior">↑</button>
+                        <button class="hv2-b-feed-nav next" data-hv2-feed-next aria-label="Siguiente">↓</button>
+                    </div>
+                </section>
+            ` : ''}
 
-            ${state.hoyV2PipOpen ? `
+            ${showPip ? `
+                <!-- Match strip + PiP trigger (flag fan.hoy.concept-c.pip) -->
+                <section class="hv2-c-strip">
+                    <div class="hv2-c-strip-info">
+                        <span>⚽</span>
+                        <div>
+                            <div class="hv2-c-strip-title">RM ─ Bayern</div>
+                            <div class="hv2-c-strip-sub">Mié 15 abr · 21:00</div>
+                        </div>
+                    </div>
+                    <button class="hv2-c-pip-trigger" data-hv2-pip-toggle>${state.hoyV2PipOpen ? '× Cerrar PiP' : '▶ RMTV PiP'}</button>
+                </section>
+            ` : ''}
+
+            ${showPena ? `
+                <!-- Tu Peña (flag fan.hoy.concept-c.pena) -->
+                <section class="hv2-card hv2-c-pena">
+                    <div class="hv2-c-pena-head">
+                        <span>👥 <b>Tu Peña: Madridistas Lavapiés</b></span>
+                    </div>
+                    <div class="hv2-c-pena-body">
+                        <div class="hv2-c-pena-stack">
+                            <span class="hv2-c-pena-av" style="background:#FFD400">A</span>
+                            <span class="hv2-c-pena-av" style="background:#00B59E">L</span>
+                            <span class="hv2-c-pena-av" style="background:#E91E63">M</span>
+                            <span class="hv2-c-pena-av" style="background:#7B1FA2">P</span>
+                            <span class="hv2-c-pena-more">+283</span>
+                        </div>
+                        <div class="hv2-c-pena-stats">🔴 287 en línea · 12 nuevos posts hoy</div>
+                    </div>
+                    <div class="hv2-c-pena-msg">@laura92: "qué porra hacemos para mañana?"</div>
+                    <button class="hv2-c-pena-cta">Entrar</button>
+                </section>
+            ` : ''}
+
+            ${showBernabeu ? `
+                <!-- Bernabéu hoy (flag fan.hoy.concept-c.bernabeu) -->
+                <section class="hv2-card hv2-c-bernabeu">
+                    <h3 class="hv2-a-list-title">Bernabéu hoy</h3>
+                    <div class="hv2-c-bern-row">
+                        <span class="hv2-c-bern-ico">🏟</span>
+                        <div class="hv2-c-bern-body">
+                            <div class="hv2-c-bern-title">Tour Bernabéu</div>
+                            <div class="hv2-c-bern-sub">16:00 · 8 plazas</div>
+                        </div>
+                        <button class="hv2-c-bern-cta">Reservar</button>
+                    </div>
+                    <div class="hv2-c-bern-row">
+                        <span class="hv2-c-bern-ico">🎤</span>
+                        <div class="hv2-c-bern-body">
+                            <div class="hv2-c-bern-title">Concierto: Sabina</div>
+                            <div class="hv2-c-bern-sub">21:00 · Sold out</div>
+                        </div>
+                        <button class="hv2-c-bern-cta hv2-c-bern-cta-ghost">Cómo llegar</button>
+                    </div>
+                </section>
+            ` : ''}
+
+            ${showCollectibles ? `
+                <!-- Coleccionables holo (flag fan.hoy.concept-c.collectibles) -->
+                <section class="hv2-c-coll">
+                    <div class="hv2-c-coll-head">
+                        <h3 class="hv2-a-list-title">Tu colección · 3 nuevos esta semana</h3>
+                    </div>
+                    <div class="hv2-c-coll-track">
+                        ${HV2_COLLECTIBLES.map(c => `
+                            <article class="hv2-c-card hv2-c-rar-${c.color}" data-hv2-card>
+                                <div class="hv2-c-card-img" style="background:linear-gradient(165deg, ${c.c1} 0%, ${c.c2} 100%)">
+                                    <span class="hv2-c-card-shine"></span>
+                                </div>
+                                <div class="hv2-c-card-body">
+                                    <div class="hv2-c-card-title">${c.title}</div>
+                                    <span class="hv2-c-card-rar">${c.rarity}</span>
+                                </div>
+                            </article>
+                        `).join('')}
+                    </div>
+                    <div class="hv2-c-coll-foot">Coleccionables digitales sin valor financiero.</div>
+                </section>
+            ` : ''}
+
+            ${(showPip && state.hoyV2PipOpen) ? `
                 <div class="hv2-c-pip" id="hv2Pip"
                      style="left: ${state.hoyV2PipPos.x}px; top: ${state.hoyV2PipPos.y}px"
                      data-hv2-pip-drag>
@@ -8400,35 +8439,10 @@ function attachHoyV2OptionsListeners() {
         return;
     }
 
-    // Selector A/B/C
-    $$('[data-hv2-concept]').forEach(btn => btn.addEventListener('click', () => {
-        const next = btn.dataset.hv2Concept;
-        if (next === state.hoyV2Concept) return;
-        state.hoyV2Concept = next;
-        // Reset feed cuando cambias de concepto
-        state.hoyV2FeedIndex = 0;
-        // Si vamos a A, deshabilitamos matchday
-        if (next === 'A') state.hoyV2Matchday = false;
-        render();
-    }));
-
-    // Toggle Matchday
-    const mdToggle = document.querySelector('[data-hv2-matchday-toggle]');
-    if (mdToggle) {
-        mdToggle.addEventListener('change', () => {
-            state.hoyV2Matchday = mdToggle.checked;
-            render();
-        });
-    }
-
-    // Info card
-    const infoBtn = document.querySelector('[data-hv2-info-toggle]');
-    if (infoBtn) {
-        infoBtn.addEventListener('click', () => {
-            state.hoyV2InfoOpen = !state.hoyV2InfoOpen;
-            render();
-        });
-    }
+    // El concepto activo y el matchday se gestionan ahora desde el panel
+    // de Funcionalidades (flags `fan.hoy.concept-{a,b,c}` y
+    // `fan.hoy.concept-b.matchday`). Aquí sólo cableamos las
+    // interacciones internas del frame: chips, feed, predictor, PiP.
 
     // Chips B
     $$('[data-hv2-chip]').forEach(btn => btn.addEventListener('click', () => {
