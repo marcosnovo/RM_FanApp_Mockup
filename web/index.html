@@ -16,7 +16,7 @@
 
     <!-- Cibeles Design System tokens (Madridistas) -->
     <link rel="stylesheet" href="tokens/cibeles-tokens.css">
-    <link rel="stylesheet" href="styles.css?v=60">
+    <link rel="stylesheet" href="styles.css?v=61">
 
     <!-- RM Neue is the brand font; fall back to Inter (Cibeles uses near-identical metrics) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -143,6 +143,11 @@
                     </div>
                 </div>
 
+                <!-- Resumen del concepto activo en Hoy V2 (3 conceptos):
+                     se renderiza desde JS sólo en desktop cuando estás
+                     en la Fan App > Hoy con `fan.hoy.v2-options` ON. -->
+                <aside class="hv2-recap" id="hv2RecapSlot"></aside>
+
                 <!-- Recipient web view (multi-share lote) — populated by JS -->
                 <aside class="web-preview" id="webPreviewSlot"></aside>
             </div>
@@ -214,11 +219,11 @@
          don't keep a stale copy (Python http.server and GH Pages both respect
          a different query string as a different cache entry). -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script defer src="auth.js?v=60"></script>
-    <script defer src="flags.js?v=60"></script>
-    <script defer src="data.js?v=60"></script>
-    <script defer src="app.js?v=60"></script>
-    <script defer src="flow_exporter.js?v=60"></script>
-    <script defer src="jira_initiatives.js?v=60"></script>
+    <script defer src="auth.js?v=61"></script>
+    <script defer src="flags.js?v=61"></script>
+    <script defer src="data.js?v=61"></script>
+    <script defer src="app.js?v=61"></script>
+    <script defer src="flow_exporter.js?v=61"></script>
+    <script defer src="jira_initiatives.js?v=61"></script>
 </body>
 </html>

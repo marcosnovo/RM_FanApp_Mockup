@@ -7514,6 +7514,9 @@ function render() {
     // Recipient web view (multi-share lote)
     renderWebPreview();
 
+    // Resumen lateral del concepto activo (Hoy V2 — 3 conceptos)
+    renderHV2Recap();
+
     attachListeners();
     attachVipListeners();
     attachWebPreviewListeners();
@@ -7819,7 +7822,6 @@ function renderHoyV2Options() {
     }
 
     const matchday = Flags.isEnabled('fan.hoy.concept-b.matchday');
-    const meta = HV2_CONCEPTS.find(c => c.key === concept) || HV2_CONCEPTS[0];
 
     const conceptBody =
         concept === 'A' ? renderHV2ConceptA()
@@ -7828,20 +7830,9 @@ function renderHoyV2Options() {
 
     return `
         <div class="hv2-wrap" data-hv2-concept="${concept}" data-hv2-matchday="${matchday ? '1' : '0'}">
-
-            <!-- Banda de identidad del concepto activo: refuerza qué
-                 estamos viendo en cada momento y le da un sello visual
-                 propio (newspaper / streaming / metaverse). El selector
-                 y los toggles de variantes viven en el panel derecho. -->
-            <div class="hv2-identity hv2-identity-${concept}">
-                <div class="hv2-identity-letter">${meta.short}</div>
-                <div class="hv2-identity-text">
-                    <div class="hv2-identity-mast">${HV2_MAST[meta.key]}</div>
-                    <div class="hv2-identity-tag">${meta.tag} · Build ${meta.build} · DAU ${meta.lift}</div>
-                </div>
-                <div class="hv2-identity-deco">${HV2_DECO[meta.key]}</div>
-            </div>
-
+            <!-- El sello del concepto vive AHORA fuera del frame, en el
+                 panel resumen lateral (#hv2RecapSlot). El frame se queda
+                 limpio para imitar mejor cómo se vería la app real. -->
             <div class="hv2-scroll" id="hv2Scroll" data-hv2-concept-bg="${concept}">
                 ${conceptBody}
                 <div style="height: 28px"></div>
@@ -7852,28 +7843,146 @@ function renderHoyV2Options() {
     `;
 }
 
-const HV2_INFO_TEXT = {
-    A: 'Reorganización inteligente. Match center compacto, contenido fresco arriba del fold y racha que engancha. NO incluye: feed vertical infinito, predictor, comunidad. Apto para evolución obvia de la home actual.',
-    B: 'Feed vertical 9:16 dominante + match strip + predictor + briefing. La app deja de ser sobre partidos y empieza a ser sobre Madrid 365 días. Modo Día de Partido con marcador grande, audio en pin, eventos timeline y chat moderado.',
-    C: 'El metaverso oficial del fan. Personalización ML, peñas digitales, fan tokens, Bernabéu hub, PiP RMTV draggable y coleccionables sin financialización. Madrid 24/7. Requiere equipo audiovisual dedicado y moderación 24/7.'
+// Tagline corto por concepto — usado en el panel resumen lateral
+// (#hv2RecapSlot) en desktop. Mantiene la identidad fuera del frame.
+const HV2_TAGLINE = {
+    A: 'Reorganización editorial conservadora.',
+    B: 'Feed dominante + predictor + matchday.',
+    C: 'Metaverso del fan: ML, peñas, PiP, holos.'
 };
 
-// Sello (mast) de cada concepto — lo pintamos en grande dentro de la
-// banda de identidad para que el concepto se reconozca de un vistazo.
-const HV2_MAST = {
-    A: 'THE MADRID TIMES',
-    B: 'MADRID·LIVE',
-    C: 'MADRID UNIVERSE'
+// Sub-flags por concepto en orden de scroll. Cada entry pinta una
+// fila en el resumen lateral con ✓/✗ según el estado del flag.
+const HV2_RECAP_MODULES = {
+    A: [
+        { key: 'fan.hoy.concept-a.streak',       label: 'Racha Madridista' },
+        { key: 'fan.hoy.concept-a.today-club',   label: 'Hoy en el Club' },
+        { key: 'fan.hoy.concept-a.news',         label: 'Noticias compactas' },
+        { key: 'fan.hoy.concept-a.upcoming',     label: 'Próximos partidos' },
+        { key: 'fan.hoy.concept-a.store-banner', label: 'Banner Tienda' }
+    ],
+    B: [
+        { key: 'fan.hoy.concept-b.chips',     label: 'Chips Para ti / jugadores' },
+        { key: 'fan.hoy.concept-b.feed',      label: 'Feed vertical 9:16' },
+        { key: 'fan.hoy.concept-b.predictor', label: 'Predictor del Madridista' },
+        { key: 'fan.hoy.concept-b.matchday',  label: 'Modo Día de Partido' },
+        { key: 'fan.hoy.concept-b.news',      label: 'Noticias compactas' },
+        { key: 'fan.hoy.concept-b.tiles',     label: 'Mini-tiles comerciales' }
+    ],
+    C: [
+        { key: 'fan.hoy.concept-c.stories',     label: 'Stories holo' },
+        { key: 'fan.hoy.concept-c.feed-ml',     label: 'Feed ML personalizado' },
+        { key: 'fan.hoy.concept-c.pip',         label: 'PiP RMTV draggable' },
+        { key: 'fan.hoy.concept-c.news',        label: 'Noticias compactas' },
+        { key: 'fan.hoy.concept-c.pena',        label: 'Tu Peña digital' },
+        { key: 'fan.hoy.concept-c.bernabeu',    label: 'Bernabéu hoy' },
+        { key: 'fan.hoy.concept-c.collectibles',label: 'Coleccionables holo' }
+    ]
 };
 
-// Decoración tipográfica de la banda: una micro-firma del concepto
-// (edición editorial, on air, trofeo) que añade textura visual sin
-// ruido funcional.
-const HV2_DECO = {
-    A: '<span class="hv2-deco-edition">Edición · Mié 15 abr</span>',
-    B: '<span class="hv2-deco-onair"><span class="hv2-deco-onair-dot"></span>ON AIR</span>',
-    C: '<span class="hv2-deco-trophy">★ Champions · Lvl 27</span>'
-};
+// Render compacto de noticias para los 3 conceptos. Sustituye al
+// `fan.hoy.news.compact` del antiguo Hoy V2 Pro: 4 noticias con thumb
+// pequeño + título + kicker. Click abre el detalle vía el handler
+// global de `[data-news-id]`.
+function renderHV2NewsCompact() {
+    const all = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []);
+    const news = all.slice(0, 4);
+    if (!news.length) return '';
+    return `
+        <section class="hv2-card hv2-news">
+            <div class="hv2-news-head">
+                <h3 class="hv2-a-list-title">Noticias</h3>
+                <button class="hv2-news-cta" data-go-tab="noticias">Ver todas</button>
+            </div>
+            <div class="hv2-news-list">
+                ${news.map(n => `
+                    <button class="hv2-news-row" data-news-id="${n.id}">
+                        <span class="hv2-news-thumb" style="background:${n.imageColor}">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff" opacity="0.85"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="#fff" stroke-width="1.4"/><circle cx="8.5" cy="10" r="1.5"/><polygon points="21,17 14,11 3,19 21,19"/></svg>
+                        </span>
+                        <span class="hv2-news-body">
+                            ${n.kind ? `<span class="hv2-news-kicker">${n.kind}</span>` : ''}
+                            <span class="hv2-news-title">${n.title}</span>
+                        </span>
+                    </button>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+// Render del resumen lateral. Sólo aparece en Fan App > Hoy con
+// `fan.hoy.v2-options` activo. CSS lo oculta por debajo de 1100px.
+function renderHV2Recap() {
+    const slot = $('#hv2RecapSlot');
+    if (!slot) return;
+    const visible = state.app === 'fan'
+                 && state.tab === 'hoy'
+                 && Flags.isEnabled('fan.hoy.v2-options');
+    if (!visible) {
+        slot.innerHTML = '';
+        slot.classList.remove('visible');
+        return;
+    }
+
+    const concept = activeHV2Concept();
+    if (!concept) {
+        slot.classList.add('visible');
+        slot.innerHTML = `
+            <div class="hv2-recap-card hv2-recap-empty">
+                <div class="hv2-recap-tag">Hoy v2 · 3 conceptos</div>
+                <div class="hv2-recap-empty-title">Sin concepto activo</div>
+                <div class="hv2-recap-empty-body">
+                    Activa A, B o C en el panel <b>Funcionalidades</b>
+                    para ver aquí los módulos del concepto.
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    const meta = HV2_CONCEPTS.find(c => c.key === concept) || HV2_CONCEPTS[0];
+    const modules = HV2_RECAP_MODULES[concept] || [];
+    const onCount = modules.filter(m => Flags.isEnabled(m.key)).length;
+
+    slot.classList.add('visible');
+    slot.innerHTML = `
+        <div class="hv2-recap-card hv2-recap-${concept}">
+            <div class="hv2-recap-tag">Concepto activo</div>
+            <div class="hv2-recap-head">
+                <div class="hv2-recap-letter">${meta.short}</div>
+                <div class="hv2-recap-titlewrap">
+                    <div class="hv2-recap-title">${meta.name}</div>
+                    <div class="hv2-recap-sub">${meta.tag}</div>
+                </div>
+            </div>
+            <p class="hv2-recap-line">${HV2_TAGLINE[concept]}</p>
+            <div class="hv2-recap-meta">
+                <div><span>Build</span><b>${meta.build}</b></div>
+                <div><span>Lift DAU</span><b>${meta.lift}</b></div>
+                <div><span>Riesgo</span><b>${meta.risk}</b></div>
+            </div>
+            <div class="hv2-recap-modhead">
+                Módulos activos · <b>${onCount}</b>/${modules.length}
+            </div>
+            <ul class="hv2-recap-mods">
+                ${modules.map(m => {
+                    const on = Flags.isEnabled(m.key);
+                    return `
+                        <li class="${on ? 'is-on' : 'is-off'}">
+                            <span class="hv2-recap-mark">${on ? '✓' : '✗'}</span>
+                            <span>${m.label}</span>
+                        </li>
+                    `;
+                }).join('')}
+            </ul>
+            <div class="hv2-recap-foot">
+                Toggle individual de cada módulo desde el panel
+                <b>Funcionalidades</b> a la derecha.
+            </div>
+        </div>
+    `;
+}
 
 // ────────────────────────────────────────────────────────────────
 // CONCEPTO A — "The Madrid Times"
@@ -7886,6 +7995,7 @@ function renderHV2ConceptA() {
     const showTodayClub = Flags.isEnabled('fan.hoy.concept-a.today-club');
     const showUpcoming  = Flags.isEnabled('fan.hoy.concept-a.upcoming');
     const showStore     = Flags.isEnabled('fan.hoy.concept-a.store-banner');
+    const showNews      = Flags.isEnabled('fan.hoy.concept-a.news');
 
     const days = [
         { d: 'L', on: true,  today: false, label: 'Lun · Conectaste' },
@@ -7976,6 +8086,8 @@ function renderHV2ConceptA() {
                 </section>
             ` : ''}
 
+            ${showNews ? renderHV2NewsCompact() : ''}
+
             ${showUpcoming ? `
                 <!-- 3) Próximos partidos (flag fan.hoy.concept-a.upcoming) -->
                 <section class="hv2-card hv2-a-list">
@@ -8030,6 +8142,7 @@ function renderHV2ConceptBNonMatchday() {
     const showFeed      = Flags.isEnabled('fan.hoy.concept-b.feed');
     const showPredictor = Flags.isEnabled('fan.hoy.concept-b.predictor');
     const showTiles     = Flags.isEnabled('fan.hoy.concept-b.tiles');
+    const showNews      = Flags.isEnabled('fan.hoy.concept-b.news');
 
     const filter = showChips ? state.hoyV2FeedFilter : 'all';
     const filtered = filter === 'all' ? HV2_CLIPS : HV2_CLIPS.filter(c => c.filter === filter);
@@ -8122,6 +8235,8 @@ function renderHV2ConceptBNonMatchday() {
                     <div class="hv2-b-pred-foot">Top 10 mensual: camiseta firmada por la plantilla</div>
                 </section>
             ` : ''}
+
+            ${showNews ? renderHV2NewsCompact() : ''}
 
             <!-- Próximos partidos (siempre visible en B) -->
             <section class="hv2-card hv2-a-list">
@@ -8272,6 +8387,7 @@ function renderHV2ConceptC(matchday) {
     const showPena        = Flags.isEnabled('fan.hoy.concept-c.pena');
     const showBernabeu    = Flags.isEnabled('fan.hoy.concept-c.bernabeu');
     const showCollectibles= Flags.isEnabled('fan.hoy.concept-c.collectibles');
+    const showNews        = Flags.isEnabled('fan.hoy.concept-c.news');
 
     const clip = HV2_CLIPS[state.hoyV2FeedIndex % HV2_CLIPS.length];
     const headerClass = matchday ? 'hv2-c-header is-md' : 'hv2-c-header';
@@ -8349,6 +8465,8 @@ function renderHV2ConceptC(matchday) {
                     <button class="hv2-c-pip-trigger" data-hv2-pip-toggle>${state.hoyV2PipOpen ? '× Cerrar PiP' : '▶ RMTV PiP'}</button>
                 </section>
             ` : ''}
+
+            ${showNews ? renderHV2NewsCompact() : ''}
 
             ${showPena ? `
                 <!-- Tu Peña (flag fan.hoy.concept-c.pena) -->
