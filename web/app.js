@@ -7913,72 +7913,129 @@ function renderHV2NewsCompact() {
 
 // Render del resumen lateral. Sólo aparece en Fan App > Hoy con
 // `fan.hoy.v2-options` activo. CSS lo oculta por debajo de 1100px.
+// Renderiza el panel resumen lateral del stage. Es general para toda
+// la app (Fan y VIP), no sólo para Hoy V2. Estructura:
+//   1. Cabecera: contexto (App · Tab actual).
+//   2. Cuando estás en Fan App > Hoy con `fan.hoy.v2-options` ON,
+//      tarjeta destacada del concepto activo (con build/lift/riesgo).
+//   3. Lista de funcionalidades activas agrupadas por categoría con
+//      contador "X/Y on" por categoría. Sólo se muestran las activas
+//      (lo apagado se ve en el panel "Funcionalidades" de la derecha).
 function renderHV2Recap() {
     const slot = $('#hv2RecapSlot');
     if (!slot) return;
-    const visible = state.app === 'fan'
-                 && state.tab === 'hoy'
-                 && Flags.isEnabled('fan.hoy.v2-options');
+    const visible = state.app === 'fan' || state.app === 'vip';
     if (!visible) {
         slot.innerHTML = '';
         slot.classList.remove('visible');
         return;
     }
+    slot.classList.add('visible');
 
-    const concept = activeHV2Concept();
-    if (!concept) {
-        slot.classList.add('visible');
-        slot.innerHTML = `
-            <div class="hv2-recap-card hv2-recap-empty">
-                <div class="hv2-recap-tag">Hoy v2 · 3 conceptos</div>
-                <div class="hv2-recap-empty-title">Sin concepto activo</div>
-                <div class="hv2-recap-empty-body">
-                    Activa A, B o C en el panel <b>Funcionalidades</b>
-                    para ver aquí los módulos del concepto.
+    // ── Contexto: app + sección actual ─────────────────────────
+    const appLabel = state.app === 'fan' ? 'Fan App' : 'VIP App';
+    const tabLabel = (() => {
+        if (state.app === 'fan') {
+            return ({
+                hoy:        'Hoy',
+                noticias:   state.newsId ? 'Noticias · Detalle' : 'Noticias',
+                calendario: ['Calendario', 'Clasificación', 'Plantilla'][state.calendarSegment] || 'Calendario',
+                rmtv:       Flags.isEnabled('fan.rmtv.play') ? 'RM Play' : 'RMTV',
+                tienda:     'Tienda'
+            })[state.tab] || state.tab;
+        }
+        return ({
+            inicio:  state.vipRestaurantId ? 'Inicio · Detalle' : 'Inicio',
+            eventos: state.vipEventScreen === 'tickets' ? 'Mis eventos · Entradas'
+                   : state.vipEventScreen === 'detail'  ? 'Mis eventos · Detalle'
+                   : 'Mis eventos',
+            gestor:  'Gestor',
+            perfil:  'Perfil'
+        })[state.vipTab] || state.vipTab;
+    })();
+
+    // ── Tarjeta del concepto (sólo en Fan > Hoy con v2-options) ──
+    let conceptCard = '';
+    const inHoyV2 = state.app === 'fan' && state.tab === 'hoy' && Flags.isEnabled('fan.hoy.v2-options');
+    if (inHoyV2) {
+        const concept = activeHV2Concept();
+        if (concept) {
+            const meta = HV2_CONCEPTS.find(c => c.key === concept) || HV2_CONCEPTS[0];
+            conceptCard = `
+                <div class="hv2-recap-concept hv2-recap-${concept}">
+                    <div class="hv2-recap-head">
+                        <div class="hv2-recap-letter">${meta.short}</div>
+                        <div class="hv2-recap-titlewrap">
+                            <div class="hv2-recap-title">${meta.name}</div>
+                            <div class="hv2-recap-sub">${meta.tag}</div>
+                        </div>
+                    </div>
+                    <p class="hv2-recap-line">${HV2_TAGLINE[concept]}</p>
+                    <div class="hv2-recap-meta">
+                        <div><span>Build</span><b>${meta.build}</b></div>
+                        <div><span>Lift DAU</span><b>${meta.lift}</b></div>
+                        <div><span>Riesgo</span><b>${meta.risk}</b></div>
+                    </div>
                 </div>
-            </div>
-        `;
-        return;
+            `;
+        } else {
+            conceptCard = `
+                <div class="hv2-recap-concept hv2-recap-empty-concept">
+                    <div class="hv2-recap-empty-title">Sin concepto activo</div>
+                    <div class="hv2-recap-empty-body">
+                        Activa A, B o C en el panel <b>Funcionalidades</b>.
+                    </div>
+                </div>
+            `;
+        }
     }
 
-    const meta = HV2_CONCEPTS.find(c => c.key === concept) || HV2_CONCEPTS[0];
-    const modules = HV2_RECAP_MODULES[concept] || [];
-    const onCount = modules.filter(m => Flags.isEnabled(m.key)).length;
-
-    slot.classList.add('visible');
-    slot.innerHTML = `
-        <div class="hv2-recap-card hv2-recap-${concept}">
-            <div class="hv2-recap-tag">Concepto activo</div>
-            <div class="hv2-recap-head">
-                <div class="hv2-recap-letter">${meta.short}</div>
-                <div class="hv2-recap-titlewrap">
-                    <div class="hv2-recap-title">${meta.name}</div>
-                    <div class="hv2-recap-sub">${meta.tag}</div>
+    // ── Lista de flags activos agrupados por categoría ─────────
+    const grouped = Flags.groupedForApp(state.app);
+    const categoryBlocks = Object.entries(grouped)
+        .map(([cat, flags]) => {
+            const onFlags = flags.filter(f => f.enabled);
+            if (!onFlags.length) return '';
+            return `
+                <div class="hv2-recap-cat">
+                    <div class="hv2-recap-cathead">
+                        <span>${cat}</span>
+                        <b>${onFlags.length}/${flags.length}</b>
+                    </div>
+                    <ul class="hv2-recap-mods">
+                        ${onFlags.map(f => `
+                            <li class="is-on" title="${(f.description || '').replace(/"/g, '&quot;')}">
+                                <span class="hv2-recap-mark">✓</span>
+                                <span>${f.label}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
                 </div>
+            `;
+        })
+        .filter(Boolean)
+        .join('');
+
+    const totalOn = Flags.activeCount(state.app);
+    const totalAll = Flags.count(state.app);
+
+    slot.innerHTML = `
+        <div class="hv2-recap-card">
+            <div class="hv2-recap-tag">Activo ahora</div>
+            <div class="hv2-recap-context">
+                <span>${appLabel}</span>
+                <b>${tabLabel}</b>
             </div>
-            <p class="hv2-recap-line">${HV2_TAGLINE[concept]}</p>
-            <div class="hv2-recap-meta">
-                <div><span>Build</span><b>${meta.build}</b></div>
-                <div><span>Lift DAU</span><b>${meta.lift}</b></div>
-                <div><span>Riesgo</span><b>${meta.risk}</b></div>
-            </div>
+            ${conceptCard}
             <div class="hv2-recap-modhead">
-                Módulos activos · <b>${onCount}</b>/${modules.length}
+                <span>Funcionalidades</span>
+                <b>${totalOn}</b>/${totalAll}
             </div>
-            <ul class="hv2-recap-mods">
-                ${modules.map(m => {
-                    const on = Flags.isEnabled(m.key);
-                    return `
-                        <li class="${on ? 'is-on' : 'is-off'}">
-                            <span class="hv2-recap-mark">${on ? '✓' : '✗'}</span>
-                            <span>${m.label}</span>
-                        </li>
-                    `;
-                }).join('')}
-            </ul>
+            <div class="hv2-recap-cats">
+                ${categoryBlocks || '<div class="hv2-recap-empty-body">No hay funcionalidades activas en esta app.</div>'}
+            </div>
             <div class="hv2-recap-foot">
-                Toggle individual de cada módulo desde el panel
-                <b>Funcionalidades</b> a la derecha.
+                Toggle individual desde el panel <b>Funcionalidades</b> a la derecha.
             </div>
         </div>
     `;
