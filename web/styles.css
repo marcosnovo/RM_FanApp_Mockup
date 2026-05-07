@@ -15461,9 +15461,10 @@ input.has-mismatch {
     padding: 12px;
     margin-bottom: 12px;
 }
-.hv2-recap-A { border-left: 3px solid #F5F1E8; }
-.hv2-recap-B { border-left: 3px solid #FF2E63; }
-.hv2-recap-C { border-left: 3px solid #FEBE10; }
+.hv2-recap-A   { border-left: 3px solid #F5F1E8; }
+.hv2-recap-B   { border-left: 3px solid #FF2E63; }
+.hv2-recap-C   { border-left: 3px solid #FEBE10; }
+.hv2-recap-MIX { border-left: 3px solid #00B59E; }
 .hv2-recap-head {
     display: flex; align-items: center; gap: 10px;
     margin-bottom: 8px;
@@ -15484,6 +15485,10 @@ input.has-mismatch {
 .hv2-recap-C .hv2-recap-letter {
     background: linear-gradient(135deg, #FEBE10 0%, #C0892B 100%);
     color: #1E1B4B;
+}
+.hv2-recap-MIX .hv2-recap-letter {
+    background: linear-gradient(135deg, #00B59E 0%, #00529F 100%);
+    color: #fff;
 }
 .hv2-recap-titlewrap { flex: 1; min-width: 0; }
 .hv2-recap-title {
@@ -16747,4 +16752,420 @@ input.has-mismatch {
 @media (prefers-reduced-motion: reduce) {
     .hv2-c-pip-screen { animation: none; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   CONCEPTO D — Mi Mix (curado por el PM)
+   ──────────────────────────────────────────────────────────────── */
+
+.hv2-mix { padding-bottom: 12px; }
+
+/* Cuando este concepto está activo, el fondo de scroll lo dejamos
+   neutro (similar a A/B sin tema fuerte), porque la identidad la da
+   el contenido seleccionado por el usuario. */
+.hv2-scroll[data-hv2-concept-bg="MIX"] {
+    background: #F3F5F8;
+}
+.hv2-scroll[data-hv2-concept-bg="MIX"] .hv2-card {
+    background: #fff;
+    color: #0B1220;
+}
+
+/* Cabecera de bienvenida — el `app-topbar-slot` ya pinta su contenido
+   con su propia caja, sólo aseguramos un buffer arriba para el status-bar. */
+.hv2-mix-header {
+    padding-top: 56px;
+    background: linear-gradient(180deg, #0B1220 0%, #0B1A33 60%, transparent 100%);
+}
+.hv2-mix-pad-top { height: 56px; }
+
+/* ── Selector de equipos + jugadores ─────────────────────────── */
+.hv2-mix-selector {
+    background: #fff;
+    margin: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+}
+.hv2-mix-selector-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+}
+.hv2-mix-selector-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #4A5568;
+}
+.hv2-mix-selector-edit {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #F4F7FB;
+    border: 1px solid #E2E8F0;
+    color: #00529F;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.hv2-mix-selector-edit:hover { background: #E8EEF6; }
+
+.hv2-mix-empty {
+    width: 100%;
+    background: #F4F7FB;
+    border: 1px dashed #00529F;
+    color: #00529F;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.hv2-mix-empty-ico { font-size: 20px; line-height: 1; }
+
+.hv2-mix-chips {
+    display: flex; gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+}
+.hv2-mix-chips::-webkit-scrollbar { display: none; }
+.hv2-mix-chip {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #F4F7FB;
+    color: #4A5568;
+    border: 1px solid #E2E8F0;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), background 220ms;
+}
+.hv2-mix-chip:hover { transform: translateY(-1px); }
+.hv2-mix-chip.is-active {
+    background: var(--mix-chip-color, #00529F);
+    color: #fff;
+    border-color: var(--mix-chip-color, #00529F);
+}
+.hv2-mix-chip-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--mix-chip-color, #00529F);
+}
+.hv2-mix-chip.is-active .hv2-mix-chip-dot { background: rgba(255,255,255,0.85); }
+.hv2-mix-chip-avatar {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    color: #fff;
+    display: grid; place-items: center;
+    font-weight: 800;
+    font-size: 9px;
+}
+.hv2-mix-chip-add {
+    background: #fff;
+    color: #00529F;
+    border: 1px dashed #00529F;
+    font-weight: 800;
+    padding: 6px 12px;
+}
+
+/* ── Próximos partidos compactos ─────────────────────────────── */
+.hv2-mix-upcoming { padding: 4px 0 12px; }
+.hv2-mix-section-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 14px;
+    margin-bottom: 8px;
+}
+.hv2-mix-cta {
+    background: transparent;
+    border: none;
+    color: #00529F;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.hv2-mix-upcoming-track {
+    display: flex; gap: 8px;
+    padding: 0 12px 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.hv2-mix-upcoming-track::-webkit-scrollbar { display: none; }
+.hv2-mix-match {
+    flex: 0 0 auto;
+    width: 148px;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-top: 3px solid var(--match-color, #00529F);
+    border-radius: 12px;
+    padding: 10px 12px 8px;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+    cursor: pointer;
+}
+.hv2-mix-match-comp {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: var(--match-color, #00529F);
+    margin-bottom: 6px;
+}
+.hv2-mix-match-row {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 6px;
+}
+.hv2-mix-match-crest {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-weight: 800;
+    font-size: 10px;
+    border: 1px solid rgba(0,0,0,0.06);
+}
+.hv2-mix-match-vs {
+    font-size: 10px;
+    color: #94A3B8;
+    font-weight: 600;
+}
+.hv2-mix-match-meta {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0B1220;
+}
+.hv2-mix-match-foot {
+    font-size: 10px;
+    color: #4A5568;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Editor del Mi Mix — modal sheet sobre el frame
+   ──────────────────────────────────────────────────────────────── */
+
+.hv2-mix-editor {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    color: #0B1220;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+    animation: hv2MixSlideUp 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes hv2MixSlideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hv2-mix-editor { animation: none; }
+}
+.hv2-mix-editor-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 56px 16px 12px;
+    background: #fff;
+    border-bottom: 1px solid #E2E8F0;
+}
+.hv2-mix-editor-close {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    color: #0B1220;
+    cursor: pointer;
+    font-size: 16px;
+}
+.hv2-mix-editor-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0B1220;
+}
+.hv2-mix-editor-spacer { width: 32px; }
+.hv2-mix-editor-progress {
+    display: flex; gap: 6px;
+    padding: 12px 16px 8px;
+    background: #fff;
+}
+.hv2-mix-editor-progress span {
+    flex: 1;
+    height: 3px;
+    background: #E2E8F0;
+    border-radius: 2px;
+    transition: background 220ms;
+}
+.hv2-mix-editor-progress span.is-on { background: #00529F; }
+.hv2-mix-editor-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px 100px;
+}
+.hv2-mix-editor-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+    padding: 12px 16px 24px;
+    border-top: 1px solid #E2E8F0;
+    background: #fff;
+}
+.hv2-mix-editor-back,
+.hv2-mix-editor-next {
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.hv2-mix-editor-back {
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    color: #0B1220;
+}
+.hv2-mix-editor-next {
+    background: #00529F;
+    border: 1px solid #00529F;
+    color: #fff;
+    flex: 1;
+}
+.hv2-mix-editor-next:hover { background: #003e78; }
+
+.hv2-mix-step h3 {
+    font-size: 18px;
+    font-weight: 800;
+    margin: 0 0 4px;
+    color: #0B1220;
+}
+.hv2-mix-step p {
+    font-size: 13px;
+    color: #4A5568;
+    margin: 0 0 16px;
+    line-height: 1.4;
+}
+.hv2-mix-grouphead {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #94A3B8;
+    margin: 16px 0 8px;
+}
+.hv2-mix-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.hv2-mix-option {
+    display: flex; align-items: center; gap: 8px;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0B1220;
+    cursor: pointer;
+    transition: transform 120ms, border-color 220ms, background 220ms;
+}
+.hv2-mix-option:hover { transform: translateY(-1px); }
+.hv2-mix-option.is-on {
+    background: #F0F6FF;
+    border-color: var(--mix-chip-color, #00529F);
+    box-shadow: 0 0 0 2px var(--mix-chip-color, #00529F) inset;
+}
+.hv2-mix-option-ico { font-size: 18px; }
+.hv2-mix-option-label { flex: 1; min-width: 0; }
+.hv2-mix-option-check {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--mix-chip-color, #00529F);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    opacity: 0;
+    transition: opacity 220ms;
+}
+.hv2-mix-option.is-on .hv2-mix-option-check { opacity: 1; }
+.hv2-mix-option-avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    color: #fff;
+    display: grid; place-items: center;
+    font-weight: 800;
+    font-size: 11px;
+    flex: 0 0 auto;
+}
+
+.hv2-mix-listing {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: flex; flex-direction: column; gap: 6px;
+}
+.hv2-mix-listing li {
+    display: flex; align-items: center; gap: 8px;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 8px 10px;
+}
+.hv2-mix-listing-handle {
+    color: #94A3B8;
+    font-weight: 800;
+    font-size: 14px;
+    cursor: grab;
+    user-select: none;
+}
+.hv2-mix-listing-ico {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    color: #fff;
+    display: grid; place-items: center;
+    font-weight: 800;
+    font-size: 12px;
+    flex: 0 0 auto;
+}
+.hv2-mix-listing-label {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0B1220;
+    min-width: 0;
+}
+.hv2-mix-listing-up,
+.hv2-mix-listing-down,
+.hv2-mix-listing-remove {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: 1px solid #E2E8F0;
+    background: #F4F7FB;
+    color: #4A5568;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 12px;
+}
+.hv2-mix-listing-up:disabled,
+.hv2-mix-listing-down:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+.hv2-mix-listing-remove { color: #C62828; }
+.hv2-mix-listing-remove:hover { background: #FFEBEE; }
+
+.hv2-mix-add-more {
+    width: 100%;
+    background: #fff;
+    border: 1px dashed #00529F;
+    color: #00529F;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 12px;
+}
+.hv2-mix-add-more:hover { background: #F0F6FF; }
 

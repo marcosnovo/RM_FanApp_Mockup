@@ -54,6 +54,14 @@ const state = {
     hoyV2PipPos: { x: 178, y: 72 },  // posición del PiP arrastrable
     hoyV2ChatTick: 0,           // contador de mensajes nuevos en chat de B matchday
 
+    // ── Concepto D · Mi Mix ─────────────────────────────────────
+    // Selección curada de equipos + jugadores favoritos. Persistida
+    // en localStorage vía `HoyV2Mix` (ver más abajo).
+    hoyV2MixTeams: ['masc', 'fem', 'basket'],   // ids de equipos en el mix
+    hoyV2MixPlayers: ['mbappe', 'vini', 'athenea'], // jugadores ordenados
+    hoyV2MixFeedFilter: 'all',  // chip activo dentro del selector del mix
+    hoyV2MixEditor: null,       // null | { step: 1|2|3, teamsDraft: [...], playersDraft: [...] }
+
     // Hoy — pestañas por equipo (flag 'fan.hoy.team-tabs')
     // Persistidas en localStorage vía HoyTeamTabs.
     hoyTeamFilter: 'all',                                // 'all' | 'masc' | 'fem' | 'basket'
@@ -7504,6 +7512,8 @@ function render() {
         renderHoyV2BehindScenesSheet();
     } else if (state.app === 'fan' && state.openRanking) {
         renderHoyV2RankingSheet();
+    } else if (state.app === 'fan' && state.hoyV2MixEditor) {
+        renderHV2MixEditor();
     } else {
         $('#newsSheetSlot').innerHTML = '';
     }
@@ -7734,9 +7744,10 @@ function updateStageHeader() {
 // ════════════════════════════════════════════════════════════════
 
 const HV2_CONCEPTS = [
-    { key: 'A', short: 'A', name: 'Madrid Times',    tag: 'Conservador',           build: '6–10 semanas',  lift: '+15–20%', risk: 'Bajo',  color: '#0B1A33' },
-    { key: 'B', short: 'B', name: 'Madrid Live',     tag: 'Recomendado',           build: '16–24 semanas', lift: '+30–40%', risk: 'Medio', color: '#1E1B4B' },
-    { key: 'C', short: 'C', name: 'Madrid Universe', tag: 'Ambicioso',             build: '6–9 meses',     lift: '+50–70%', risk: 'Alto',  color: '#2E1B6B' }
+    { key: 'A',   short: 'A', name: 'Madrid Times',    tag: 'Conservador',           build: '6–10 semanas',  lift: '+15–20%', risk: 'Bajo',  color: '#0B1A33' },
+    { key: 'B',   short: 'B', name: 'Madrid Live',     tag: 'Recomendado',           build: '16–24 semanas', lift: '+30–40%', risk: 'Medio', color: '#1E1B4B' },
+    { key: 'C',   short: 'C', name: 'Madrid Universe', tag: 'Ambicioso',             build: '6–9 meses',     lift: '+50–70%', risk: 'Alto',  color: '#2E1B6B' },
+    { key: 'MIX', short: 'D', name: 'Mi Mix',          tag: 'Curado por el PM',      build: 'Pick & mix',    lift: 'Variable',risk: 'Bajo',  color: '#0F1A35' }
 ];
 
 const HV2_CLIPS = [
@@ -7794,9 +7805,10 @@ const HV2_COLLECTIBLES = [
 // ON, no renderizamos nada — mostramos un empty-state que invita al
 // usuario a activar uno desde el panel de funcionalidades.
 function activeHV2Concept() {
-    if (Flags.isEnabled('fan.hoy.concept-a')) return 'A';
-    if (Flags.isEnabled('fan.hoy.concept-b')) return 'B';
-    if (Flags.isEnabled('fan.hoy.concept-c')) return 'C';
+    if (Flags.isEnabled('fan.hoy.concept-a'))   return 'A';
+    if (Flags.isEnabled('fan.hoy.concept-b'))   return 'B';
+    if (Flags.isEnabled('fan.hoy.concept-c'))   return 'C';
+    if (Flags.isEnabled('fan.hoy.concept-mix')) return 'MIX';
     return null;
 }
 
@@ -7824,9 +7836,10 @@ function renderHoyV2Options() {
     const matchday = Flags.isEnabled('fan.hoy.concept-b.matchday');
 
     const conceptBody =
-        concept === 'A' ? renderHV2ConceptA()
-      : concept === 'B' ? renderHV2ConceptB(matchday)
-      :                   renderHV2ConceptC(matchday);
+        concept === 'A'   ? renderHV2ConceptA()
+      : concept === 'B'   ? renderHV2ConceptB(matchday)
+      : concept === 'C'   ? renderHV2ConceptC(matchday)
+      :                     renderHV2ConceptMix();
 
     return `
         <div class="hv2-wrap" data-hv2-concept="${concept}" data-hv2-matchday="${matchday ? '1' : '0'}">
@@ -7846,9 +7859,10 @@ function renderHoyV2Options() {
 // Tagline corto por concepto — usado en el panel resumen lateral
 // (#hv2RecapSlot) en desktop. Mantiene la identidad fuera del frame.
 const HV2_TAGLINE = {
-    A: 'Reorganización editorial conservadora.',
-    B: 'Feed dominante + predictor + matchday.',
-    C: 'Metaverso del fan: ML, peñas, PiP, holos.'
+    A:   'Reorganización editorial conservadora.',
+    B:   'Feed dominante + predictor + matchday.',
+    C:   'Metaverso del fan: ML, peñas, PiP, holos.',
+    MIX: 'Mezcla curada: tú eliges qué módulos viven en tu Hoy.'
 };
 
 // Sub-flags por concepto en orden de scroll. Cada entry pinta una
@@ -7877,6 +7891,16 @@ const HV2_RECAP_MODULES = {
         { key: 'fan.hoy.concept-c.pena',        label: 'Tu Peña digital' },
         { key: 'fan.hoy.concept-c.bernabeu',    label: 'Bernabéu hoy' },
         { key: 'fan.hoy.concept-c.collectibles',label: 'Coleccionables holo' }
+    ],
+    MIX: [
+        { key: 'fan.hoy.concept-mix.login-header', label: 'Cabecera login' },
+        { key: 'fan.hoy.concept-mix.selector',     label: 'Selector equipos / jugadores' },
+        { key: 'fan.hoy.concept-mix.upcoming',     label: 'Próximos partidos' },
+        { key: 'fan.hoy.concept-mix.feed',         label: 'Feed vertical 9:16' },
+        { key: 'fan.hoy.concept-mix.streak',       label: 'Racha Madridista' },
+        { key: 'fan.hoy.concept-mix.predictor',    label: 'Predictor del Madridista' },
+        { key: 'fan.hoy.concept-mix.news',         label: 'Mini Noticias' },
+        { key: 'fan.hoy.concept-mix.bernabeu',     label: 'Bernabéu hoy' }
     ]
 };
 
@@ -8607,6 +8631,629 @@ function renderHV2ConceptC(matchday) {
     `;
 }
 
+// ════════════════════════════════════════════════════════════════
+// CONCEPTO D — "Mi Mix" (curado por el PM)
+// Combina los módulos preferidos de A/B/C con un selector configurable
+// de equipos y jugadores favoritos. Cada bloque es toggleable
+// individualmente como sub-flag bajo `fan.hoy.concept-mix`.
+// ════════════════════════════════════════════════════════════════
+
+const HV2_MIX_TEAMS = [
+    { id: 'masc',   label: 'Fútbol masc.', short: 'Masc',   icon: '⚽', color: '#00529F' },
+    { id: 'fem',    label: 'Fútbol fem.',  short: 'Fem',    icon: '⚽', color: '#E91E63' },
+    { id: 'basket', label: 'Baloncesto',   short: 'Basket', icon: '🏀', color: '#1976D2' }
+];
+
+const HV2_MIX_PLAYERS = [
+    // Masculino
+    { id: 'mbappe',     name: 'Kylian Mbappé', short: 'Mbappé',     team: 'masc',   initials: 'KM', color: '#FFD400' },
+    { id: 'vini',       name: 'Vinícius Jr.',  short: 'Vinícius',   team: 'masc',   initials: 'VJ', color: '#00B59E' },
+    { id: 'bellingham', name: 'Jude Bellingham',short: 'Bellingham',team: 'masc',   initials: 'JB', color: '#7B1FA2' },
+    { id: 'rodrygo',    name: 'Rodrygo',       short: 'Rodrygo',    team: 'masc',   initials: 'RG', color: '#FF6B35' },
+    { id: 'courtois',   name: 'Thibaut Courtois', short: 'Courtois',team: 'masc',   initials: 'TC', color: '#3a2978' },
+    { id: 'camavinga',  name: 'Eduardo Camavinga', short: 'Camavinga', team: 'masc', initials: 'EC', color: '#0d8c40' },
+    // Femenino
+    { id: 'athenea',    name: 'Athenea del Castillo', short: 'Athenea', team: 'fem', initials: 'AC', color: '#E91E63' },
+    { id: 'weir',       name: 'Caroline Weir',  short: 'Weir',       team: 'fem',  initials: 'CW', color: '#3a2978' },
+    { id: 'olga',       name: 'Olga Carmona',   short: 'Olga',       team: 'fem',  initials: 'OC', color: '#5a4380' },
+    { id: 'misa',       name: 'Misa Rodríguez', short: 'Misa',       team: 'fem',  initials: 'MR', color: '#cc1a26' },
+    // Basket
+    { id: 'campazzo',   name: 'Facundo Campazzo', short: 'Campazzo', team: 'basket', initials: 'FC', color: '#1976D2' },
+    { id: 'tavares',    name: 'Walter Tavares',   short: 'Tavares',  team: 'basket', initials: 'WT', color: '#1b3a72' },
+    { id: 'llull',      name: 'Sergio Llull',     short: 'Llull',    team: 'basket', initials: 'SL', color: '#163a72' },
+    { id: 'hezonja',    name: 'Mario Hezonja',    short: 'Hezonja',  team: 'basket', initials: 'MH', color: '#0a2c4a' }
+];
+
+// Próximos partidos compactos (más pequeños que la Estructura modular)
+const HV2_MIX_UPCOMING = [
+    { team: 'masc',   comp: 'CHAMPIONS',  homeShort: 'RM',  awayShort: 'BAY', homeColor: '#fff', awayColor: '#DC052D', awayLabel: 'Bayern',           when: 'Mié 21:00' },
+    { team: 'fem',    comp: 'LIGA F',     homeShort: 'RM',  awayShort: 'ATM', homeColor: '#fff', awayColor: '#cc1a26', awayLabel: 'Atleti',            when: 'Sáb 12:00' },
+    { team: 'basket', comp: 'EUROLEAGUE', homeShort: 'RM',  awayShort: 'TEL', homeColor: '#fff', awayColor: '#1976D2', awayLabel: 'Maccabi Tel Aviv',  when: 'Dom 18:30' }
+];
+
+// ── Persistencia en localStorage ─────────────────────────────────
+const HV2_MIX_STORAGE_KEY = 'rm_hoy_v2_mix_v1';
+const HoyV2Mix = {
+    hydrate() {
+        try {
+            const raw = localStorage.getItem(HV2_MIX_STORAGE_KEY);
+            if (!raw) return;
+            const s = JSON.parse(raw);
+            if (Array.isArray(s.teams))   state.hoyV2MixTeams   = s.teams;
+            if (Array.isArray(s.players)) state.hoyV2MixPlayers = s.players;
+        } catch {}
+    },
+    persist() {
+        try {
+            localStorage.setItem(HV2_MIX_STORAGE_KEY, JSON.stringify({
+                teams: state.hoyV2MixTeams,
+                players: state.hoyV2MixPlayers
+            }));
+        } catch {}
+    }
+};
+window.HoyV2Mix = HoyV2Mix;
+
+// ── Renderer principal del concepto Mi Mix ──────────────────────
+function renderHV2ConceptMix() {
+    const showHeader    = Flags.isEnabled('fan.hoy.concept-mix.login-header');
+    const showSelector  = Flags.isEnabled('fan.hoy.concept-mix.selector');
+    const showUpcoming  = Flags.isEnabled('fan.hoy.concept-mix.upcoming');
+    const showFeed      = Flags.isEnabled('fan.hoy.concept-mix.feed');
+    const showStreak    = Flags.isEnabled('fan.hoy.concept-mix.streak');
+    const showPredictor = Flags.isEnabled('fan.hoy.concept-mix.predictor');
+    const showNews      = Flags.isEnabled('fan.hoy.concept-mix.news');
+    const showBernabeu  = Flags.isEnabled('fan.hoy.concept-mix.bernabeu');
+
+    return `
+        <div class="hv2-mix">
+
+            ${showHeader ? renderHV2MixLoginHeader() : ''}
+
+            ${showSelector ? renderHV2MixSelector() : ''}
+
+            ${showUpcoming ? renderHV2MixUpcoming() : ''}
+
+            ${showFeed ? renderHV2MixFeed() : ''}
+
+            ${showStreak ? renderHV2MixStreak() : ''}
+
+            ${showPredictor ? renderHV2MixPredictor() : ''}
+
+            ${showNews ? renderHV2NewsCompact() : ''}
+
+            ${showBernabeu ? renderHV2MixBernabeu() : ''}
+
+        </div>
+    `;
+}
+
+// ── Cabecera de bienvenida / login (reutiliza HoyLoginHeader) ──
+function renderHV2MixLoginHeader() {
+    if (typeof renderAppLoginBar !== 'function') {
+        return '<div class="hv2-mix-pad-top"></div>';
+    }
+    return `
+        <header class="hv2-mix-header">
+            ${renderAppLoginBar()}
+        </header>
+    `;
+}
+
+// ── Selector de equipos + jugadores ─────────────────────────────
+// Si no hay nada configurado (improbable, hay defaults), CTA grande.
+// Si hay items, chips con avatares + botón "Configurar".
+function renderHV2MixSelector() {
+    const teams = state.hoyV2MixTeams.map(id => HV2_MIX_TEAMS.find(t => t.id === id)).filter(Boolean);
+    const players = state.hoyV2MixPlayers.map(id => HV2_MIX_PLAYERS.find(p => p.id === id)).filter(Boolean);
+    const filter = state.hoyV2MixFeedFilter;
+    const empty = teams.length === 0 && players.length === 0;
+
+    return `
+        <section class="hv2-mix-selector">
+            <div class="hv2-mix-selector-head">
+                <span class="hv2-mix-selector-title">Tus favoritos</span>
+                <button class="hv2-mix-selector-edit" data-mix-edit-open aria-label="Configurar favoritos">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Configurar
+                </button>
+            </div>
+            ${empty ? `
+                <button class="hv2-mix-empty" data-mix-edit-open>
+                    <span class="hv2-mix-empty-ico">＋</span>
+                    Configura tu Mi Mix · 3 pasos
+                </button>
+            ` : `
+                <div class="hv2-mix-chips" data-hv2-mix-chips>
+                    <button class="hv2-mix-chip ${filter === 'all' ? 'is-active' : ''}" data-mix-chip="all">Para ti</button>
+                    ${teams.map(t => `
+                        <button class="hv2-mix-chip hv2-mix-chip-team ${filter === t.id ? 'is-active' : ''}"
+                                data-mix-chip="${t.id}" style="--mix-chip-color:${t.color}">
+                            <span class="hv2-mix-chip-dot"></span>${t.label}
+                        </button>
+                    `).join('')}
+                    ${players.map(p => `
+                        <button class="hv2-mix-chip hv2-mix-chip-player ${filter === p.id ? 'is-active' : ''}"
+                                data-mix-chip="${p.id}" style="--mix-chip-color:${p.color}">
+                            <span class="hv2-mix-chip-avatar" style="background:${p.color}">${p.initials}</span>${p.short}
+                        </button>
+                    `).join('')}
+                    <button class="hv2-mix-chip hv2-mix-chip-add" data-mix-edit-open aria-label="Añadir favoritos">＋</button>
+                </div>
+            `}
+        </section>
+    `;
+}
+
+// ── Próximos partidos compactos ─────────────────────────────────
+function renderHV2MixUpcoming() {
+    const teams = state.hoyV2MixTeams;
+    const filter = state.hoyV2MixFeedFilter;
+    // Si el filtro activo es un equipo concreto, sólo ese match.
+    // Si es un jugador, su equipo. Si "Para ti", todos los marcados.
+    let visible = HV2_MIX_UPCOMING.filter(m => teams.includes(m.team));
+    if (filter !== 'all') {
+        const t = HV2_MIX_TEAMS.find(x => x.id === filter);
+        if (t) {
+            visible = visible.filter(m => m.team === t.id);
+        } else {
+            const p = HV2_MIX_PLAYERS.find(x => x.id === filter);
+            if (p) visible = visible.filter(m => m.team === p.team);
+        }
+    }
+    if (!visible.length) return '';
+    return `
+        <section class="hv2-mix-upcoming">
+            <div class="hv2-mix-section-head">
+                <h3 class="hv2-a-list-title">Próximos partidos</h3>
+                <button class="hv2-mix-cta" data-go-tab="calendario">Ver todos</button>
+            </div>
+            <div class="hv2-mix-upcoming-track">
+                ${visible.map(m => {
+                    const team = HV2_MIX_TEAMS.find(t => t.id === m.team) || { color: '#00529F', icon: '⚽' };
+                    return `
+                        <article class="hv2-mix-match" style="--match-color:${team.color}">
+                            <div class="hv2-mix-match-comp">${m.comp}</div>
+                            <div class="hv2-mix-match-row">
+                                <span class="hv2-mix-match-crest" style="background:${m.homeColor};color:#00529F">${m.homeShort}</span>
+                                <span class="hv2-mix-match-vs">vs</span>
+                                <span class="hv2-mix-match-crest" style="background:${m.awayColor};color:#fff">${m.awayShort}</span>
+                            </div>
+                            <div class="hv2-mix-match-meta">${m.when}</div>
+                            <div class="hv2-mix-match-foot">${team.icon} ${m.awayLabel}</div>
+                        </article>
+                    `;
+                }).join('')}
+            </div>
+        </section>
+    `;
+}
+
+// ── Feed vertical 9:16 (filtrado por chip activo del mix) ───────
+function renderHV2MixFeed() {
+    const filter = state.hoyV2MixFeedFilter;
+    let clips = HV2_CLIPS;
+    if (filter !== 'all') {
+        const team = HV2_MIX_TEAMS.find(t => t.id === filter);
+        if (team) {
+            // Equipo → clips cuya tag corresponda (femenino, basket, default masc)
+            const wanted = team.id === 'fem' ? 'femenino'
+                         : team.id === 'basket' ? 'basket'
+                         : null;
+            clips = wanted ? HV2_CLIPS.filter(c => c.filter === wanted)
+                           : HV2_CLIPS.filter(c => !['femenino','basket'].includes(c.filter));
+        } else {
+            const player = HV2_MIX_PLAYERS.find(p => p.id === filter);
+            if (player) clips = HV2_CLIPS.filter(c => c.filter === player.id) || HV2_CLIPS;
+            if (!clips.length) clips = HV2_CLIPS;
+        }
+    }
+    if (!clips.length) clips = HV2_CLIPS;
+    const idx = Math.min(state.hoyV2FeedIndex, clips.length - 1);
+    const clip = clips[idx];
+    return `
+        <section class="hv2-b-feed-section">
+            <div class="hv2-b-feed" data-hv2-feed
+                 style="background:linear-gradient(165deg, ${clip.color1} 0%, ${clip.color2} 100%)">
+                <div class="hv2-b-feed-top">
+                    <span class="hv2-b-feed-dur">${clip.duration}</span>
+                    <span class="hv2-b-feed-tag">${clip.tag}</span>
+                </div>
+                <button class="hv2-b-feed-play" aria-label="Reproducir">
+                    <svg viewBox="0 0 24 24" width="26" height="26" fill="#fff"><polygon points="6,4 20,12 6,20"/></svg>
+                </button>
+                <div class="hv2-b-feed-overlay">
+                    <div class="hv2-b-feed-author">
+                        <span class="hv2-b-feed-avatar" style="background:${clip.color1}">${clip.initials}</span>
+                        <span>${clip.player}</span>
+                    </div>
+                    <div class="hv2-b-feed-title">${clip.title}</div>
+                    <div class="hv2-b-feed-actions">
+                        <span>❤ ${clip.likes}</span>
+                        <span>💬 ${clip.comments}</span>
+                        <span>↗ Compartir</span>
+                    </div>
+                </div>
+                <div class="hv2-b-feed-progress">
+                    ${clips.map((_, i) => `<span class="${i === idx ? 'is-active' : ''}"></span>`).join('')}
+                </div>
+                <button class="hv2-b-feed-nav prev" data-hv2-feed-prev aria-label="Anterior">↑</button>
+                <button class="hv2-b-feed-nav next" data-hv2-feed-next aria-label="Siguiente">↓</button>
+            </div>
+        </section>
+    `;
+}
+
+// ── Racha Madridista (igual que A) ───────────────────────────────
+function renderHV2MixStreak() {
+    const days = [
+        { d: 'L', on: true,  today: false },
+        { d: 'M', on: true,  today: false },
+        { d: 'X', on: true,  today: false },
+        { d: 'J', on: true,  today: false },
+        { d: 'V', on: true,  today: true  },
+        { d: 'S', on: false, today: false },
+        { d: 'D', on: false, today: false }
+    ];
+    return `
+        <section class="hv2-card hv2-a-streak">
+            <div class="hv2-a-streak-head">
+                <span>🔥 Tu racha: <b>5 días</b></span>
+                <span class="hv2-a-streak-next">Próx. logro: 7 días</span>
+            </div>
+            <div class="hv2-a-streak-days">
+                ${days.map(x => `
+                    <div class="hv2-a-day ${x.on ? 'is-on' : ''} ${x.today ? 'is-today' : ''}">
+                        <span class="hv2-a-day-letter">${x.d}</span>
+                        <span class="hv2-a-day-mark">${x.on ? '✓' : '?'}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="hv2-a-streak-foot">+1 cada día que abras la app. Reset el 1 de junio.</div>
+        </section>
+    `;
+}
+
+// ── Predictor (igual que B) ─────────────────────────────────────
+function renderHV2MixPredictor() {
+    const pred = state.hoyV2Prediction;
+    return `
+        <section class="hv2-card hv2-b-pred">
+            <div class="hv2-b-pred-head">
+                <span>🎯 <b>Predictor del Madridista</b></span>
+                <span class="hv2-b-pred-streak">RACHA 🔥 5</span>
+            </div>
+            <div class="hv2-b-pred-q">¿Resultado RM-Bayern vuelta?</div>
+            <div class="hv2-b-pred-opts">
+                ${HV2_PREDICTOR_OPTIONS.map(opt => `
+                    <button class="hv2-b-pred-opt ${pred === opt ? 'is-picked' : ''} ${pred && pred !== opt ? 'is-dim' : ''}"
+                            data-hv2-pred="${opt}" ${pred ? 'disabled' : ''}>
+                        ${opt}
+                    </button>
+                `).join('')}
+            </div>
+            ${pred ? `<div class="hv2-b-pred-result">Tu predicción enviada · Posición <b>#428</b> de 121.300</div>` : ''}
+            <div class="hv2-b-pred-foot">Top 10 mensual: camiseta firmada por la plantilla</div>
+        </section>
+    `;
+}
+
+// ── Bernabéu hoy (igual que C) ──────────────────────────────────
+function renderHV2MixBernabeu() {
+    return `
+        <section class="hv2-card hv2-c-bernabeu">
+            <h3 class="hv2-a-list-title">Bernabéu hoy</h3>
+            <div class="hv2-c-bern-row">
+                <span class="hv2-c-bern-ico">🏟</span>
+                <div class="hv2-c-bern-body">
+                    <div class="hv2-c-bern-title">Tour Bernabéu</div>
+                    <div class="hv2-c-bern-sub">16:00 · 8 plazas</div>
+                </div>
+                <button class="hv2-c-bern-cta">Reservar</button>
+            </div>
+            <div class="hv2-c-bern-row">
+                <span class="hv2-c-bern-ico">🎤</span>
+                <div class="hv2-c-bern-body">
+                    <div class="hv2-c-bern-title">Concierto: Sabina</div>
+                    <div class="hv2-c-bern-sub">21:00 · Sold out</div>
+                </div>
+                <button class="hv2-c-bern-cta hv2-c-bern-cta-ghost">Cómo llegar</button>
+            </div>
+        </section>
+    `;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Editor 3 pasos del Mi Mix (modal sheet sobre el frame)
+// ────────────────────────────────────────────────────────────────
+function renderHV2MixEditor() {
+    const ed = state.hoyV2MixEditor;
+    if (!ed) return '';
+    const slot = $('#newsSheetSlot');
+    if (!slot) return '';
+
+    const total = 3;
+    const html = `
+        <div class="hv2-mix-editor" role="dialog" aria-modal="true">
+            <div class="hv2-mix-editor-head">
+                <button class="hv2-mix-editor-close" data-mix-edit-close aria-label="Cerrar">✕</button>
+                <div class="hv2-mix-editor-title">
+                    Mi Mix · paso ${ed.step} de ${total}
+                </div>
+                <div class="hv2-mix-editor-spacer"></div>
+            </div>
+            <div class="hv2-mix-editor-progress">
+                ${[1,2,3].map(s => `<span class="${s <= ed.step ? 'is-on' : ''}"></span>`).join('')}
+            </div>
+            <div class="hv2-mix-editor-body">
+                ${ed.step === 1 ? renderHV2MixEditorStep1(ed) : ''}
+                ${ed.step === 2 ? renderHV2MixEditorStep2(ed) : ''}
+                ${ed.step === 3 ? renderHV2MixEditorStep3(ed) : ''}
+            </div>
+            <div class="hv2-mix-editor-foot">
+                ${ed.step > 1 ? `<button class="hv2-mix-editor-back" data-mix-edit-prev>← Atrás</button>` : '<span></span>'}
+                <button class="hv2-mix-editor-next" data-mix-edit-next>
+                    ${ed.step < 3 ? 'Siguiente →' : 'Guardar ✓'}
+                </button>
+            </div>
+        </div>
+    `;
+    // Pintamos el editor en el news-sheet-slot, que ya está sobre el
+    // contenido del frame y se desplaza con safe areas. No interfiere
+    // con la tab-bar.
+    slot.innerHTML = html;
+    return '';
+}
+
+function renderHV2MixEditorStep1(ed) {
+    const draft = ed.teamsDraft;
+    return `
+        <div class="hv2-mix-step">
+            <h3>Tus equipos</h3>
+            <p>¿Qué equipos del Real Madrid sigues? Puedes elegir varios.</p>
+            <div class="hv2-mix-options">
+                ${HV2_MIX_TEAMS.map(t => {
+                    const on = draft.includes(t.id);
+                    return `
+                        <button class="hv2-mix-option ${on ? 'is-on' : ''}"
+                                data-mix-toggle-team="${t.id}"
+                                style="--mix-chip-color:${t.color}">
+                            <span class="hv2-mix-option-ico">${t.icon}</span>
+                            <span class="hv2-mix-option-label">${t.label}</span>
+                            <span class="hv2-mix-option-check">${on ? '✓' : ''}</span>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderHV2MixEditorStep2(ed) {
+    const draft = ed.playersDraft;
+    const teamsDraft = ed.teamsDraft.length ? ed.teamsDraft : HV2_MIX_TEAMS.map(t => t.id);
+    return `
+        <div class="hv2-mix-step">
+            <h3>Tus jugadores</h3>
+            <p>De los equipos que sigues, elige tus jugadores favoritos.</p>
+            ${teamsDraft.map(tid => {
+                const team = HV2_MIX_TEAMS.find(t => t.id === tid);
+                if (!team) return '';
+                const players = HV2_MIX_PLAYERS.filter(p => p.team === tid);
+                return `
+                    <div class="hv2-mix-grouphead">${team.icon} ${team.label.toUpperCase()}</div>
+                    <div class="hv2-mix-options">
+                        ${players.map(p => {
+                            const on = draft.includes(p.id);
+                            return `
+                                <button class="hv2-mix-option hv2-mix-option-player ${on ? 'is-on' : ''}"
+                                        data-mix-toggle-player="${p.id}"
+                                        style="--mix-chip-color:${p.color}">
+                                    <span class="hv2-mix-option-avatar" style="background:${p.color}">${p.initials}</span>
+                                    <span class="hv2-mix-option-label">${p.short}</span>
+                                    <span class="hv2-mix-option-check">${on ? '✓' : ''}</span>
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderHV2MixEditorStep3(ed) {
+    // Mostramos teams primero (preservan orden de selección) + players
+    // (con posición editable mediante up/down). Botón añadir más
+    // vuelve al paso 2.
+    const teams = ed.teamsDraft.map(id => HV2_MIX_TEAMS.find(t => t.id === id)).filter(Boolean);
+    const players = ed.playersDraft.map(id => HV2_MIX_PLAYERS.find(p => p.id === id)).filter(Boolean);
+    const total = teams.length + players.length;
+    return `
+        <div class="hv2-mix-step">
+            <h3>Tu Mi Mix</h3>
+            <p>${total} elementos · usa ↑/↓ para reordenar y × para quitar.</p>
+
+            ${teams.length ? `
+                <div class="hv2-mix-grouphead">EQUIPOS</div>
+                <ul class="hv2-mix-listing">
+                    ${teams.map((t, i) => `
+                        <li>
+                            <span class="hv2-mix-listing-handle">≡</span>
+                            <span class="hv2-mix-listing-ico" style="background:${t.color}">${t.icon}</span>
+                            <span class="hv2-mix-listing-label">${t.label}</span>
+                            <button class="hv2-mix-listing-up"   data-mix-team-up="${t.id}"   ${i === 0                  ? 'disabled' : ''} aria-label="Subir">↑</button>
+                            <button class="hv2-mix-listing-down" data-mix-team-down="${t.id}" ${i === teams.length - 1   ? 'disabled' : ''} aria-label="Bajar">↓</button>
+                            <button class="hv2-mix-listing-remove" data-mix-team-remove="${t.id}" aria-label="Quitar">×</button>
+                        </li>
+                    `).join('')}
+                </ul>
+            ` : ''}
+
+            ${players.length ? `
+                <div class="hv2-mix-grouphead">JUGADORES</div>
+                <ul class="hv2-mix-listing">
+                    ${players.map((p, i) => `
+                        <li>
+                            <span class="hv2-mix-listing-handle">≡</span>
+                            <span class="hv2-mix-listing-ico" style="background:${p.color}">${p.initials}</span>
+                            <span class="hv2-mix-listing-label">${p.short}</span>
+                            <button class="hv2-mix-listing-up"   data-mix-player-up="${p.id}"   ${i === 0                    ? 'disabled' : ''} aria-label="Subir">↑</button>
+                            <button class="hv2-mix-listing-down" data-mix-player-down="${p.id}" ${i === players.length - 1   ? 'disabled' : ''} aria-label="Bajar">↓</button>
+                            <button class="hv2-mix-listing-remove" data-mix-player-remove="${p.id}" aria-label="Quitar">×</button>
+                        </li>
+                    `).join('')}
+                </ul>
+            ` : ''}
+
+            <button class="hv2-mix-add-more" data-mix-edit-step="2">＋ Añadir más</button>
+        </div>
+    `;
+}
+
+// ── Listeners del Mi Mix (chips + editor) ──────────────────────
+function attachHoyV2MixListeners() {
+    if (state.app !== 'fan' || state.tab !== 'hoy') return;
+    if (!Flags.isEnabled('fan.hoy.concept-mix')) return;
+
+    // Chips del selector
+    $$('[data-mix-chip]').forEach(btn => btn.addEventListener('click', () => {
+        state.hoyV2MixFeedFilter = btn.dataset.mixChip;
+        state.hoyV2FeedIndex = 0;
+        render();
+    }));
+
+    // Abrir editor (clona estado actual a draft)
+    $$('[data-mix-edit-open]').forEach(btn => btn.addEventListener('click', () => {
+        state.hoyV2MixEditor = {
+            step: 1,
+            teamsDraft: [...state.hoyV2MixTeams],
+            playersDraft: [...state.hoyV2MixPlayers]
+        };
+        render();
+    }));
+    // Cerrar editor sin guardar
+    $$('[data-mix-edit-close]').forEach(btn => btn.addEventListener('click', () => {
+        state.hoyV2MixEditor = null;
+        render();
+    }));
+    // Avanzar al paso N específico (botón "Añadir más")
+    $$('[data-mix-edit-step]').forEach(btn => btn.addEventListener('click', () => {
+        if (!state.hoyV2MixEditor) return;
+        state.hoyV2MixEditor.step = parseInt(btn.dataset.mixEditStep, 10);
+        render();
+    }));
+    // Atrás
+    const back = $('[data-mix-edit-prev]');
+    if (back) back.addEventListener('click', () => {
+        if (!state.hoyV2MixEditor) return;
+        state.hoyV2MixEditor.step = Math.max(1, state.hoyV2MixEditor.step - 1);
+        render();
+    });
+    // Siguiente / Guardar
+    const next = $('[data-mix-edit-next]');
+    if (next) next.addEventListener('click', () => {
+        const ed = state.hoyV2MixEditor;
+        if (!ed) return;
+        if (ed.step < 3) {
+            // Si saltamos a paso 2 sin teams, lo evitamos con un fallback.
+            if (ed.step === 1 && ed.teamsDraft.length === 0) {
+                ed.teamsDraft = HV2_MIX_TEAMS.map(t => t.id);
+            }
+            // Al pasar al paso 2: limpiar players cuyos teams ya no están
+            if (ed.step === 1) {
+                ed.playersDraft = ed.playersDraft.filter(pid => {
+                    const p = HV2_MIX_PLAYERS.find(x => x.id === pid);
+                    return p && ed.teamsDraft.includes(p.team);
+                });
+            }
+            ed.step += 1;
+            render();
+        } else {
+            // Guardar y persistir
+            state.hoyV2MixTeams = ed.teamsDraft;
+            state.hoyV2MixPlayers = ed.playersDraft;
+            HoyV2Mix.persist();
+            state.hoyV2MixEditor = null;
+            // Si el filtro activo ya no está en la nueva lista, vuelve a "all".
+            const ids = new Set([...state.hoyV2MixTeams, ...state.hoyV2MixPlayers, 'all']);
+            if (!ids.has(state.hoyV2MixFeedFilter)) state.hoyV2MixFeedFilter = 'all';
+            render();
+        }
+    });
+
+    // Toggle equipo en el draft (paso 1)
+    $$('[data-mix-toggle-team]').forEach(btn => btn.addEventListener('click', () => {
+        const ed = state.hoyV2MixEditor;
+        if (!ed) return;
+        const id = btn.dataset.mixToggleTeam;
+        const i = ed.teamsDraft.indexOf(id);
+        if (i >= 0) ed.teamsDraft.splice(i, 1);
+        else ed.teamsDraft.push(id);
+        render();
+    }));
+    // Toggle jugador en el draft (paso 2)
+    $$('[data-mix-toggle-player]').forEach(btn => btn.addEventListener('click', () => {
+        const ed = state.hoyV2MixEditor;
+        if (!ed) return;
+        const id = btn.dataset.mixTogglePlayer;
+        const i = ed.playersDraft.indexOf(id);
+        if (i >= 0) ed.playersDraft.splice(i, 1);
+        else ed.playersDraft.push(id);
+        render();
+    }));
+
+    // Reordenar / quitar en paso 3
+    const reorder = (arr, id, dir) => {
+        const i = arr.indexOf(id);
+        if (i < 0) return arr;
+        const j = i + dir;
+        if (j < 0 || j >= arr.length) return arr;
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+        return arr;
+    };
+    $$('[data-mix-team-up]').forEach(b => b.addEventListener('click', () => {
+        if (!state.hoyV2MixEditor) return;
+        reorder(state.hoyV2MixEditor.teamsDraft, b.dataset.mixTeamUp, -1);
+        render();
+    }));
+    $$('[data-mix-team-down]').forEach(b => b.addEventListener('click', () => {
+        if (!state.hoyV2MixEditor) return;
+        reorder(state.hoyV2MixEditor.teamsDraft, b.dataset.mixTeamDown, +1);
+        render();
+    }));
+    $$('[data-mix-team-remove]').forEach(b => b.addEventListener('click', () => {
+        if (!state.hoyV2MixEditor) return;
+        const id = b.dataset.mixTeamRemove;
+        state.hoyV2MixEditor.teamsDraft = state.hoyV2MixEditor.teamsDraft.filter(x => x !== id);
+        // Quitar también jugadores huérfanos del draft
+        state.hoyV2MixEditor.playersDraft = state.hoyV2MixEditor.playersDraft.filter(pid => {
+            const p = HV2_MIX_PLAYERS.find(x => x.id === pid);
+            return p && state.hoyV2MixEditor.teamsDraft.includes(p.team);
+        });
+        render();
+    }));
+    $$('[data-mix-player-up]').forEach(b => b.addEventListener('click', () => {
+        if (!state.hoyV2MixEditor) return;
+        reorder(state.hoyV2MixEditor.playersDraft, b.dataset.mixPlayerUp, -1);
+        render();
+    }));
+    $$('[data-mix-player-down]').forEach(b => b.addEventListener('click', () => {
+        if (!state.hoyV2MixEditor) return;
+        reorder(state.hoyV2MixEditor.playersDraft, b.dataset.mixPlayerDown, +1);
+        render();
+    }));
+    $$('[data-mix-player-remove]').forEach(b => b.addEventListener('click', () => {
+        if (!state.hoyV2MixEditor) return;
+        const id = b.dataset.mixPlayerRemove;
+        state.hoyV2MixEditor.playersDraft = state.hoyV2MixEditor.playersDraft.filter(x => x !== id);
+        render();
+    }));
+}
+
 // ── Event wiring (Hoy V2 Options) ───────────────────────────────
 function attachHoyV2OptionsListeners() {
     if (!Flags.isEnabled('fan.hoy.v2-options') || state.tab !== 'hoy' || state.app !== 'fan') {
@@ -9161,6 +9808,7 @@ function attachListeners() {
 
     // Hoy V2 — 3 conceptos (flag fan.hoy.v2-options)
     attachHoyV2OptionsListeners();
+    attachHoyV2MixListeners();
 }
 
 // ── Hoy v2: "Ver todos" full-screen highlights view ──────────────
@@ -11214,6 +11862,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof Gamification    !== 'undefined') Gamification.hydrate();
         if (typeof HoyTeamTabs     !== 'undefined') HoyTeamTabs.hydrate();
         if (typeof HoyLoginHeader  !== 'undefined') HoyLoginHeader.hydrate();
+        if (typeof HoyV2Mix        !== 'undefined') HoyV2Mix.hydrate();
 
         // Panel lateral redimensionable (drag del handle).
         setupSidePanelResize();
