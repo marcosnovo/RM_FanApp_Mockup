@@ -16805,38 +16805,45 @@ input.has-mismatch {
 
 /* ── Selector de equipos + jugadores ─────────────────────────── */
 /* ── Selector como filtro real (tabs + banner activo) ────────── */
-.hv2-mix-filter {
+/* ── Selector tipo Stories (Instagram / NBA App For You) ───────
+   Avatares circulares con anillo del color del equipo o jugador
+   cuando están activos. Tap filtra todo el contenido de abajo. */
+.hv2-mix-stories {
     background: #fff;
     margin: 12px;
-    padding: 12px 14px 4px;
+    padding: 12px 0 6px;
     border-radius: 14px;
     box-shadow: 0 1px 2px rgba(15,23,42,0.06);
 }
-.hv2-mix-filter-head {
+.hv2-mix-stories-head {
     display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 4px;
+    padding: 0 16px;
+    margin-bottom: 12px;
 }
-.hv2-mix-filter-title {
+.hv2-mix-stories-title {
     font-size: 11px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.6px;
     color: #94A3B8;
 }
-.hv2-mix-filter-edit {
+.hv2-mix-stories-edit {
     display: inline-flex; align-items: center; gap: 4px;
-    background: transparent;
-    border: 0;
+    background: #F4F7FB;
+    border: 1px solid #E2E8F0;
     color: #00529F;
-    padding: 4px 6px;
+    border-radius: 999px;
+    padding: 4px 10px;
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
+    transition: background 220ms;
 }
-.hv2-mix-filter-edit:hover { text-decoration: underline; }
+.hv2-mix-stories-edit:hover { background: #E8EEF6; }
 
 .hv2-mix-empty {
-    width: 100%;
+    width: calc(100% - 32px);
+    margin: 0 16px;
     background: #F4F7FB;
     border: 1px dashed #00529F;
     color: #00529F;
@@ -16849,48 +16856,110 @@ input.has-mismatch {
 }
 .hv2-mix-empty-ico { font-size: 20px; line-height: 1; }
 
-.hv2-mix-tabs {
-    display: flex; gap: 2px;
+.hv2-mix-stories-track {
+    display: flex; gap: 14px;
     overflow-x: auto;
+    padding: 0 16px 8px;
     scrollbar-width: none;
-    border-bottom: 1px solid #E2E8F0;
-    margin: 0 -2px;
 }
-.hv2-mix-tabs::-webkit-scrollbar { display: none; }
-.hv2-mix-tab {
+.hv2-mix-stories-track::-webkit-scrollbar { display: none; }
+
+.hv2-mix-story {
     flex: 0 0 auto;
-    display: inline-flex; align-items: center; gap: 6px;
+    width: 60px;
     background: transparent;
-    color: #4A5568;
     border: 0;
-    border-bottom: 2px solid transparent;
-    padding: 10px 12px;
-    font-size: 12px;
-    font-weight: 600;
     cursor: pointer;
-    transition: color 220ms, border-color 220ms;
-    white-space: nowrap;
-    margin-bottom: -1px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 0;
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.hv2-mix-tab:hover { color: #0B1220; }
-.hv2-mix-tab.is-active {
-    color: var(--tab-color, #00529F);
-    border-bottom-color: var(--tab-color, #00529F);
-    font-weight: 800;
+.hv2-mix-story:hover { transform: translateY(-2px); }
+
+.hv2-mix-story-ring {
+    position: relative;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    padding: 3px;
+    background: #E2E8F0;
+    display: grid; place-items: center;
+    transition: background 220ms, box-shadow 220ms;
 }
-.hv2-mix-tab-ico { font-size: 14px; line-height: 1; }
-.hv2-mix-tab-avatar {
-    width: 18px; height: 18px;
+.hv2-mix-story-icon {
+    width: 100%; height: 100%;
     border-radius: 50%;
     color: #fff;
     display: grid; place-items: center;
     font-weight: 800;
-    font-size: 9px;
-    flex: 0 0 auto;
+    font-size: 14px;
+    border: 2px solid #fff;
+    background: #94A3B8;
+    box-sizing: border-box;
+}
+.hv2-mix-story.is-all .hv2-mix-story-icon {
+    background: linear-gradient(135deg, #FEBE10 0%, #C62828 50%, #00529F 100%);
+}
+.hv2-mix-story.is-add .hv2-mix-story-ring {
+    background: transparent;
+    border: 2px dashed #00529F;
+    padding: 0;
+}
+.hv2-mix-story-icon-add {
+    background: transparent !important;
+    color: #00529F !important;
+    border: 0 !important;
+    font-size: 20px;
+    font-weight: 400;
 }
 
+/* Estado activo: anillo del color del equipo/jugador, label en color
+   y check badge superpuesto en la esquina inferior derecha. */
+.hv2-mix-story.is-active .hv2-mix-story-ring {
+    background: var(--story-color, #00529F);
+    box-shadow: 0 0 0 2px rgba(0,82,159,0.15);
+}
+.hv2-mix-story.is-all.is-active .hv2-mix-story-ring {
+    background: conic-gradient(from 0deg, #FEBE10, #C62828, #00529F, #FEBE10);
+    box-shadow: 0 0 0 2px rgba(254,190,16,0.25);
+}
+.hv2-mix-story.is-active .hv2-mix-story-ring::after {
+    content: "✓";
+    position: absolute;
+    bottom: -2px; right: -2px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--story-color, #00529F);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    display: grid; place-items: center;
+    border: 2px solid #fff;
+    line-height: 1;
+}
+.hv2-mix-story.is-all.is-active .hv2-mix-story-ring::after {
+    background: #FEBE10;
+    color: #0B1220;
+}
+
+.hv2-mix-story-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4A5568;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60px;
+    text-align: center;
+}
+.hv2-mix-story.is-active .hv2-mix-story-label {
+    color: var(--story-color, #00529F);
+    font-weight: 800;
+}
+.hv2-mix-story.is-all.is-active .hv2-mix-story-label { color: #0B1220; }
+
+/* Banner contextual cuando hay filtro activo. */
 .hv2-mix-filter-active {
-    margin-top: 8px;
+    margin: 4px 16px 0;
     background: rgba(0,82,159,0.08);
     border-left: 3px solid var(--active-color, #00529F);
     border-radius: 0 8px 8px 0;
@@ -16911,13 +16980,6 @@ input.has-mismatch {
     flex: 0 0 auto;
 }
 .hv2-mix-filter-active button:hover { text-decoration: underline; }
-.hv2-mix-filter-hint {
-    margin-top: 8px;
-    font-size: 11px;
-    color: #94A3B8;
-    text-align: center;
-    padding-bottom: 4px;
-}
 
 /* ── Próximos partidos · cards ricas (estilo Hoy clásico) ─────── */
 .hv2-mix-upcoming { padding: 4px 0 12px; }
