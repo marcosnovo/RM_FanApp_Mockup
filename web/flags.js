@@ -29,6 +29,11 @@
    ================================================================ */
 
 const FLAG_STORAGE_KEY = 'rm_flags_v1';
+// Storage independiente para el orden personalizado de los hijos por
+// padre. Estructura: { '<parentKey>': ['childA', 'childB', ...] }.
+// Se normaliza contra la lista actual de FLAGS (filtrando huérfanos
+// y añadiendo nuevos al final) en `getOrderedChildKeys`.
+const FLAG_ORDER_STORAGE_KEY = 'rm_flag_order_v1';
 
 // ⚠️ Registry of all flags. Keep this sorted by `app` and `category` for readability.
 // Each flag MUST declare `app` so it appears in the right panel.
@@ -496,6 +501,7 @@ const FLAGS = [
 
 // ── Internal state ──────────────────────────────────────────────
 let _overrides = null;
+let _order     = null;     // { parentKey: [childKey...] } — orden custom
 const _listeners = [];
 
 function _load() {
@@ -511,6 +517,22 @@ function _load() {
 function _save() {
     try {
         localStorage.setItem(FLAG_STORAGE_KEY, JSON.stringify(_overrides || {}));
+    } catch {}
+}
+
+function _loadOrder() {
+    if (_order) return _order;
+    try {
+        _order = JSON.parse(localStorage.getItem(FLAG_ORDER_STORAGE_KEY) || '{}');
+    } catch {
+        _order = {};
+    }
+    return _order;
+}
+
+function _saveOrder() {
+    try {
+        localStorage.setItem(FLAG_ORDER_STORAGE_KEY, JSON.stringify(_order || {}));
     } catch {}
 }
 
@@ -654,6 +676,60 @@ const Flags = {
             groups[cat].push(f);
         }
         return groups;
+    },
+
+    /**
+     * Returns the children keys of `parentKey` ordered as the user
+     * arranged them in the panel (drag-and-drop). If there is no
+     * saved order, falls back to the natural FLAGS declaration order.
+     * Children added after the user reordered are appended at the
+     * end. Children that no longer exist are filtered out.
+     *
+     * Use this in render code to iterate the optional blocks of a
+     * concept/feature in user-defined order.
+     */
+    getOrderedChildKeys(parentKey) {
+        const naturalOrder = FLAGS
+            .filter(f => f.requires === parentKey)
+            .map(f => f.key);
+        const ord = _loadOrder();
+        const saved = Array.isArray(ord[parentKey]) ? ord[parentKey] : null;
+        if (!saved) return naturalOrder;
+        const naturalSet = new Set(naturalOrder);
+        const seen = new Set();
+        const result = [];
+        // Saved keys that still exist
+        for (const k of saved) {
+            if (naturalSet.has(k) && !seen.has(k)) {
+                result.push(k);
+                seen.add(k);
+            }
+        }
+        // New keys that weren't in saved order → append at the end
+        for (const k of naturalOrder) {
+            if (!seen.has(k)) result.push(k);
+        }
+        return result;
+    },
+
+    /**
+     * Persist a custom order for `parentKey`'s children. `keys` should
+     * include exactly the children of that parent (will be normalised
+     * on read via `getOrderedChildKeys`).
+     */
+    setOrder(parentKey, keys) {
+        const ord = _loadOrder();
+        ord[parentKey] = keys.slice();
+        _saveOrder();
+        _fire(parentKey, null);
+    },
+
+    /** Resets the user's custom order for `parentKey`. */
+    resetOrder(parentKey) {
+        const ord = _loadOrder();
+        delete ord[parentKey];
+        _saveOrder();
+        _fire(parentKey, null);
     },
 
     /** Subscribe to changes; callback fires as (key, value). */

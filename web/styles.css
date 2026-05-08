@@ -5975,12 +5975,37 @@ input.has-mismatch {
     background: #ffffff07;
     border: 1px solid #ffffff12;
     border-radius: 10px;
-    transition: background 0.12s, border-color 0.12s;
+    transition: background 0.12s, border-color 0.12s, transform 0.12s, opacity 0.12s;
 }
 
 .flag-row:hover {
     background: #ffffff0c;
     border-color: #ffffff22;
+}
+
+/* Asa de arrastre. Sólo aparece en hijos (`.is-draggable`). Hover
+   sube la opacidad para no competir visualmente con el resto del row. */
+.flag-row-handle {
+    align-self: center;
+    color: #94A3B8;
+    cursor: grab;
+    padding: 4px 2px;
+    margin-left: -4px;
+    user-select: none;
+    flex: 0 0 auto;
+    opacity: 0.6;
+    transition: opacity 0.12s, color 0.12s;
+}
+.flag-row.is-draggable:hover .flag-row-handle { opacity: 1; color: #cbd5e1; }
+.flag-row.is-draggable.is-dragging .flag-row-handle { cursor: grabbing; }
+.flag-row.is-dragging {
+    opacity: 0.5;
+    border-style: dashed;
+    cursor: grabbing;
+}
+.flag-row.is-drop-target {
+    border-color: #00529F;
+    box-shadow: 0 -2px 0 #00529F inset;
 }
 
 /* Child card: conector horizontal del árbol */
