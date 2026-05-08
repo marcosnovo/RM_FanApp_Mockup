@@ -7908,9 +7908,19 @@ const HV2_RECAP_MODULES = {
 // `fan.hoy.news.compact` del antiguo Hoy V2 Pro: 4 noticias con thumb
 // pequeño + título + kicker. Click abre el detalle vía el handler
 // global de `[data-news-id]`.
-function renderHV2NewsCompact() {
+function renderHV2NewsCompact(filterTeamId) {
     const all = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []);
-    const news = all.slice(0, 4);
+    // Filtra por equipo cuando hay filtro activo (Mi Mix). Si no hay
+    // suficientes noticias del equipo, completa con neutrales para que
+    // la card no se quede vacía.
+    let news;
+    if (filterTeamId) {
+        const team = all.filter(n => n.teamId === filterTeamId);
+        const rest = all.filter(n => n.teamId !== filterTeamId);
+        news = team.concat(rest).slice(0, 4);
+    } else {
+        news = all.slice(0, 4);
+    }
     if (!news.length) return '';
     return `
         <section class="hv2-card hv2-news">
@@ -8715,12 +8725,49 @@ const HV2_MIX_PLAYERS = [
     { id: 'hezonja',    name: 'Mario Hezonja',    short: 'Hezonja',  team: 'basket', initials: 'MH', color: '#0a2c4a' }
 ];
 
-// Próximos partidos compactos (más pequeños que la Estructura modular)
+// Próximos partidos: cards ricas estilo Hoy clásico (escudos grandes,
+// vs central, fecha+venue y footer con último resultado), pero más
+// pequeñas para caber en un carrusel horizontal.
 const HV2_MIX_UPCOMING = [
-    { team: 'masc',   comp: 'CHAMPIONS',  homeShort: 'RM',  awayShort: 'BAY', homeColor: '#fff', awayColor: '#DC052D', awayLabel: 'Bayern',           when: 'Mié 21:00' },
-    { team: 'fem',    comp: 'LIGA F',     homeShort: 'RM',  awayShort: 'ATM', homeColor: '#fff', awayColor: '#cc1a26', awayLabel: 'Atleti',            when: 'Sáb 12:00' },
-    { team: 'basket', comp: 'EUROLEAGUE', homeShort: 'RM',  awayShort: 'TEL', homeColor: '#fff', awayColor: '#1976D2', awayLabel: 'Maccabi Tel Aviv',  when: 'Dom 18:30' }
+    {
+        team: 'masc',
+        comp: 'CHAMPIONS LEAGUE',
+        home: { short: 'BAY', name: 'Bayern Múnich', color: '#DC052D', textColor: '#fff' },
+        away: { short: 'RMA', name: 'Real Madrid',  color: '#FFFFFF', textColor: '#00529F' },
+        when: 'Mié 15 abr · 21:00',
+        venue: 'Allianz Arena',
+        last: { result: '2-1', opponent: 'Mallorca' }
+    },
+    {
+        team: 'fem',
+        comp: 'LIGA F',
+        home: { short: 'RMA', name: 'Real Madrid', color: '#FFFFFF', textColor: '#00529F' },
+        away: { short: 'ATM', name: 'Atleti',      color: '#cc1a26', textColor: '#fff' },
+        when: 'Sáb 12 abr · 12:00',
+        venue: 'Alfredo Di Stéfano',
+        last: { result: '3-0', opponent: 'Sevilla' }
+    },
+    {
+        team: 'basket',
+        comp: 'EUROLEAGUE',
+        home: { short: 'RMA', name: 'Real Madrid',         color: '#FFFFFF', textColor: '#00529F' },
+        away: { short: 'TEL', name: 'Maccabi Tel Aviv',    color: '#1976D2', textColor: '#fff' },
+        when: 'Dom 13 abr · 18:30',
+        venue: 'WiZink Center',
+        last: { result: '85-78', opponent: 'Fenerbahçe' }
+    }
 ];
+
+// Devuelve el teamId activo según el filtro. Si el filtro es un
+// equipo → su id. Si es un jugador → el equipo del jugador. Si es
+// 'all' → null (sin filtro).
+function hv2MixActiveTeamId() {
+    const f = state.hoyV2MixFeedFilter;
+    if (!f || f === 'all') return null;
+    if (HV2_MIX_TEAMS.find(t => t.id === f)) return f;
+    const p = HV2_MIX_PLAYERS.find(x => x.id === f);
+    return p ? p.team : null;
+}
 
 // ── Persistencia en localStorage ─────────────────────────────────
 const HV2_MIX_STORAGE_KEY = 'rm_hoy_v2_mix_v1';
@@ -8746,6 +8793,12 @@ const HoyV2Mix = {
 window.HoyV2Mix = HoyV2Mix;
 
 // ── Renderer principal del concepto Mi Mix ──────────────────────
+// Wrapper de noticias para el Mi Mix: si hay un filtro activo, las
+// noticias del equipo correspondiente suben al principio.
+function renderHV2MixNews() {
+    return renderHV2NewsCompact(hv2MixActiveTeamId());
+}
+
 const HV2_MIX_BLOCKS = {
     'fan.hoy.concept-mix.login-header': renderHV2MixLoginHeader,
     'fan.hoy.concept-mix.selector':     renderHV2MixSelector,
@@ -8753,7 +8806,7 @@ const HV2_MIX_BLOCKS = {
     'fan.hoy.concept-mix.feed':         renderHV2MixFeed,
     'fan.hoy.concept-mix.streak':       renderHV2MixStreak,
     'fan.hoy.concept-mix.predictor':    renderHV2MixPredictor,
-    'fan.hoy.concept-mix.news':         renderHV2NewsCompact,
+    'fan.hoy.concept-mix.news':         renderHV2MixNews,
     'fan.hoy.concept-mix.bernabeu':     renderHV2MixBernabeu
 };
 
@@ -8777,25 +8830,40 @@ function renderHV2MixLoginHeader() {
     `;
 }
 
-// ── Selector de equipos + jugadores ─────────────────────────────
-// Si no hay nada configurado (improbable, hay defaults), CTA grande.
-// Si hay items, chips con avatares + botón "Configurar".
+// ── Selector de equipos + jugadores (filtro real) ────────────────
+// El selector funciona como filtro: lo elegido cambia feed, próximos
+// partidos y noticias. Tabs con icono/avatar + estado activo claro
+// (subrayado de color del equipo o jugador). Banner con "Mostrando: X
+// · Quitar filtro" cuando hay filtro activo. CTA "Editar lista" abre
+// el editor en 3 pasos.
 function renderHV2MixSelector() {
     const teams = state.hoyV2MixTeams.map(id => HV2_MIX_TEAMS.find(t => t.id === id)).filter(Boolean);
     const players = state.hoyV2MixPlayers.map(id => HV2_MIX_PLAYERS.find(p => p.id === id)).filter(Boolean);
     const filter = state.hoyV2MixFeedFilter;
     const empty = teams.length === 0 && players.length === 0;
 
+    // Etiqueta del filtro activo + color asociado, para pintar el
+    // banner "Mostrando: X" en el color correspondiente.
+    let activeLabel = null, activeColor = '#00529F';
+    if (filter !== 'all') {
+        const t = HV2_MIX_TEAMS.find(x => x.id === filter);
+        if (t) { activeLabel = t.label; activeColor = t.color; }
+        else {
+            const p = HV2_MIX_PLAYERS.find(x => x.id === filter);
+            if (p) { activeLabel = p.name; activeColor = p.color; }
+        }
+    }
+
     return `
-        <section class="hv2-mix-selector">
-            <div class="hv2-mix-selector-head">
-                <span class="hv2-mix-selector-title">Tus favoritos</span>
-                <button class="hv2-mix-selector-edit" data-mix-edit-open aria-label="Configurar favoritos">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <section class="hv2-mix-filter">
+            <div class="hv2-mix-filter-head">
+                <span class="hv2-mix-filter-title">Filtrar por</span>
+                <button class="hv2-mix-filter-edit" data-mix-edit-open aria-label="Editar lista de favoritos">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
-                    Configurar
+                    Editar lista
                 </button>
             </div>
             ${empty ? `
@@ -8804,66 +8872,98 @@ function renderHV2MixSelector() {
                     Configura tu Mi Mix · 3 pasos
                 </button>
             ` : `
-                <div class="hv2-mix-chips" data-hv2-mix-chips>
-                    <button class="hv2-mix-chip ${filter === 'all' ? 'is-active' : ''}" data-mix-chip="all">Para ti</button>
+                <div class="hv2-mix-tabs" data-hv2-mix-chips>
+                    <button class="hv2-mix-tab ${filter === 'all' ? 'is-active' : ''}" data-mix-chip="all">
+                        <span class="hv2-mix-tab-ico">⭐</span>
+                        Para ti
+                    </button>
                     ${teams.map(t => `
-                        <button class="hv2-mix-chip hv2-mix-chip-team ${filter === t.id ? 'is-active' : ''}"
-                                data-mix-chip="${t.id}" style="--mix-chip-color:${t.color}">
-                            <span class="hv2-mix-chip-dot"></span>${t.label}
+                        <button class="hv2-mix-tab ${filter === t.id ? 'is-active' : ''}"
+                                data-mix-chip="${t.id}" style="--tab-color:${t.color}">
+                            <span class="hv2-mix-tab-ico">${t.icon}</span>
+                            ${t.short}
                         </button>
                     `).join('')}
                     ${players.map(p => `
-                        <button class="hv2-mix-chip hv2-mix-chip-player ${filter === p.id ? 'is-active' : ''}"
-                                data-mix-chip="${p.id}" style="--mix-chip-color:${p.color}">
-                            <span class="hv2-mix-chip-avatar" style="background:${p.color}">${p.initials}</span>${p.short}
+                        <button class="hv2-mix-tab hv2-mix-tab-player ${filter === p.id ? 'is-active' : ''}"
+                                data-mix-chip="${p.id}" style="--tab-color:${p.color}">
+                            <span class="hv2-mix-tab-avatar" style="background:${p.color}">${p.initials}</span>
+                            ${p.short}
                         </button>
                     `).join('')}
-                    <button class="hv2-mix-chip hv2-mix-chip-add" data-mix-edit-open aria-label="Añadir favoritos">＋</button>
                 </div>
+                ${activeLabel ? `
+                    <div class="hv2-mix-filter-active" style="--active-color:${activeColor}">
+                        <span>Mostrando: <b>${activeLabel}</b></span>
+                        <button data-mix-chip="all">✕ Quitar filtro</button>
+                    </div>
+                ` : `
+                    <div class="hv2-mix-filter-hint">
+                        Toca un equipo o jugador para filtrar feed, próximos partidos y noticias.
+                    </div>
+                `}
             `}
         </section>
     `;
 }
 
-// ── Próximos partidos compactos ─────────────────────────────────
+// ── Próximos partidos (cards ricas estilo Hoy clásico) ──────────
+// Card grande con escudos, "vs" central, fecha+venue y footer con
+// el último resultado y "Ver resumen". El carrusel mantiene
+// horizontal scroll-snap para que se asome la siguiente card.
+function renderHV2MixMatchCard(m) {
+    return `
+        <article class="hv2-mix-match2" data-mix-match="${m.team}">
+            <div class="hv2-mix-match2-top">
+                <span class="hv2-mix-match2-comp">${m.comp}</span>
+                <button class="hv2-mix-match2-radio" aria-label="Radio">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 12 a10 10 0 0 1 20 0"/>
+                        <path d="M5.5 12 a6.5 6.5 0 0 1 13 0"/>
+                        <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
+                    </svg>
+                    Radio
+                </button>
+            </div>
+            <div class="hv2-mix-match2-teams">
+                <div class="hv2-mix-match2-team">
+                    <div class="hv2-mix-match2-crest" style="background:${m.home.color};color:${m.home.textColor}">${m.home.short}</div>
+                    <div class="hv2-mix-match2-name">${m.home.name}</div>
+                </div>
+                <div class="hv2-mix-match2-vs">vs</div>
+                <div class="hv2-mix-match2-team">
+                    <div class="hv2-mix-match2-crest" style="background:${m.away.color};color:${m.away.textColor}">${m.away.short}</div>
+                    <div class="hv2-mix-match2-name">${m.away.name}</div>
+                </div>
+            </div>
+            <div class="hv2-mix-match2-meta">
+                <div class="hv2-mix-match2-when">${m.when}</div>
+                <div class="hv2-mix-match2-venue">${m.venue}</div>
+            </div>
+            <div class="hv2-mix-match2-last">
+                <span class="hv2-mix-match2-last-tag">ÚLTIMO</span>
+                <span class="hv2-mix-match2-last-score">${m.last.result}</span>
+                <span class="hv2-mix-match2-last-opp">${m.last.opponent}</span>
+                <button class="hv2-mix-match2-last-link" type="button">Ver resumen ›</button>
+            </div>
+        </article>
+    `;
+}
+
 function renderHV2MixUpcoming() {
     const teams = state.hoyV2MixTeams;
-    const filter = state.hoyV2MixFeedFilter;
-    // Si el filtro activo es un equipo concreto, sólo ese match.
-    // Si es un jugador, su equipo. Si "Para ti", todos los marcados.
+    const activeTeam = hv2MixActiveTeamId();
     let visible = HV2_MIX_UPCOMING.filter(m => teams.includes(m.team));
-    if (filter !== 'all') {
-        const t = HV2_MIX_TEAMS.find(x => x.id === filter);
-        if (t) {
-            visible = visible.filter(m => m.team === t.id);
-        } else {
-            const p = HV2_MIX_PLAYERS.find(x => x.id === filter);
-            if (p) visible = visible.filter(m => m.team === p.team);
-        }
-    }
+    if (activeTeam) visible = visible.filter(m => m.team === activeTeam);
     if (!visible.length) return '';
     return `
         <section class="hv2-mix-upcoming">
             <div class="hv2-mix-section-head">
                 <h3 class="hv2-a-list-title">Próximos partidos</h3>
-                <button class="hv2-mix-cta" data-go-tab="calendario">Ver todos</button>
+                <button class="hv2-mix-cta" data-go-tab="calendario">Calendario</button>
             </div>
             <div class="hv2-mix-upcoming-track">
-                ${visible.map(m => {
-                    const team = HV2_MIX_TEAMS.find(t => t.id === m.team) || { color: '#00529F', icon: '⚽' };
-                    return `
-                        <article class="hv2-mix-match" style="--match-color:${team.color}">
-                            <div class="hv2-mix-match-comp">${m.comp}</div>
-                            <div class="hv2-mix-match-row">
-                                <span class="hv2-mix-match-crest" style="background:${m.homeColor};color:#00529F">${m.homeShort}</span>
-                                <span class="hv2-mix-match-vs">vs</span>
-                                <span class="hv2-mix-match-crest" style="background:${m.awayColor};color:#fff">${m.awayShort}</span>
-                            </div>
-                            <div class="hv2-mix-match-meta">${m.when}</div>
-                            <div class="hv2-mix-match-foot">${team.icon} ${m.awayLabel}</div>
-                        </article>
-                    `;
-                }).join('')}
+                ${visible.map(renderHV2MixMatchCard).join('')}
             </div>
         </section>
     `;
