@@ -8830,20 +8830,18 @@ function renderHV2MixLoginHeader() {
     `;
 }
 
-// ── Selector de equipos + jugadores (filtro real) ────────────────
-// El selector funciona como filtro: lo elegido cambia feed, próximos
-// partidos y noticias. Tabs con icono/avatar + estado activo claro
-// (subrayado de color del equipo o jugador). Banner con "Mostrando: X
-// · Quitar filtro" cuando hay filtro activo. CTA "Editar lista" abre
-// el editor en 3 pasos.
+// ── Selector de equipos + jugadores (filtro tipo Stories) ───────
+// Patrón Instagram Stories / NBA App "For You" / OneFootball follows:
+// avatares circulares con anillo de color por estado. Mucho más
+// reconocible que tabs de texto. El elemento "Todo" abre la lista
+// completa; cualquier equipo o jugador filtra feed, próximos partidos
+// y mini-noticias. Banner contextual abajo cuando hay filtro activo.
 function renderHV2MixSelector() {
     const teams = state.hoyV2MixTeams.map(id => HV2_MIX_TEAMS.find(t => t.id === id)).filter(Boolean);
     const players = state.hoyV2MixPlayers.map(id => HV2_MIX_PLAYERS.find(p => p.id === id)).filter(Boolean);
     const filter = state.hoyV2MixFeedFilter;
     const empty = teams.length === 0 && players.length === 0;
 
-    // Etiqueta del filtro activo + color asociado, para pintar el
-    // banner "Mostrando: X" en el color correspondiente.
     let activeLabel = null, activeColor = '#00529F';
     if (filter !== 'all') {
         const t = HV2_MIX_TEAMS.find(x => x.id === filter);
@@ -8855,15 +8853,15 @@ function renderHV2MixSelector() {
     }
 
     return `
-        <section class="hv2-mix-filter">
-            <div class="hv2-mix-filter-head">
-                <span class="hv2-mix-filter-title">Filtrar por</span>
-                <button class="hv2-mix-filter-edit" data-mix-edit-open aria-label="Editar lista de favoritos">
+        <section class="hv2-mix-stories">
+            <div class="hv2-mix-stories-head">
+                <span class="hv2-mix-stories-title">Tus favoritos</span>
+                <button class="hv2-mix-stories-edit" data-mix-edit-open aria-label="Editar lista de favoritos">
                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
-                    Editar lista
+                    Editar
                 </button>
             </div>
             ${empty ? `
@@ -8872,36 +8870,47 @@ function renderHV2MixSelector() {
                     Configura tu Mi Mix · 3 pasos
                 </button>
             ` : `
-                <div class="hv2-mix-tabs" data-hv2-mix-chips>
-                    <button class="hv2-mix-tab ${filter === 'all' ? 'is-active' : ''}" data-mix-chip="all">
-                        <span class="hv2-mix-tab-ico">⭐</span>
-                        Para ti
+                <div class="hv2-mix-stories-track" data-hv2-mix-chips>
+                    <button class="hv2-mix-story is-all ${filter === 'all' ? 'is-active' : ''}"
+                            data-mix-chip="all" aria-label="Mostrar todo">
+                        <span class="hv2-mix-story-ring">
+                            <span class="hv2-mix-story-icon">★</span>
+                        </span>
+                        <span class="hv2-mix-story-label">Todo</span>
                     </button>
                     ${teams.map(t => `
-                        <button class="hv2-mix-tab ${filter === t.id ? 'is-active' : ''}"
-                                data-mix-chip="${t.id}" style="--tab-color:${t.color}">
-                            <span class="hv2-mix-tab-ico">${t.icon}</span>
-                            ${t.short}
+                        <button class="hv2-mix-story ${filter === t.id ? 'is-active' : ''}"
+                                data-mix-chip="${t.id}" style="--story-color:${t.color}"
+                                aria-label="Filtrar por ${t.label}">
+                            <span class="hv2-mix-story-ring">
+                                <span class="hv2-mix-story-icon" style="background:${t.color}">${t.icon}</span>
+                            </span>
+                            <span class="hv2-mix-story-label">${t.short}</span>
                         </button>
                     `).join('')}
                     ${players.map(p => `
-                        <button class="hv2-mix-tab hv2-mix-tab-player ${filter === p.id ? 'is-active' : ''}"
-                                data-mix-chip="${p.id}" style="--tab-color:${p.color}">
-                            <span class="hv2-mix-tab-avatar" style="background:${p.color}">${p.initials}</span>
-                            ${p.short}
+                        <button class="hv2-mix-story ${filter === p.id ? 'is-active' : ''}"
+                                data-mix-chip="${p.id}" style="--story-color:${p.color}"
+                                aria-label="Filtrar por ${p.name}">
+                            <span class="hv2-mix-story-ring">
+                                <span class="hv2-mix-story-icon" style="background:${p.color}">${p.initials}</span>
+                            </span>
+                            <span class="hv2-mix-story-label">${p.short}</span>
                         </button>
                     `).join('')}
+                    <button class="hv2-mix-story is-add" data-mix-edit-open aria-label="Añadir favoritos">
+                        <span class="hv2-mix-story-ring">
+                            <span class="hv2-mix-story-icon hv2-mix-story-icon-add">＋</span>
+                        </span>
+                        <span class="hv2-mix-story-label">Añadir</span>
+                    </button>
                 </div>
                 ${activeLabel ? `
                     <div class="hv2-mix-filter-active" style="--active-color:${activeColor}">
                         <span>Mostrando: <b>${activeLabel}</b></span>
                         <button data-mix-chip="all">✕ Quitar filtro</button>
                     </div>
-                ` : `
-                    <div class="hv2-mix-filter-hint">
-                        Toca un equipo o jugador para filtrar feed, próximos partidos y noticias.
-                    </div>
-                `}
+                ` : ''}
             `}
         </section>
     `;
