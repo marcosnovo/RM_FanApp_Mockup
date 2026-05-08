@@ -16805,45 +16805,83 @@ input.has-mismatch {
 
 /* ── Selector de equipos + jugadores ─────────────────────────── */
 /* ── Selector como filtro real (tabs + banner activo) ────────── */
-/* ── Selector tipo Stories (Instagram / NBA App For You) ───────
-   Avatares circulares con anillo del color del equipo o jugador
-   cuando están activos. Tap filtra todo el contenido de abajo. */
-.hv2-mix-stories {
-    background: #fff;
+/* ── Selector contextual (patrón OneFootball) ──────────────────
+   Header compacto que muestra la entidad activa + chevron. Al
+   pulsar abre un bottom-sheet (`.hv2-mix-picker`) con todos los
+   favoritos. Mucho más limpio que tabs/stories: deja todo el
+   espacio del frame para el contenido real y resulta evidente
+   que es un switcher, no decoración. */
+.hv2-mix-context {
     margin: 12px;
-    padding: 12px 0 6px;
+}
+.hv2-mix-context-trigger {
+    width: 100%;
+    background: #fff;
+    border: 1px solid #E2E8F0;
     border-radius: 14px;
+    padding: 10px 12px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+    text-align: left;
     box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+    transition: border-color 220ms, box-shadow 220ms;
 }
-.hv2-mix-stories-head {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 0 16px;
-    margin-bottom: 12px;
+.hv2-mix-context-trigger:hover {
+    border-color: var(--ctx-color, #00529F);
+    box-shadow: 0 2px 6px rgba(15,23,42,0.10);
 }
-.hv2-mix-stories-title {
-    font-size: 11px;
+.hv2-mix-context-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    color: #fff;
+    display: grid; place-items: center;
+    font-weight: 900;
+    font-size: 14px;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
+    flex: 0 0 auto;
+}
+.hv2-mix-context-text {
+    flex: 1;
+    min-width: 0;
+    display: flex; flex-direction: column;
+}
+.hv2-mix-context-tag {
+    font-size: 9px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.6px;
     color: #94A3B8;
 }
-.hv2-mix-stories-edit {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: #F4F7FB;
-    border: 1px solid #E2E8F0;
-    color: #00529F;
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 220ms;
+.hv2-mix-context-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0B1220;
+    line-height: 1.15;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
-.hv2-mix-stories-edit:hover { background: #E8EEF6; }
+.hv2-mix-context-sub {
+    font-size: 11px;
+    color: #4A5568;
+    margin-top: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.hv2-mix-context-chev {
+    color: var(--ctx-color, #94A3B8);
+    flex: 0 0 auto;
+    transition: transform 220ms;
+}
+.hv2-mix-context-trigger[aria-expanded="true"] .hv2-mix-context-chev {
+    transform: rotate(180deg);
+}
 
-.hv2-mix-empty {
-    width: calc(100% - 32px);
-    margin: 0 16px;
+.hv2-mix-context-empty .hv2-mix-empty {
+    width: 100%;
     background: #F4F7FB;
     border: 1px dashed #00529F;
     color: #00529F;
@@ -16856,130 +16894,150 @@ input.has-mismatch {
 }
 .hv2-mix-empty-ico { font-size: 20px; line-height: 1; }
 
-.hv2-mix-stories-track {
-    display: flex; gap: 14px;
-    overflow-x: auto;
-    padding: 0 16px 8px;
-    scrollbar-width: none;
-}
-.hv2-mix-stories-track::-webkit-scrollbar { display: none; }
-
-.hv2-mix-story {
-    flex: 0 0 auto;
-    width: 60px;
-    background: transparent;
-    border: 0;
-    cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 0;
-    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.hv2-mix-story:hover { transform: translateY(-2px); }
-
-.hv2-mix-story-ring {
-    position: relative;
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    padding: 3px;
-    background: #E2E8F0;
-    display: grid; place-items: center;
-    transition: background 220ms, box-shadow 220ms;
-}
-.hv2-mix-story-icon {
-    width: 100%; height: 100%;
-    border-radius: 50%;
-    color: #fff;
-    display: grid; place-items: center;
-    font-weight: 800;
-    font-size: 14px;
-    border: 2px solid #fff;
-    background: #94A3B8;
-    box-sizing: border-box;
-}
-.hv2-mix-story.is-all .hv2-mix-story-icon {
-    background: linear-gradient(135deg, #FEBE10 0%, #C62828 50%, #00529F 100%);
-}
-.hv2-mix-story.is-add .hv2-mix-story-ring {
-    background: transparent;
-    border: 2px dashed #00529F;
-    padding: 0;
-}
-.hv2-mix-story-icon-add {
-    background: transparent !important;
-    color: #00529F !important;
-    border: 0 !important;
-    font-size: 20px;
-    font-weight: 400;
-}
-
-/* Estado activo: anillo del color del equipo/jugador, label en color
-   y check badge superpuesto en la esquina inferior derecha. */
-.hv2-mix-story.is-active .hv2-mix-story-ring {
-    background: var(--story-color, #00529F);
-    box-shadow: 0 0 0 2px rgba(0,82,159,0.15);
-}
-.hv2-mix-story.is-all.is-active .hv2-mix-story-ring {
-    background: conic-gradient(from 0deg, #FEBE10, #C62828, #00529F, #FEBE10);
-    box-shadow: 0 0 0 2px rgba(254,190,16,0.25);
-}
-.hv2-mix-story.is-active .hv2-mix-story-ring::after {
-    content: "✓";
+/* ── Bottom-sheet picker (estilo OneFootball) ──────────────── */
+.hv2-mix-picker-backdrop {
     position: absolute;
-    bottom: -2px; right: -2px;
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    background: var(--story-color, #00529F);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 900;
-    display: grid; place-items: center;
-    border: 2px solid #fff;
-    line-height: 1;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 60;
+    pointer-events: auto;
+    animation: hv2MixFade 200ms ease-out;
 }
-.hv2-mix-story.is-all.is-active .hv2-mix-story-ring::after {
-    background: #FEBE10;
+@keyframes hv2MixFade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.hv2-mix-picker {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: #fff;
+    color: #0B1220;
+    z-index: 61;
+    pointer-events: auto;
+    border-radius: 16px 16px 0 0;
+    max-height: 80%;
+    display: flex; flex-direction: column;
+    animation: hv2MixSlideUp 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 -8px 28px rgba(0,0,0,0.25);
+}
+@media (prefers-reduced-motion: reduce) {
+    .hv2-mix-picker, .hv2-mix-picker-backdrop { animation: none; }
+}
+.hv2-mix-picker-handle {
+    width: 36px; height: 4px;
+    background: #E2E8F0;
+    border-radius: 4px;
+    margin: 8px auto 4px;
+    flex: 0 0 auto;
+}
+.hv2-mix-picker-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px 10px;
+    border-bottom: 1px solid #E2E8F0;
+}
+.hv2-mix-picker-title {
+    font-size: 14px;
+    font-weight: 800;
     color: #0B1220;
 }
-
-.hv2-mix-story-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #4A5568;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 60px;
-    text-align: center;
+.hv2-mix-picker-close {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    color: #0B1220;
+    cursor: pointer;
+    font-size: 14px;
 }
-.hv2-mix-story.is-active .hv2-mix-story-label {
-    color: var(--story-color, #00529F);
+.hv2-mix-picker-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 8px 12px 12px;
+}
+.hv2-mix-picker-section {
+    font-size: 9px;
     font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #94A3B8;
+    padding: 12px 4px 6px;
 }
-.hv2-mix-story.is-all.is-active .hv2-mix-story-label { color: #0B1220; }
-
-/* Banner contextual cuando hay filtro activo. */
-.hv2-mix-filter-active {
-    margin: 4px 16px 0;
-    background: rgba(0,82,159,0.08);
-    border-left: 3px solid var(--active-color, #00529F);
-    border-radius: 0 8px 8px 0;
-    padding: 8px 12px;
-    display: flex; justify-content: space-between; align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: #4A5568;
-}
-.hv2-mix-filter-active b { color: var(--active-color, #00529F); }
-.hv2-mix-filter-active button {
+.hv2-mix-picker-row {
+    width: 100%;
+    display: flex; align-items: center; gap: 12px;
     background: transparent;
     border: 0;
-    color: var(--active-color, #00529F);
-    font-size: 11px;
+    border-radius: 10px;
+    padding: 10px 8px;
+    text-align: left;
     cursor: pointer;
-    font-weight: 700;
+    transition: background 120ms;
+}
+.hv2-mix-picker-row:hover { background: #F4F7FB; }
+.hv2-mix-picker-row.is-active {
+    background: rgba(0,82,159,0.08);
+}
+.hv2-mix-picker-row.is-active .hv2-mix-picker-label {
+    color: var(--row-color, #00529F);
+    font-weight: 800;
+}
+.hv2-mix-picker-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-weight: 800;
+    font-size: 13px;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
     flex: 0 0 auto;
 }
-.hv2-mix-filter-active button:hover { text-decoration: underline; }
+.hv2-mix-picker-body {
+    flex: 1;
+    min-width: 0;
+    display: flex; flex-direction: column;
+}
+.hv2-mix-picker-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0B1220;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.hv2-mix-picker-sub {
+    font-size: 11px;
+    color: #4A5568;
+    margin-top: 1px;
+}
+.hv2-mix-picker-check {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--row-color, #00529F);
+    color: #fff;
+    display: grid; place-items: center;
+    font-size: 11px;
+    font-weight: 900;
+    flex: 0 0 auto;
+}
+.hv2-mix-picker-foot {
+    border-top: 1px solid #E2E8F0;
+    padding: 10px 16px 22px;
+    flex: 0 0 auto;
+}
+.hv2-mix-picker-edit {
+    width: 100%;
+    background: #F4F7FB;
+    border: 1px solid #E2E8F0;
+    color: #00529F;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.hv2-mix-picker-edit:hover { background: #E8EEF6; }
 
 /* ── Próximos partidos · cards ricas (estilo Hoy clásico) ─────── */
 .hv2-mix-upcoming { padding: 4px 0 12px; }
