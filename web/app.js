@@ -11502,10 +11502,31 @@ function buildFlagView(app, search, filter) {
     }
 
     // Construcción recursiva del subárbol de un padre.
+    // Importante: respetar el orden custom del usuario (drag&drop en
+    // el panel) usando `Flags.getOrderedChildKeys`. Si no hay orden
+    // custom, vuelve a usar el orden de declaración (el "natural").
     const buildSubtree = (parentKey) => {
-        const kids = (childrenByParent[parentKey] || [])
-            .filter(c => visibleKeys.has(c.key));
-        return kids.map(k => ({
+        // Mapa key→nodo para resolver rápido el orden custom.
+        const kidsByKey = new Map();
+        (childrenByParent[parentKey] || [])
+            .filter(c => visibleKeys.has(c.key))
+            .forEach(c => kidsByKey.set(c.key, c));
+        const orderedKeys = Flags.getOrderedChildKeys(parentKey);
+        const ordered = [];
+        const seen = new Set();
+        for (const k of orderedKeys) {
+            if (kidsByKey.has(k)) {
+                ordered.push(kidsByKey.get(k));
+                seen.add(k);
+            }
+        }
+        // Hijos visibles que getOrderedChildKeys filtró fuera (raro,
+        // pero podría pasar si la búsqueda los excluye); van al final
+        // en el orden natural por consistencia.
+        for (const c of (childrenByParent[parentKey] || [])) {
+            if (!seen.has(c.key) && kidsByKey.has(c.key)) ordered.push(c);
+        }
+        return ordered.map(k => ({
             flag: k,
             children: buildSubtree(k.key)
         }));
