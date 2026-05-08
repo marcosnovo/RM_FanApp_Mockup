@@ -61,6 +61,7 @@ const state = {
     hoyV2MixPlayers: ['mbappe', 'vini', 'athenea'], // jugadores ordenados
     hoyV2MixFeedFilter: 'all',  // chip activo dentro del selector del mix
     hoyV2MixEditor: null,       // null | { step: 1|2|3, teamsDraft: [...], playersDraft: [...] }
+    hoyV2MixPickerOpen: false,  // bottom-sheet con la lista de favoritos (estilo OneFootball)
 
     // Hoy — pestañas por equipo (flag 'fan.hoy.team-tabs')
     // Persistidas en localStorage vía HoyTeamTabs.
@@ -7514,6 +7515,8 @@ function render() {
         renderHoyV2RankingSheet();
     } else if (state.app === 'fan' && state.hoyV2MixEditor) {
         renderHV2MixEditor();
+    } else if (state.app === 'fan' && state.hoyV2MixPickerOpen) {
+        renderHV2MixPicker();
     } else {
         $('#newsSheetSlot').innerHTML = '';
     }
@@ -8830,89 +8833,151 @@ function renderHV2MixLoginHeader() {
     `;
 }
 
-// ── Selector de equipos + jugadores (filtro tipo Stories) ───────
-// Patrón Instagram Stories / NBA App "For You" / OneFootball follows:
-// avatares circulares con anillo de color por estado. Mucho más
-// reconocible que tabs de texto. El elemento "Todo" abre la lista
-// completa; cualquier equipo o jugador filtra feed, próximos partidos
-// y mini-noticias. Banner contextual abajo cuando hay filtro activo.
+// ── Selector de favoritos (patrón OneFootball) ───────────────────
+// Header compacto "Mostrando · {entidad activa} ▾" que ocupa muy
+// poco espacio y, al pulsar, abre un bottom-sheet con la lista
+// completa de favoritos del usuario. Es la forma más limpia de
+// indicar "filtro activo + posibilidad de cambiar" sin saturar el
+// frame. Inspirado en cómo OneFootball muestra el equipo activo
+// con un chevron en la cabecera del Home.
 function renderHV2MixSelector() {
     const teams = state.hoyV2MixTeams.map(id => HV2_MIX_TEAMS.find(t => t.id === id)).filter(Boolean);
     const players = state.hoyV2MixPlayers.map(id => HV2_MIX_PLAYERS.find(p => p.id === id)).filter(Boolean);
     const filter = state.hoyV2MixFeedFilter;
     const empty = teams.length === 0 && players.length === 0;
 
-    let activeLabel = null, activeColor = '#00529F';
-    if (filter !== 'all') {
-        const t = HV2_MIX_TEAMS.find(x => x.id === filter);
-        if (t) { activeLabel = t.label; activeColor = t.color; }
-        else {
-            const p = HV2_MIX_PLAYERS.find(x => x.id === filter);
-            if (p) { activeLabel = p.name; activeColor = p.color; }
-        }
-    }
-
-    return `
-        <section class="hv2-mix-stories">
-            <div class="hv2-mix-stories-head">
-                <span class="hv2-mix-stories-title">Tus favoritos</span>
-                <button class="hv2-mix-stories-edit" data-mix-edit-open aria-label="Editar lista de favoritos">
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                    Editar
-                </button>
-            </div>
-            ${empty ? `
+    if (empty) {
+        return `
+            <section class="hv2-mix-context hv2-mix-context-empty">
                 <button class="hv2-mix-empty" data-mix-edit-open>
                     <span class="hv2-mix-empty-ico">＋</span>
                     Configura tu Mi Mix · 3 pasos
                 </button>
-            ` : `
-                <div class="hv2-mix-stories-track" data-hv2-mix-chips>
-                    <button class="hv2-mix-story is-all ${filter === 'all' ? 'is-active' : ''}"
-                            data-mix-chip="all" aria-label="Mostrar todo">
-                        <span class="hv2-mix-story-ring">
-                            <span class="hv2-mix-story-icon">★</span>
-                        </span>
-                        <span class="hv2-mix-story-label">Todo</span>
-                    </button>
-                    ${teams.map(t => `
-                        <button class="hv2-mix-story ${filter === t.id ? 'is-active' : ''}"
-                                data-mix-chip="${t.id}" style="--story-color:${t.color}"
-                                aria-label="Filtrar por ${t.label}">
-                            <span class="hv2-mix-story-ring">
-                                <span class="hv2-mix-story-icon" style="background:${t.color}">${t.icon}</span>
-                            </span>
-                            <span class="hv2-mix-story-label">${t.short}</span>
-                        </button>
-                    `).join('')}
-                    ${players.map(p => `
-                        <button class="hv2-mix-story ${filter === p.id ? 'is-active' : ''}"
-                                data-mix-chip="${p.id}" style="--story-color:${p.color}"
-                                aria-label="Filtrar por ${p.name}">
-                            <span class="hv2-mix-story-ring">
-                                <span class="hv2-mix-story-icon" style="background:${p.color}">${p.initials}</span>
-                            </span>
-                            <span class="hv2-mix-story-label">${p.short}</span>
-                        </button>
-                    `).join('')}
-                    <button class="hv2-mix-story is-add" data-mix-edit-open aria-label="Añadir favoritos">
-                        <span class="hv2-mix-story-ring">
-                            <span class="hv2-mix-story-icon hv2-mix-story-icon-add">＋</span>
-                        </span>
-                        <span class="hv2-mix-story-label">Añadir</span>
-                    </button>
-                </div>
-                ${activeLabel ? `
-                    <div class="hv2-mix-filter-active" style="--active-color:${activeColor}">
-                        <span>Mostrando: <b>${activeLabel}</b></span>
-                        <button data-mix-chip="all">✕ Quitar filtro</button>
-                    </div>
-                ` : ''}
-            `}
+            </section>
+        `;
+    }
+
+    // Resuelve la entidad activa: "Para ti" (gradient + estrella) o
+    // un equipo/jugador concreto con su color e iniciales/icono.
+    let activeLabel = 'Para ti';
+    let activeSubtitle = `Mezcla de ${teams.length} ${teams.length === 1 ? 'equipo' : 'equipos'} · ${players.length} ${players.length === 1 ? 'jugador' : 'jugadores'}`;
+    let activeColor = '#FEBE10';
+    let activeIcon = '★';
+    let activeAvatarStyle = 'background:linear-gradient(135deg, #FEBE10 0%, #C62828 50%, #00529F 100%);color:#fff';
+    if (filter !== 'all') {
+        const t = HV2_MIX_TEAMS.find(x => x.id === filter);
+        if (t) {
+            activeLabel = t.label;
+            activeSubtitle = 'Equipo · todo el contenido filtrado';
+            activeColor = t.color;
+            activeIcon = t.icon;
+            activeAvatarStyle = `background:${t.color};color:#fff`;
+        } else {
+            const p = HV2_MIX_PLAYERS.find(x => x.id === filter);
+            if (p) {
+                activeLabel = p.name;
+                const team = HV2_MIX_TEAMS.find(x => x.id === p.team);
+                activeSubtitle = `Jugador${team ? ' · ' + team.label : ''}`;
+                activeColor = p.color;
+                activeIcon = p.initials;
+                activeAvatarStyle = `background:${p.color};color:#fff`;
+            }
+        }
+    }
+
+    return `
+        <section class="hv2-mix-context" style="--ctx-color:${activeColor}">
+            <button class="hv2-mix-context-trigger" data-mix-picker-toggle
+                    aria-haspopup="listbox" aria-expanded="${state.hoyV2MixPickerOpen}">
+                <span class="hv2-mix-context-avatar" style="${activeAvatarStyle}">${activeIcon}</span>
+                <span class="hv2-mix-context-text">
+                    <span class="hv2-mix-context-tag">Mostrando</span>
+                    <span class="hv2-mix-context-name">${activeLabel}</span>
+                    <span class="hv2-mix-context-sub">${activeSubtitle}</span>
+                </span>
+                <svg class="hv2-mix-context-chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6,9 12,15 18,9"/>
+                </svg>
+            </button>
         </section>
+    `;
+}
+
+// Bottom sheet que se abre al tocar el header. Lista todos los
+// favoritos del usuario con check en el activo + acceso al editor.
+// Vive en `#newsSheetSlot` con z-index 60.
+function renderHV2MixPicker() {
+    const slot = $('#newsSheetSlot');
+    if (!slot) return;
+    const teams = state.hoyV2MixTeams.map(id => HV2_MIX_TEAMS.find(t => t.id === id)).filter(Boolean);
+    const players = state.hoyV2MixPlayers.map(id => HV2_MIX_PLAYERS.find(p => p.id === id)).filter(Boolean);
+    const filter = state.hoyV2MixFeedFilter;
+
+    const row = ({ key, label, sub, color, icon, avatarStyle }) => {
+        const active = filter === key;
+        return `
+            <button class="hv2-mix-picker-row ${active ? 'is-active' : ''}"
+                    data-mix-chip="${key}" data-mix-picker-pick
+                    style="--row-color:${color}">
+                <span class="hv2-mix-picker-avatar" style="${avatarStyle}">${icon}</span>
+                <span class="hv2-mix-picker-body">
+                    <span class="hv2-mix-picker-label">${label}</span>
+                    ${sub ? `<span class="hv2-mix-picker-sub">${sub}</span>` : ''}
+                </span>
+                ${active ? `<span class="hv2-mix-picker-check">✓</span>` : ''}
+            </button>
+        `;
+    };
+
+    slot.innerHTML = `
+        <div class="hv2-mix-picker-backdrop" data-mix-picker-close></div>
+        <div class="hv2-mix-picker" role="listbox" aria-label="Tus favoritos">
+            <div class="hv2-mix-picker-handle"></div>
+            <div class="hv2-mix-picker-head">
+                <span class="hv2-mix-picker-title">Tus favoritos</span>
+                <button class="hv2-mix-picker-close" data-mix-picker-close aria-label="Cerrar">✕</button>
+            </div>
+            <div class="hv2-mix-picker-list">
+                ${row({
+                    key: 'all',
+                    label: 'Para ti',
+                    sub: 'Mezcla curada con todos tus favoritos',
+                    color: '#FEBE10',
+                    icon: '★',
+                    avatarStyle: 'background:linear-gradient(135deg, #FEBE10 0%, #C62828 50%, #00529F 100%);color:#fff'
+                })}
+                ${teams.length ? `<div class="hv2-mix-picker-section">EQUIPOS</div>` : ''}
+                ${teams.map(t => row({
+                    key: t.id,
+                    label: t.label,
+                    sub: '',
+                    color: t.color,
+                    icon: t.icon,
+                    avatarStyle: `background:${t.color};color:#fff`
+                })).join('')}
+                ${players.length ? `<div class="hv2-mix-picker-section">JUGADORES</div>` : ''}
+                ${players.map(p => {
+                    const team = HV2_MIX_TEAMS.find(x => x.id === p.team);
+                    return row({
+                        key: p.id,
+                        label: p.name,
+                        sub: team ? team.label : '',
+                        color: p.color,
+                        icon: p.initials,
+                        avatarStyle: `background:${p.color};color:#fff`
+                    });
+                }).join('')}
+            </div>
+            <div class="hv2-mix-picker-foot">
+                <button class="hv2-mix-picker-edit" data-mix-edit-open>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Editar lista de favoritos
+                </button>
+            </div>
+        </div>
     `;
 }
 
@@ -9272,13 +9337,33 @@ function attachHoyV2MixListeners() {
         render();
     }));
 
-    // Abrir editor (clona estado actual a draft)
+    // Abrir editor (clona estado actual a draft).
+    // Si el picker estaba abierto (lo abren desde su footer), lo cierra.
     $$('[data-mix-edit-open]').forEach(btn => btn.addEventListener('click', () => {
         state.hoyV2MixEditor = {
             step: 1,
             teamsDraft: [...state.hoyV2MixTeams],
             playersDraft: [...state.hoyV2MixPlayers]
         };
+        state.hoyV2MixPickerOpen = false;
+        render();
+    }));
+
+    // Bottom-sheet picker (estilo OneFootball): abre/cierra y elige
+    // un item. Tap fuera (backdrop) o ✕ → cierra. Tap en una row →
+    // setea filtro y cierra.
+    $$('[data-mix-picker-toggle]').forEach(btn => btn.addEventListener('click', () => {
+        state.hoyV2MixPickerOpen = !state.hoyV2MixPickerOpen;
+        render();
+    }));
+    $$('[data-mix-picker-close]').forEach(btn => btn.addEventListener('click', () => {
+        state.hoyV2MixPickerOpen = false;
+        render();
+    }));
+    $$('[data-mix-picker-pick]').forEach(btn => btn.addEventListener('click', () => {
+        state.hoyV2MixFeedFilter = btn.dataset.mixChip;
+        state.hoyV2FeedIndex = 0;
+        state.hoyV2MixPickerOpen = false;
         render();
     }));
     // Cerrar editor sin guardar
