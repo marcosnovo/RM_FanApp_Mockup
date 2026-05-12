@@ -11649,6 +11649,40 @@ if (typeof state.flagsSearch === 'undefined') state.flagsSearch = '';
 if (typeof state.flagsFilter === 'undefined') state.flagsFilter = 'all';   // 'all' | 'active' | 'inactive'
 if (typeof state.flagsCollapsed === 'undefined') state.flagsCollapsed = {}; // { [cat]: bool } — categorías plegadas
 if (typeof state.flagsOpen === 'undefined') state.flagsOpen = true;         // panel entero
+// Plegado por flag padre (sub-árbol). { [parentFlagKey]: true if collapsed }.
+// Por defecto colapsamos los padres con muchos hijos para que el panel
+// no ocupe pantallas enteras — el usuario expande lo que quiera con
+// el chevron. Persistido en localStorage para no perder la elección.
+const FLAGS_TREE_COLLAPSE_KEY = 'rm_flags_tree_collapse_v1';
+if (typeof state.flagsTreeCollapsed === 'undefined') {
+    try {
+        const saved = localStorage.getItem(FLAGS_TREE_COLLAPSE_KEY);
+        if (saved) {
+            state.flagsTreeCollapsed = JSON.parse(saved);
+        } else {
+            // Defaults: colapsar todos los padres con hijos, EXCEPTO
+            // `fan.hoy.v2-options` (porque queremos ver los 4 conceptos
+            // de un vistazo). Los padres dentro de él (A/B/C/Mix) sí
+            // arrancan colapsados.
+            const def = {};
+            if (typeof FLAGS !== 'undefined') {
+                const parents = new Set();
+                FLAGS.forEach(f => { if (f.requires) parents.add(f.requires); });
+                parents.forEach(k => {
+                    if (k !== 'fan.hoy.v2-options') def[k] = true;
+                });
+            }
+            state.flagsTreeCollapsed = def;
+        }
+    } catch {
+        state.flagsTreeCollapsed = {};
+    }
+}
+function _saveFlagsTreeCollapsed() {
+    try {
+        localStorage.setItem(FLAGS_TREE_COLLAPSE_KEY, JSON.stringify(state.flagsTreeCollapsed || {}));
+    } catch {}
+}
 
 /**
  * Construye una lista agrupada y filtrada de flags listos para pintar.
@@ -11763,10 +11797,23 @@ function buildFlagView(app, search, filter) {
  */
 function flagTreeHTML(node, depth = 0) {
     const { flag, children } = node;
+    const hasKids = children.length > 0;
+    // Si hay búsqueda activa, ignoramos el colapso para que los
+    // resultados sean visibles aunque su padre estuviera plegado.
+    const searchActive = !!(state.flagsSearch && state.flagsSearch.trim());
+    const collapsed = hasKids && !searchActive && !!state.flagsTreeCollapsed[flag.key];
+    // Cuenta total dentro del subárbol (recursiva) y cuántos están on,
+    // para mostrar "3/5" en la pill cuando el padre está colapsado.
+    const treeCount = (n) => 1 + n.children.reduce((s, c) => s + treeCount(c), 0);
+    const treeActive = (n) => (n.flag.enabled ? 1 : 0)
+                            + n.children.reduce((s, c) => s + treeActive(c), 0);
+    const kidsTotal  = hasKids ? children.reduce((s, c) => s + treeCount(c), 0) : 0;
+    const kidsActive = hasKids ? children.reduce((s, c) => s + treeActive(c), 0) : 0;
+
     return `
         <div class="flags-tree ${depth > 0 ? 'is-nested' : ''}">
-            ${flagRowHTML(flag, { indent: depth > 0 })}
-            ${children.length ? `
+            ${flagRowHTML(flag, { indent: depth > 0, hasKids, collapsed, kidsTotal, kidsActive })}
+            ${(hasKids && !collapsed) ? `
                 <div class="flags-tree-children">
                     ${children.map(c => flagTreeHTML(c, depth + 1)).join('')}
                 </div>
@@ -11785,7 +11832,7 @@ function statusChip(flag) {
         : `<span class="flag-chip off">INACTIVA</span>`;
 }
 
-function flagRowHTML(f, { indent = false } = {}) {
+function flagRowHTML(f, { indent = false, hasKids = false, collapsed = false, kidsTotal = 0, kidsActive = 0 } = {}) {
     const parent = f.parent;
     const parentEnabled = !parent || parent.enabled;
     const effectiveOn = f.rawEnabled && parentEnabled;
@@ -11804,7 +11851,7 @@ function flagRowHTML(f, { indent = false } = {}) {
     const draggable = !!parent;
 
     return `
-        <div class="flag-row ${indent ? 'is-child' : ''} ${locked ? 'is-locked' : ''} ${draggable ? 'is-draggable' : ''}"
+        <div class="flag-row ${indent ? 'is-child' : ''} ${locked ? 'is-locked' : ''} ${draggable ? 'is-draggable' : ''} ${hasKids ? 'has-kids' : ''} ${collapsed ? 'is-collapsed' : ''}"
              data-flag-row="${f.key}"
              ${draggable ? `data-flag-parent="${parent.key}" draggable="true"` : ''}>
             ${draggable ? `
@@ -11814,6 +11861,17 @@ function flagRowHTML(f, { indent = false } = {}) {
                         <line x1="6" y1="15" x2="18" y2="15"/>
                     </svg>
                 </span>
+            ` : ''}
+            ${hasKids ? `
+                <button class="flag-row-collapse" data-flag-collapse="${f.key}"
+                        aria-label="${collapsed ? 'Expandir' : 'Colapsar'} sub-funcionalidades"
+                        aria-expanded="${collapsed ? 'false' : 'true'}"
+                        title="${collapsed ? 'Expandir' : 'Colapsar'} ${kidsTotal} sub-funcionalidades">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6,9 12,15 18,9"/>
+                    </svg>
+                    <span class="flag-row-collapse-count">${kidsActive}/${kidsTotal}</span>
+                </button>
             ` : ''}
             <div class="flag-row-main">
                 <div class="flag-row-top">
@@ -11984,6 +12042,19 @@ function _attachFlagsPanelListeners() {
     $$('[data-flags-group]').forEach(b => b.addEventListener('click', () => {
         const cat = b.dataset.flagsGroup;
         state.flagsCollapsed = { ...state.flagsCollapsed, [cat]: !state.flagsCollapsed[cat] };
+        renderSidebarFlags();
+    }));
+
+    // Plegar / desplegar un sub-árbol de flags (padre con hijos).
+    // El click no debe propagarse al row para no disparar el toggle.
+    $$('[data-flag-collapse]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        const key = b.dataset.flagCollapse;
+        state.flagsTreeCollapsed = {
+            ...state.flagsTreeCollapsed,
+            [key]: !state.flagsTreeCollapsed[key]
+        };
+        _saveFlagsTreeCollapsed();
         renderSidebarFlags();
     }));
 

@@ -6008,6 +6008,36 @@ input.has-mismatch {
     box-shadow: 0 -2px 0 #00529F inset;
 }
 
+/* Chevron de plegado para padres con hijos. Muestra contador
+   "activos/totales" para que el usuario sepa qué tiene dentro sin
+   tener que desplegarlo. */
+.flag-row-collapse {
+    align-self: center;
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #ffffff10;
+    border: 1px solid #ffffff20;
+    color: #cbd5e1;
+    border-radius: 999px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: background 0.12s, color 0.12s, transform 0.12s;
+}
+.flag-row-collapse:hover { background: #ffffff20; color: #fff; }
+.flag-row-collapse svg { transition: transform 0.18s; }
+.flag-row.has-kids.is-collapsed .flag-row-collapse svg { transform: rotate(-90deg); }
+.flag-row-collapse-count {
+    line-height: 1;
+}
+/* Cuando el padre está colapsado, le damos un tinte visual sutil
+   para distinguirlo de los rows expandidos / hojas. */
+.flag-row.has-kids.is-collapsed {
+    background: #ffffff0a;
+    border-style: dashed;
+}
+
 /* Child card: conector horizontal del árbol */
 .flag-row.is-child::before {
     content: "";
