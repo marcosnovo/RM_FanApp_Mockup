@@ -7849,7 +7849,7 @@ function renderHoyV2Options() {
             <!-- El sello del concepto vive AHORA fuera del frame, en el
                  panel resumen lateral (#hv2RecapSlot). El frame se queda
                  limpio para imitar mejor cómo se vería la app real. -->
-            <div class="hv2-scroll" id="hv2Scroll" data-hv2-concept-bg="${concept}">
+            <div class="hv2-scroll ${concept === 'MIX' && Flags.isEnabled('fan.hoy.concept-mix.hi-fi') ? 'is-hifi' : ''}" id="hv2Scroll" data-hv2-concept-bg="${concept}">
                 ${conceptBody}
                 <div style="height: 28px"></div>
             </div>
@@ -8817,10 +8817,65 @@ const HV2_MIX_BLOCKS = {
 };
 
 function renderHV2ConceptMix() {
+    // Alta Fidelidad: reemplaza por completo la estructura del Mi Mix
+    // por la del mockup avanzado (avatar + chips + Partidos + Predictor
+    // + Para ti + Noticias). Ignora los sub-flags de bloques
+    // individuales (streak/bernabéu/login/etc.) porque no aparecen en
+    // los mockups: la idea de la opción "Alta Fidelidad" es ver el
+    // resultado final tal cual lo diseñaría el equipo de diseño.
+    if (Flags.isEnabled('fan.hoy.concept-mix.hi-fi')) {
+        return renderHV2ConceptMixHiFi();
+    }
     return `
         <div class="hv2-mix">
             ${renderHV2OrderedBlocks('fan.hoy.concept-mix', HV2_MIX_BLOCKS)}
         </div>
+    `;
+}
+
+// ── Layout completo de Mi Mix · Alta Fidelidad ──────────────────
+// El orden y los bloques son fijos para imitar fielmente los mockups
+// del PM. Si quieres customizar (toggle streak, etc.), desactiva la
+// Alta Fidelidad y vuelves al modo modular con los sub-flags.
+function renderHV2ConceptMixHiFi() {
+    return `
+        <div class="hv2-mix hv2-hifi">
+            ${renderHV2HiFiTopBar()}
+            ${renderHV2HiFiChips()}
+            ${renderHV2MixUpcomingHiFi()}
+            ${renderHV2MixPredictorHiFi()}
+            ${renderHV2MixFeedHiFi()}
+            ${renderHV2NewsCompactHiFi(hv2MixActiveTeamId())}
+        </div>
+    `;
+}
+
+function renderHV2HiFiTopBar() {
+    return `
+        <header class="hv2-hifi-topbar">
+            <button class="hv2-hifi-avatar" id="btnSideMenu" aria-label="Tu área">MN</button>
+        </header>
+    `;
+}
+
+// Chips de equipo (Todos / F. Masculino / F. Femenino / Baloncesto).
+// La selección activa es la única en violeta sólido; las demás van en
+// outline. Reaprovecha state.hoyV2MixFeedFilter para filtrar el resto.
+function renderHV2HiFiChips() {
+    const filter = state.hoyV2MixFeedFilter;
+    const chips = [
+        { key: 'all',    label: 'Todos' },
+        { key: 'masc',   label: 'F. Masculino' },
+        { key: 'fem',    label: 'F. Femenino' },
+        { key: 'basket', label: 'Baloncesto' }
+    ];
+    return `
+        <nav class="hv2-hifi-chips" data-hv2-mix-chips>
+            ${chips.map(c => `
+                <button class="hv2-hifi-chip ${filter === c.key ? 'is-active' : ''}"
+                        data-mix-chip="${c.key}">${c.label}</button>
+            `).join('')}
+        </nav>
     `;
 }
 

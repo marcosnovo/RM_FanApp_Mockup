@@ -17854,3 +17854,60 @@ input.has-mismatch {
     overflow: hidden;
 }
 
+/* ── Layout completo Mi Mix · Alta Fidelidad ──────────────────
+   Sobrescribe el fondo gris del scroll (Mi Mix estándar) por blanco
+   para que el conjunto se parezca al mockup. */
+.hv2-scroll.is-hifi {
+    background: #fff !important;
+}
+.hv2-mix.hv2-hifi { padding-bottom: 20px; }
+
+/* Topbar minimal: avatar circular pegado al status-bar. */
+.hv2-hifi-topbar {
+    padding: 56px 16px 8px;
+    display: flex;
+    align-items: center;
+}
+.hv2-hifi-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: #5040E8;
+    color: #fff;
+    border: 0;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 14px;
+    box-shadow: 0 2px 6px rgba(80,64,232,0.30);
+}
+
+/* Chips de equipo (Todos / F. Masculino / F. Femenino / Baloncesto)
+   con el activo en violeta sólido y los demás en outline también
+   violeta, como en el mockup. */
+.hv2-hifi-chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 4px 16px 14px;
+}
+.hv2-hifi-chips::-webkit-scrollbar { display: none; }
+.hv2-hifi-chip {
+    flex: 0 0 auto;
+    background: #fff;
+    color: #5040E8;
+    border: 1px solid #5040E8;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 220ms, color 220ms, transform 220ms;
+    white-space: nowrap;
+}
+.hv2-hifi-chip:hover { transform: translateY(-1px); }
+.hv2-hifi-chip.is-active {
+    background: #5040E8;
+    color: #fff;
+    border-color: #5040E8;
+}
+
