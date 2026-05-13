@@ -342,6 +342,15 @@ const FLAGS = [
     },
     {
         app: 'fan',
+        key: 'fan.hoy.concept-mix.hi-fi',
+        label: 'D · Alta Fidelidad (mockups avanzados)',
+        description: 'Sustituye los bloques de Mi Mix por sus versiones de alta fidelidad: date picker + match card con venue + escudos SVG en Partidos, carrusel "Para ti" con card grande + paginación, predictor con escudos RM y Barça, y Noticias con hero + grid de 2 columnas con etiquetas por equipo.',
+        category: 'Hoy',
+        default: false,
+        requires: 'fan.hoy.concept-mix'
+    },
+    {
+        app: 'fan',
         key: 'fan.hoy.stories',
         label: 'Stories + Tras las cámaras',
         description: 'Carrusel de stories tipo Instagram en la parte superior y sección "Tras las cámaras" con galería de fotos tras las noticias.',
