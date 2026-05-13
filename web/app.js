@@ -7896,6 +7896,7 @@ const HV2_RECAP_MODULES = {
         { key: 'fan.hoy.concept-c.collectibles',label: 'Coleccionables holo' }
     ],
     MIX: [
+        { key: 'fan.hoy.concept-mix.hi-fi',        label: '✨ Alta Fidelidad' },
         { key: 'fan.hoy.concept-mix.login-header', label: 'Cabecera login' },
         { key: 'fan.hoy.concept-mix.selector',     label: 'Selector equipos / jugadores' },
         { key: 'fan.hoy.concept-mix.upcoming',     label: 'Próximos partidos' },
@@ -8799,7 +8800,9 @@ window.HoyV2Mix = HoyV2Mix;
 // Wrapper de noticias para el Mi Mix: si hay un filtro activo, las
 // noticias del equipo correspondiente suben al principio.
 function renderHV2MixNews() {
-    return renderHV2NewsCompact(hv2MixActiveTeamId());
+    const tid = hv2MixActiveTeamId();
+    if (Flags.isEnabled('fan.hoy.concept-mix.hi-fi')) return renderHV2NewsCompactHiFi(tid);
+    return renderHV2NewsCompact(tid);
 }
 
 const HV2_MIX_BLOCKS = {
@@ -9025,6 +9028,7 @@ function renderHV2MixMatchCard(m) {
 }
 
 function renderHV2MixUpcoming() {
+    if (Flags.isEnabled('fan.hoy.concept-mix.hi-fi')) return renderHV2MixUpcomingHiFi();
     const teams = state.hoyV2MixTeams;
     const activeTeam = hv2MixActiveTeamId();
     let visible = HV2_MIX_UPCOMING.filter(m => teams.includes(m.team));
@@ -9045,6 +9049,7 @@ function renderHV2MixUpcoming() {
 
 // ── Feed vertical 9:16 (filtrado por chip activo del mix) ───────
 function renderHV2MixFeed() {
+    if (Flags.isEnabled('fan.hoy.concept-mix.hi-fi')) return renderHV2MixFeedHiFi();
     const filter = state.hoyV2MixFeedFilter;
     let clips = HV2_CLIPS;
     if (filter !== 'all') {
@@ -9130,6 +9135,7 @@ function renderHV2MixStreak() {
 
 // ── Predictor (igual que B) ─────────────────────────────────────
 function renderHV2MixPredictor() {
+    if (Flags.isEnabled('fan.hoy.concept-mix.hi-fi')) return renderHV2MixPredictorHiFi();
     const pred = state.hoyV2Prediction;
     return `
         <section class="hv2-card hv2-b-pred">
@@ -9148,6 +9154,218 @@ function renderHV2MixPredictor() {
             </div>
             ${pred ? `<div class="hv2-b-pred-result">Tu predicción enviada · Posición <b>#428</b> de 121.300</div>` : ''}
             <div class="hv2-b-pred-foot">Top 10 mensual: camiseta firmada por la plantilla</div>
+        </section>
+    `;
+}
+
+// ════════════════════════════════════════════════════════════════
+// MI MIX · Alta Fidelidad — versiones avanzadas de los bloques que
+// se activan con `fan.hoy.concept-mix.hi-fi`. Pensadas para acercar
+// el frame a los mockups que prepara el PM (date picker + match
+// card con venue + Para ti rich card + Noticias hero+grid + etc.).
+// ════════════════════════════════════════════════════════════════
+
+const HV2_HIFI_PREDICTOR_OPTS = ['0 - 1', '1 - 1', '1 - 2', '2 - 1'];
+
+function renderHV2MixPredictorHiFi() {
+    const pred = state.hoyV2Prediction;
+    return `
+        <section class="hv2-hifi-pred">
+            <div class="hv2-hifi-pred-row">
+                <div class="hv2-hifi-pred-shield hv2-hifi-pred-shield-rm">
+                    ${typeof CREST_REAL_MADRID !== 'undefined' ? CREST_REAL_MADRID : '<svg viewBox="0 0 24 24" width="44" height="44" fill="#00529F"><circle cx="12" cy="12" r="10"/></svg>'}
+                </div>
+                <div class="hv2-hifi-pred-body">
+                    <h4 class="hv2-hifi-pred-q">¿Resultado Real Madrid - Barcelona?</h4>
+                </div>
+                <div class="hv2-hifi-pred-shield hv2-hifi-pred-shield-barca">
+                    ${typeof CREST_BARCELONA !== 'undefined' ? CREST_BARCELONA : '<svg viewBox="0 0 24 24" width="44" height="44" fill="#a50044"><circle cx="12" cy="12" r="10"/></svg>'}
+                </div>
+            </div>
+            <div class="hv2-hifi-pred-opts">
+                ${HV2_HIFI_PREDICTOR_OPTS.map(opt => `
+                    <button class="hv2-hifi-pred-opt ${pred === opt ? 'is-picked' : ''} ${pred && pred !== opt ? 'is-dim' : ''}"
+                            data-hv2-pred="${opt}" ${pred ? 'disabled' : ''}>
+                        ${opt}
+                    </button>
+                `).join('')}
+            </div>
+            ${pred ? `<div class="hv2-hifi-pred-result">Tu predicción enviada · Posición <b>#428</b> de 121.300</div>` : ''}
+        </section>
+    `;
+}
+
+// ── Hi-Fi · Date picker + match card grande con venue + escudos ──
+const HV2_HIFI_DATES = [
+    { weekday: 'MAR', day: 9,  month: 'ABR', match: false },
+    { weekday: 'SÁB', day: 13, month: 'ABR', match: false },
+    { weekday: 'MIÉ', day: 15, month: 'ABR', match: true  }, // hoy con partido
+    { weekday: 'SÁB', day: 18, month: 'ABR', match: false }
+];
+
+function renderHV2MixUpcomingHiFi() {
+    const activeIdx = HV2_HIFI_DATES.findIndex(d => d.match);
+    return `
+        <section class="hv2-hifi-partidos">
+            <div class="hv2-mix-section-head">
+                <h3 class="hv2-a-list-title" style="font-size:18px;text-transform:none;letter-spacing:-0.2px;color:#0B1220">Partidos</h3>
+                <button class="hv2-mix-cta" data-go-tab="calendario">Ver calendario ›</button>
+            </div>
+            <div class="hv2-hifi-datepicker">
+                ${HV2_HIFI_DATES.map((d, i) => `
+                    <button class="hv2-hifi-day ${i === activeIdx ? 'is-active' : ''}">
+                        <span class="hv2-hifi-day-weekday">${d.weekday}</span>
+                        <span class="hv2-hifi-day-num">${d.day}</span>
+                        <span class="hv2-hifi-day-month">${d.month}</span>
+                    </button>
+                `).join('')}
+            </div>
+            <article class="hv2-hifi-match">
+                <div class="hv2-hifi-match-hero">
+                    <button class="hv2-hifi-match-cal" aria-label="Añadir al calendario">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                    </button>
+                    <span class="hv2-hifi-match-venue">Santiago Bernabéu</span>
+                </div>
+                <div class="hv2-hifi-match-teams">
+                    <div class="hv2-hifi-match-team">
+                        <div class="hv2-hifi-match-crest">
+                            ${typeof CREST_REAL_MADRID !== 'undefined' ? CREST_REAL_MADRID : ''}
+                        </div>
+                        <span class="hv2-hifi-match-name">Real Madrid</span>
+                    </div>
+                    <div class="hv2-hifi-match-comp">
+                        <div class="hv2-hifi-match-comp-icon">
+                            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="1.6">
+                                <ellipse cx="12" cy="9" rx="6" ry="6.5"/>
+                                <path d="M6 9 c-2.5 0-3.5-2-3.5-4 h3" stroke-linejoin="round"/>
+                                <path d="M18 9 c2.5 0 3.5-2 3.5-4 h-3" stroke-linejoin="round"/>
+                                <path d="M9 16 v3 h6 v-3"/>
+                                <path d="M7 22 h10"/>
+                            </svg>
+                        </div>
+                        <span class="hv2-hifi-match-comp-label">Champions<br>League</span>
+                    </div>
+                    <div class="hv2-hifi-match-team">
+                        <div class="hv2-hifi-match-crest">
+                            ${typeof CREST_BARCELONA !== 'undefined' ? CREST_BARCELONA : ''}
+                        </div>
+                        <span class="hv2-hifi-match-name">Barça</span>
+                    </div>
+                </div>
+                <div class="hv2-hifi-match-bottom">
+                    <div class="hv2-hifi-match-when">Mié 15 abr - 21:00</div>
+                    <div class="hv2-hifi-match-tv">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="4" width="20" height="14" rx="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                        DAZN, Movistar
+                    </div>
+                </div>
+            </article>
+        </section>
+    `;
+}
+
+// ── Hi-Fi · "Para ti" carrusel de cards grandes con badge + img ──
+const HV2_HIFI_PARATU = [
+    {
+        kind: 'Noticias',
+        badge: '#5040E8',
+        title: 'El Real Madrid visita el jueves al Surne Bilbao Basket',
+        body: 'Los de Scariolo afrontan la 31ª jornada del campeonato en el Bilbao Arena (19:00 h; Dazn).',
+        cta: 'Acceder a la noticia',
+        bg: 'linear-gradient(165deg, #1976D2 0%, #0B1220 100%)'
+    },
+    {
+        kind: 'Resumen',
+        badge: '#2E7D32',
+        title: 'Resumen · J.34 Espanyol 0 - 2 Real Sociedad',
+        body: 'Revive la victoria de los jugadores',
+        cta: 'Acceder a RM Play',
+        bg: 'linear-gradient(165deg, #00529F 0%, #1E1B4B 100%)'
+    },
+    {
+        kind: 'Tienda',
+        badge: '#FEBE10',
+        title: 'Tus equipaciones con descuento',
+        body: '15% en las equipaciones de la tienda online.',
+        cta: 'Comprar ahora',
+        bg: 'linear-gradient(165deg, #7C3AED 0%, #00529F 100%)'
+    }
+];
+
+function renderHV2MixFeedHiFi() {
+    const idx = Math.min(state.hoyV2FeedIndex, HV2_HIFI_PARATU.length - 1);
+    return `
+        <section class="hv2-hifi-paratu">
+            <h3 class="hv2-hifi-section-title">Para ti</h3>
+            <div class="hv2-hifi-paratu-track" data-hv2-feed>
+                ${HV2_HIFI_PARATU.map((item, i) => `
+                    <article class="hv2-hifi-paratu-card ${i === idx ? 'is-active' : ''}"
+                             style="background:${item.bg}">
+                        <span class="hv2-hifi-paratu-badge" style="background:${item.badge}">${item.kind}</span>
+                        <div class="hv2-hifi-paratu-body">
+                            <h4 class="hv2-hifi-paratu-title">${item.title}</h4>
+                            <p class="hv2-hifi-paratu-text">${item.body}</p>
+                            <button class="hv2-hifi-paratu-cta">${item.cta}</button>
+                        </div>
+                    </article>
+                `).join('')}
+            </div>
+            <div class="hv2-hifi-paratu-dots">
+                ${HV2_HIFI_PARATU.map((_, i) => `<span class="${i === idx ? 'is-active' : ''}"></span>`).join('')}
+            </div>
+        </section>
+    `;
+}
+
+// ── Hi-Fi · Noticias hero + grid 2 columnas con tags por equipo ──
+function renderHV2NewsCompactHiFi(filterTeamId) {
+    const all = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []);
+    let news;
+    if (filterTeamId) {
+        const team = all.filter(n => n.teamId === filterTeamId);
+        const rest = all.filter(n => n.teamId !== filterTeamId);
+        news = team.concat(rest).slice(0, 4);
+    } else {
+        news = all.slice(0, 4);
+    }
+    if (news.length < 4) return renderHV2NewsCompact(filterTeamId);  // fallback compacto
+
+    const teamLabel = id => ({ masc: 'Fútbol masculino', fem: 'Fútbol femenino', basket: 'Baloncesto' })[id] || (id ? id : '');
+    const teamColor = id => ({ masc: '#00529F', fem: '#E91E63', basket: '#7B1FA2' })[id] || '#00529F';
+
+    const hero = news[0];
+    const grid = news.slice(1, 5);
+
+    return `
+        <section class="hv2-hifi-news">
+            <div class="hv2-mix-section-head">
+                <h3 class="hv2-hifi-section-title">Noticias</h3>
+                <button class="hv2-mix-cta" data-go-tab="noticias">Ver todas ›</button>
+            </div>
+            <article class="hv2-hifi-news-hero" data-news-id="${hero.id}">
+                <div class="hv2-hifi-news-hero-img" style="background:${hero.imageColor}"></div>
+                ${hero.teamId ? `<span class="hv2-hifi-news-tag" style="background:${teamColor(hero.teamId)}">${teamLabel(hero.teamId)}</span>` : ''}
+                <h4 class="hv2-hifi-news-hero-title">${hero.title}</h4>
+            </article>
+            <div class="hv2-hifi-news-grid">
+                ${grid.map(n => `
+                    <article class="hv2-hifi-news-tile" data-news-id="${n.id}">
+                        <div class="hv2-hifi-news-tile-img" style="background:${n.imageColor}"></div>
+                        ${n.teamId ? `<span class="hv2-hifi-news-tag hv2-hifi-news-tag-sm" style="background:${teamColor(n.teamId)}">${teamLabel(n.teamId)}</span>` : ''}
+                        <div class="hv2-hifi-news-tile-title">${n.title}</div>
+                    </article>
+                `).join('')}
+            </div>
         </section>
     `;
 }
