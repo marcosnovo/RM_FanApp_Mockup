@@ -16825,6 +16825,103 @@ input.has-mismatch {
     color: #0B1220;
 }
 
+/* ── Noticia destacada (flag fan.hoy.concept-mix.featured) ──────────
+   Bloque hero estilo NBA adaptado al sistema de diseño RM. */
+.hv2-featured {
+    background: #fff;
+    border-radius: 14px;
+    margin: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+}
+.hv2-featured-hero {
+    position: relative;
+    aspect-ratio: 16 / 13;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+}
+.hv2-featured-kicker {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 2;
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.16);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+.hv2-featured-media {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 56px;
+    height: 56px;
+    color: rgba(255,255,255,0.9);
+    opacity: 0.92;
+}
+.hv2-featured-media svg { width: 100%; height: 100%; display: block; }
+.hv2-featured-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,0.72) 100%);
+    z-index: 1;
+}
+.hv2-featured-headline {
+    position: relative;
+    z-index: 2;
+    margin: 0;
+    padding: 16px;
+    color: #fff;
+    font-size: 30px;
+    line-height: 0.96;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 12px rgba(0,0,0,0.45);
+}
+.hv2-featured-body {
+    padding: 14px 16px 16px;
+}
+.hv2-featured-title {
+    margin: 0 0 6px;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #0B1220;
+}
+.hv2-featured-teaser {
+    margin: 0 0 14px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #64748B;
+}
+.hv2-featured-cta {
+    width: 100%;
+    padding: 13px 16px;
+    border: 1.5px solid #00529F;
+    border-radius: 12px;
+    background: transparent;
+    color: #00529F;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.hv2-featured-cta:active {
+    background: #00529F;
+    color: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+    .hv2-featured-cta { transition: none; }
+}
+
 /* Cabecera de bienvenida — el `app-topbar-slot` ya pinta su contenido
    con su propia caja, sólo aseguramos un buffer arriba para el status-bar. */
 .hv2-mix-header {

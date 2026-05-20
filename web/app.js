@@ -6498,23 +6498,6 @@ function renderHV2Recap() {
     `;
 }
 
-// ────────────────────────────────────────────────────────────────
-// Helper: itera los hijos de un padre en el orden que el usuario haya
-// dejado en el panel "Funcionalidades", ejecuta el render de cada bloque
-// activo y devuelve el HTML concatenado. Lo usa Mi Mix para pintar sus
-// módulos toggleables en el orden definido por el usuario.
-// ────────────────────────────────────────────────────────────────
-function renderHV2OrderedBlocks(parentKey, blockMap) {
-    return Flags.getOrderedChildKeys(parentKey)
-        .map(key => {
-            if (!Flags.isEnabled(key))   return '';
-            const fn = blockMap[key];
-            if (typeof fn !== 'function') return '';
-            return fn() || '';
-        })
-        .join('');
-}
-
 // ════════════════════════════════════════════════════════════════
 // HOY V2 — "Mi Mix" (curado por el PM)
 // Home modular con un selector configurable de equipos y jugadores
@@ -6635,6 +6618,35 @@ const HV2_MIX_BLOCKS = {
     'fan.hoy.concept-mix.bernabeu':     renderHV2MixBernabeu
 };
 
+// ── Noticia destacada (flag 'fan.hoy.concept-mix.featured') ─────
+// Bloque grande tipo "hero" (imagen/vídeo + titular + botón) inspirado
+// en la app de la NBA, con el sistema de diseño RM. Al pulsar el botón
+// se abre la noticia (handler global [data-news-id]).
+function renderHV2MixFeatured(idx) {
+    const list = (typeof FEATURED_NEWS !== 'undefined' ? FEATURED_NEWS : []);
+    const item = list[idx];
+    if (!item) return '';
+    const news = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []).find(n => n.id === item.newsId);
+    const title = news ? news.title : item.headline;
+    return `
+        <section class="hv2-featured">
+            <div class="hv2-featured-hero" style="background: linear-gradient(155deg, ${item.c1} 0%, ${item.c2} 100%)">
+                <span class="hv2-featured-kicker">${item.kicker}</span>
+                <span class="hv2-featured-media">${item.media === 'video' ? I.play : I.photo}</span>
+                <div class="hv2-featured-scrim"></div>
+                <h2 class="hv2-featured-headline">${item.headline}</h2>
+            </div>
+            <div class="hv2-featured-body">
+                <h3 class="hv2-featured-title">${title}</h3>
+                <p class="hv2-featured-teaser">${item.teaser}</p>
+                <button class="hv2-featured-cta" data-news-id="${item.newsId}">
+                    ${item.media === 'video' ? 'Ver noticia' : 'Leer noticia'}
+                </button>
+            </div>
+        </section>
+    `;
+}
+
 function renderHV2ConceptMix() {
     // Alta Fidelidad: reemplaza por completo la estructura del Mi Mix
     // por la del mockup avanzado (avatar + chips + Partidos + Predictor
@@ -6645,9 +6657,32 @@ function renderHV2ConceptMix() {
     if (Flags.isEnabled('fan.hoy.concept-mix.hi-fi')) {
         return renderHV2ConceptMixHiFi();
     }
+
+    // Bloques modulares en el orden elegido por el usuario.
+    const blocks = Flags.getOrderedChildKeys('fan.hoy.concept-mix')
+        .filter(key => Flags.isEnabled(key) && typeof HV2_MIX_BLOCKS[key] === 'function')
+        .map(key => HV2_MIX_BLOCKS[key]() || '')
+        .filter(Boolean);
+
+    // Noticia destacada: intercala 3 bloques hero entre el resto de
+    // módulos (no contiguos), para que la Home alterne contenido propio
+    // con noticias destacadas como en la app de la NBA.
+    if (Flags.isEnabled('fan.hoy.concept-mix.featured')) {
+        const featuredCount = Math.min(3, (typeof FEATURED_NEWS !== 'undefined' ? FEATURED_NEWS.length : 0));
+        const insertAfter = [1, 3, 5];   // posiciones repartidas a lo largo del scroll
+        const out = [];
+        let fi = 0;
+        blocks.forEach((b, i) => {
+            out.push(b);
+            if (fi < featuredCount && insertAfter.includes(i)) out.push(renderHV2MixFeatured(fi++));
+        });
+        while (fi < featuredCount) out.push(renderHV2MixFeatured(fi++));   // sobrantes al final
+        return `<div class="hv2-mix">${out.join('')}</div>`;
+    }
+
     return `
         <div class="hv2-mix">
-            ${renderHV2OrderedBlocks('fan.hoy.concept-mix', HV2_MIX_BLOCKS)}
+            ${blocks.join('')}
         </div>
     `;
 }

@@ -806,6 +806,20 @@ registerFlow('fan.hoy.concept-mix.bernabeu', {
     }]
 });
 
+registerFlow('fan.hoy.concept-mix.featured', {
+    title: 'Mi Mix · Noticia destacada',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { mixSubInit('fan.hoy.concept-mix.featured'); },
+    paths: [{
+        label: 'Noticias destacadas intercaladas',
+        steps: [
+            { caption: '1 · Primera noticia destacada', async run() { scrollScreen(260); } },
+            { caption: '2 · Segunda destacada (intercalada)', async run() { scrollScreen(900); } },
+            { caption: '3 · Tercera destacada', async run() { scrollScreen(1600); } }
+        ]
+    }]
+});
+
 registerFlow('fan.hoy.concept-mix.hi-fi', {
     title: 'Mi Mix · Alta Fidelidad (mockups avanzados)',
     snapshot: genericSnapshot, restore: genericRestore,

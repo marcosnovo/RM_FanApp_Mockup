@@ -547,6 +547,37 @@ El partido se podrá ver en directo a través de Orange TV y Movistar Liga de Ca
     }
 ];
 
+// ── Featured news (flag 'fan.hoy.concept-mix.featured') ─────────
+// Bloque grande estilo "hero" de la app de la NBA, adaptado al sistema
+// de diseño RM. Cada item referencia una noticia real (newsId) que se
+// abre al pulsar el botón. `media: 'video'` pinta un icono de play.
+const FEATURED_NEWS = [
+    {
+        newsId: 1,
+        kicker: 'CHAMPIONS · CUARTOS',
+        headline: 'REMONTADA EN MÚNICH',
+        teaser: 'El Madrid visita el Allianz Arena para dar la vuelta al 1-2 y meterse en semifinales.',
+        media: 'video',
+        c1: '#1b2a6b', c2: '#0a1130'
+    },
+    {
+        newsId: 8,
+        kicker: 'LIGA F · CLÁSICO',
+        headline: 'CLÁSICO POR EL LIDERATO',
+        teaser: 'El RM Femenino recibe al Barça en un duelo que puede valer el primer puesto de la Liga F.',
+        media: 'image',
+        c1: '#7a1f56', c2: '#2c0a20'
+    },
+    {
+        newsId: 9,
+        kicker: 'EUROLIGA · PLAYOFF',
+        headline: 'ASALTO A ATENAS',
+        teaser: 'El Madrid de baloncesto viaja al OAKA para el tercer partido del playoff ante Panathinaikos.',
+        media: 'video',
+        c1: '#8a4413', c2: '#2e1405'
+    }
+];
+
 // ── Calendar (April matches) ────────────────────────────────────
 const CAL_MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto'];
 
