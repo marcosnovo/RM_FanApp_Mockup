@@ -245,240 +245,64 @@ function escapeHTML(s) {
 
 // ── Fan App ─────────────────────────────────────────────────────
 
-register('fan.hoy.v2-options', {
-    flagKey: 'fan.hoy.v2-options',
-    title: 'Hoy v2 · 3 conceptos alternativos (A/B/C) para discovery interno',
+register('fan.hoy.concept-mix', {
+    flagKey: 'fan.hoy.concept-mix',
+    title: 'Hoy v2 · Mi Mix — rediseño modular y configurable de la Home',
     epic: 'Fan App · Hoy',
-    estimate: 'XL (8-16 sprints, multi-fase)',
+    estimate: 'L (3-5 sprints)',
     priority: 'Alta',
-    context: 'La pantalla "Hoy" actual es la primera impresión que tiene un madridista al abrir la app. Necesitamos validar internamente con stakeholders qué dirección estratégica tomar antes de invertir en un rediseño grande: ¿evolución obvia, plataforma OTT-feed, o metaverso del fan? Para forzar esa decisión se construye un mockup interactivo con 3 conceptos lado a lado, navegables sin salir de la pantalla.',
-    problem: 'Los stakeholders sólo deciden entre slides, no entre experiencias jugables. Las decisiones de roadmap del Hoy se aplazan ronda tras ronda porque "no se puede sentir" la diferencia entre un rediseño conservador y uno ambicioso. Esto bloquea sprints de iOS/Android y desalinea el plan editorial.',
-    objective: 'Entregar un mockup interactivo en HTML/CSS/JS vanilla con tres conceptos alternativos de la HOME — A "Madrid Times" (conservador), B "Madrid Live" (recomendado), C "Madrid Universe" (ambicioso) — seleccionables desde dentro del frame del iPhone con un toggle Matchday/Non-matchday adicional, para que cualquier stakeholder los compare en 30 segundos y dé feedback antes de comprometerse a un build.',
+    context: 'Tras el discovery interno de los conceptos del Hoy, el Club se decanta por "Mi Mix": una Home rediseñada que combina las mejores piezas validadas (feed vertical, predictor, racha, próximos partidos, mini-noticias y Bernabéu hoy) bajo una cabecera de bienvenida y un selector configurable de equipos y jugadores favoritos. El objetivo es una pantalla "Hoy" personalizable que cada madridista adapta a sus equipos y jugadores.',
+    problem: 'La "Hoy" actual es la misma para todos y se centra sólo en el próximo partido del primer equipo masculino. El aficionado del femenino o del baloncesto no se siente representado, y no hay forma de priorizar el contenido que de verdad le interesa. Eso lastra retención y tiempo en pestaña.',
+    objective: 'Entregar "Hoy v2 — Mi Mix": una Home modular con scroll vertical donde cada bloque es activable por separado, encabezada por un saludo con tier y un selector de equipos/jugadores favoritos editable en 3 pasos y persistido localmente. El feed y las noticias se filtran por el chip activo del selector.',
     inScope: [
-        'Selector A/B/C dentro del frame con identidad visual fuerte por concepto (newspaper / streaming / metaverse).',
-        'Toggle Matchday/Non-matchday que afecta a B (cambio fuerte) y a C (cambio sutil); en A se deshabilita con tooltip.',
-        'Concepto A — Madrid Times: header compacto, racha de 7 días con día actual pulsante, "Hoy en el Club" (clip + noticia editorial), próximos partidos Femenino/Basket, banner Tienda con descuento.',
-        'Concepto B — Madrid Live: match strip, chips horizontales con filtro por jugador, feed vertical 9:16 dominante con navegación ↑/↓, predictor del Madridista interactivo (4 opciones, posición #428), mini-tiles comerciales. Modo Día de Partido con marcador grande, pin de audio del Carrusel, eventos timeline, chat Madridismo Live (auto-ticker cada 4s) y stats en directo.',
-        'Concepto C — Madrid Universe: saludo + racha 🔥 + tokens 🪙, stories circulares con borde holo, feed ML "Personalizado para ti", peña digital "Madridistas Lavapiés", Bernabéu hoy (Tour + Concierto), coleccionables sin valor financiero con efecto holo, PiP RMTV draggable.',
-        'Tarjeta lateral por concepto con build estimado, lift esperado y riesgo (para que el stakeholder decida con datos).',
-        'Botón "Captura PNG" sobre el frame que exporta la vista actual con scroll desplegado, para compartir vía Slack/Confluence.'
+        'Cabecera de bienvenida / login con saludo + tier (Visitante / Socio / Madridista / Junior / Premium / Platinum).',
+        'Selector de equipos y jugadores favoritos con chips horizontales y editor en 3 pasos (equipos · jugadores · lista reordenable), persistido en localStorage.',
+        'Próximos partidos en cards compactas (una por equipo seguido) con escudos, hora y competición.',
+        'Feed vertical 9:16 reutilizado, filtrado por el chip activo del selector.',
+        'Racha Madridista (7 días) y Predictor del Madridista (4 resultados + leaderboard).',
+        'Mini-noticias compactas (thumb + título + kicker) y bloque "Bernabéu hoy" (Tour + Concierto).',
+        'Variante "Alta Fidelidad" (sub-flag) que sustituye los bloques por sus versiones de mockup avanzado.',
+        'Cada módulo es un sub-flag independiente bajo `fan.hoy.concept-mix`, reordenable desde el panel "Funcionalidades".'
     ],
     outOfScope: [
-        'Datos reales: todo es mock (Mbappé, Vinícius, Bayern, etc.) sin llamadas a API ni persistencia.',
-        'Funcionalidad real de Calendario, Noticias, RMTV o Tienda — sólo se mockea la pestaña Hoy.',
-        'Tokens financieros / NFTs en C: los coleccionables son sin valor financiero, sólo identidad.',
-        'AR / mundo virtual del Bernabéu en C — fuera del scope del discovery.',
-        'Gamificación profunda con leaderboards globales y rewards reales.',
-        'Login/sign-up real, push notifications, deep linking.'
+        'Datos reales: todo es mock (Mbappé, Vinícius, etc.) sin llamadas a API.',
+        'Personalización con backend / sincronización entre dispositivos: el selector vive en localStorage.',
+        'Recomendación algorítmica real del feed (el filtrado es por chip, no por ML).',
+        'Login / sign-up real, push notifications y deep linking.'
     ],
     userStories: [
-        'Como PM, quiero abrir un link y mostrarle al CMO los 3 conceptos en 30 segundos sin abrir 60 slides.',
-        'Como Director Digital, quiero comparar A vs B vs C tocando los mismos elementos en el mismo frame.',
-        'Como Diseñador, quiero ver mis 3 propuestas vivas antes de comprometerme a Figma final.',
-        'Como Stakeholder, quiero ver el modo "Día de Partido" del concepto B sin tener que esperar al partido real.',
-        'Como PM, quiero exportar una captura PNG del frame con scroll completo para pegarla en Confluence / Jira.'
+        'Como madridista del femenino, quiero elegir mis equipos y jugadores favoritos para que el Hoy priorice su contenido.',
+        'Como usuario, quiero reordenar y activar/ocultar los módulos del Hoy para quedarme sólo con lo que me interesa.',
+        'Como aficionado, quiero ver el feed y las noticias filtradas al tocar el chip de un jugador o equipo.',
+        'Como PM, quiero comparar combinaciones de módulos activando/desactivando cada sub-flag sin tocar código.'
     ],
     acceptanceCriteria: [
-        'El selector A/B/C cambia el contenido del frame con cross-fade de 220ms.',
-        'Cada concepto tiene un sello/banda de identidad propio (Madrid Times serif / Madrid·Live ON AIR / Madrid Universe gold) inmediatamente reconocible.',
-        'El toggle Matchday transforma el header de B (marcador grande, pin audio, eventos, chat, stats) y se aplica de forma sutil al header de C.',
-        'En B no-matchday, las flechas ↑/↓ del feed cambian de clip; en B matchday hay 4 mensajes iniciales en el chat y se añade uno nuevo cada 4s.',
-        'En C, el botón "▶ RMTV PiP" abre un reproductor flotante que se puede arrastrar por el frame.',
-        'El predictor de B acepta una opción y muestra "Posición #428 de 121.300", deshabilitando las otras opciones.',
-        'En A, el toggle Matchday está deshabilitado con tooltip "Concepto A no varía con el matchday".',
-        'El botón "Captura PNG" sobre el frame genera un PNG con TODO el scroll de la vista actual desplegado verticalmente.',
-        'prefers-reduced-motion desactiva pulsos, audio bars, holo y broadcast del PiP, manteniendo cambios de estado.'
+        'El selector permite configurar equipos y jugadores en 3 pasos y persiste la selección al recargar.',
+        'Al tocar un chip de jugador/equipo, el feed vertical y las mini-noticias se filtran a ese contexto.',
+        'Cada sub-flag (cabecera, selector, próximos, feed, racha, predictor, noticias, Bernabéu) muestra/oculta su bloque de forma independiente.',
+        'El orden de los bloques respeta el orden definido por el usuario en el panel "Funcionalidades".',
+        'La variante "Alta Fidelidad" sustituye los bloques estándar por sus versiones avanzadas sin romper el scroll.',
+        'prefers-reduced-motion desactiva el anillo pulsante de la racha y demás animaciones, manteniendo los estados.'
     ],
     uxNotes: [
-        'A debe sentirse a "newspaper editorial" (cream, serif), B a "Twitch/TikTok" (oscuro + magenta ON AIR), C a "Champions premium" (purpura + dorado).',
-        'El stakeholder NO debe necesitar leer documentación: la banda de identidad arriba del scroll deja claro qué concepto está activo.',
-        'Las cards en B y C son oscuras a propósito (tema OTT); en A son blancas sobre fondo cream (tema editorial).',
-        'Los toggles deben recordar tu última elección al volver a "Hoy" (vive en `state`, se pierde al recargar; eso es aceptable para un mockup).',
-        'En A no debe aparecer ni feed vertical, ni predictor, ni peñas — el pitch es justo "lo mínimo para pelear con la home actual".'
+        'La cabecera de bienvenida es persistente arriba del scroll; el tap sobre el cluster cicla los estados de tier.',
+        'El selector sigue el patrón OneFootball: chips horizontales + botón "Configurar" que abre el editor.',
+        'Las cards de próximos partidos son más compactas que las de la antigua estructura modular: una por equipo.',
+        'Mi Mix es la dirección elegida del Hoy v2; los conceptos A/B/C fueron material de discovery y ya no forman parte del producto.'
     ],
     metrics: [
-        'Decisión de concepto firmada por la junta del Club ≤ 2 semanas tras lanzar el mockup (hoy: indefinido).',
-        'Asistentes a la demo interna que tocan los 3 conceptos: ≥ 90% (medible con observación directa, no analytics).',
-        'PDF/PNG exportados desde el mockup y compartidos en Confluence: ≥ 1 por concepto.',
-        'Reducción de slides de discovery siguientes: -50% (porque ya hay un mockup que sustituye 30 wireframes).'
+        'Adopción del selector: ≥ 40% de usuarios configura al menos un equipo/jugador favorito.',
+        '+20-30% de tiempo en pestaña "Hoy" frente a la Home clásica.',
+        '+15% de CTR a noticias y feed desde "Hoy".',
+        'Scroll depth medio ≥ 60% de la pantalla.'
     ],
     dependencies: [
-        'Hosting en GitHub Pages activado (Settings → Pages, branch `main`, folder `/`).',
-        'Supabase para auth de stakeholders (ya existente en el repo) o `?dev=1` bypass para demos.',
-        'html2canvas + jsPDF cargados desde CDN para los exportes (lazy-load).'
+        'Hosting en GitHub Pages activado.',
+        'html2canvas + jsPDF cargados desde CDN para el export a PDF (lazy-load).'
     ],
     risks: [
-        'Los stakeholders pueden enamorarse del concepto C (más espectacular) sin entender que es 6-9 meses de build con moderación 24/7. Mitigación: side-card con build/lift/riesgo siempre visible.',
-        'El feed vertical de B se ve "demasiado TikTok" para un sector conservador del Club. Mitigación: dejar a B como recomendado con datos del PRD (+30-40% DAU non-matchday).',
-        'La captura PNG depende de html2canvas y puede ahogar Safari iOS si el scroll es enorme. Mitigación: scale: 2 (no 3), JPEG fallback si el blob > 5MB.',
-        'Si lo abre alguien en móvil, el frame del iPhone "envuelto" se queda raro — usar viewport directo en <768px (ya hecho).'
-    ]
-});
-
-register('fan.hoy.v2-structure', {
-    title: 'Hoy v2 · estructura modular con scroll vertical',
-    epic: 'Fan App · Hoy',
-    estimate: 'L (3-4 sprints)',
-    priority: 'Alta',
-    context: 'La pantalla "Hoy" actual concentra todo el contenido en un único bloque sobre el próximo partido. La interacción es muy plana: el usuario ve un partido, abre detalle y vuelve. No hay puntos de entrada secundarios (noticias, highlights, encuestas) que aumenten retención dentro de la pestaña.',
-    problem: 'La sesión media en "Hoy" es corta porque, una vez consultado el partido próximo, no hay nada más que invite a quedarse. Los KPIs de tiempo en pestaña, scroll depth y CTR a contenidos secundarios son bajos.',
-    objective: 'Rediseñar "Hoy" como un feed modular con scroll vertical, donde el partido siga siendo el ancla pero coexista con módulos de noticias, highlights y encuestas que el usuario puede consumir sin salir de la pestaña.',
-    inScope: [
-        'Card compacta del próximo partido en la parte superior (crests, fecha, hora, estadio, competición)',
-        'Listado de 3-5 noticias destacadas con tap-to-detail',
-        'Carrusel horizontal de highlights / vídeos cortos',
-        'Bloque de encuesta placeholder (puede ser dummy en v1)',
-        'Scroll vertical fluido entre módulos con respect al safe area'
-    ],
-    outOfScope: [
-        'Pestañas por equipo (entregable separado, ver fan.hoy.team-tabs)',
-        'Stories y Tras las cámaras (ver fan.hoy.stories)',
-        'Bloque de gamificación (ver fan.hoy.gamification)',
-        'Cabecera de login (ver fan.app.login-header)'
-    ],
-    userStories: [
-        'Como aficionado, quiero ver el próximo partido nada más abrir la app, para no tener que buscarlo.',
-        'Como aficionado, quiero scrollear hacia abajo y ver noticias relevantes sin cambiar de pestaña.',
-        'Como aficionado, quiero ver highlights cortos del último partido sin tener que ir a RMTV.',
-        'Como aficionado, quiero opinar sobre el equipo en una encuesta rápida, para sentir que mi voz cuenta.'
-    ],
-    acceptanceCriteria: [
-        'La card del próximo partido muestra crests, fecha, hora, estadio y competición y es tappable hacia el detalle.',
-        'Si hay más de un partido próximo, un carrusel horizontal en la card permite navegarlos.',
-        'El listado de noticias muestra al menos título, kicker (categoría) y fecha; tap abre el detalle existente.',
-        'El carrusel de highlights es horizontal con snap; al tocar un item se reproduce el vídeo en una hoja modal.',
-        'La encuesta acepta una respuesta y deshabilita el resto sin recargar la pantalla.',
-        'El scroll de la pantalla es fluido a 60fps en iPhone 12 o superior.'
-    ],
-    uxNotes: [
-        'Todos los módulos tienen el mismo padding horizontal y un separador sutil para sentir el grid común.',
-        'El módulo de partido se queda "sticky" al hacer scroll los primeros 80px para no perder la referencia.',
-        'Los módulos vacíos (sin noticias, sin highlights) se ocultan en lugar de mostrar empty state.'
-    ],
-    metrics: [
-        'Tiempo medio en la pestaña Hoy (objetivo: +30%)',
-        'Scroll depth medio (objetivo: alcanzar el módulo de encuesta en al menos el 40% de las sesiones)',
-        'CTR a detalle de noticia desde Hoy (objetivo: 8%+)',
-        'Engagement de la encuesta (objetivo: 15% de los usuarios que ven el módulo responden)'
-    ],
-    dependencies: [
-        'API de noticias destacadas (ya existente, sólo añadir endpoint para "destacadas en Hoy")',
-        'CMS de highlights debe etiquetar piezas como "Hoy elegible"',
-        'Diseño aprobado del bloque de encuesta (podría ir como dummy en v1)'
-    ],
-    risks: [
-        'Si el back de noticias tarda > 800ms, el módulo aparece después del primer paint y produce CLS — necesitamos skeleton.',
-        'El reproductor de highlights en hoja modal puede chocar con la rotación de iPad si no se valida.',
-        'Encuesta puede percibirse como "anuncio" si se abusa: alternar contenido cada 2-3 días.'
-    ]
-});
-
-register('fan.hoy.stories', {
-    title: 'Stories + Tras las cámaras en Hoy v2',
-    epic: 'Fan App · Hoy',
-    estimate: 'M (2 sprints)',
-    priority: 'Media',
-    context: 'Una vez Hoy v2 está en marcha, queremos un punto de entrada visual estilo Instagram que aproveche el contenido lifestyle del club (entrenamientos, llegadas, vestuario) y ofrezca un layout de galería para "Tras las cámaras".',
-    objective: 'Añadir un carrusel de stories en la parte superior de Hoy v2 y una sección "Tras las cámaras" después de las noticias, para subir tiempo en pantalla y dar visibilidad a contenido que hoy se pierde en RRSS.',
-    inScope: [
-        'Carrusel horizontal de stories arriba del todo en Hoy v2',
-        'Visor a pantalla completa con paginación por tap (similar a Instagram Stories)',
-        'Indicador de progreso por página, autoplay con duración configurable por pieza',
-        'Sección "Tras las cámaras" con galería de fotos tras el bloque de noticias',
-        'Tap en una foto → carrusel de imágenes a pantalla completa'
-    ],
-    outOfScope: [
-        'Reacciones a stories (likes, mensajes)',
-        'Ver quién ha visto tu story (es contenido editorial, no social)',
-        'Stories patrocinadas o comerciales en v1'
-    ],
-    userStories: [
-        'Como aficionado, quiero ver stories cortos del día a día del club para sentirme cerca del equipo.',
-        'Como aficionado, quiero ver galerías de fotos de detrás de cámaras para acceder a contenido exclusivo.',
-        'Como editor del club, quiero subir stories desde el CMS sin pasar por desarrollo.'
-    ],
-    acceptanceCriteria: [
-        'El carrusel de stories es horizontal con scroll snap y muestra avatar circular + título de cada story.',
-        'Tap en un avatar abre el visor a pantalla completa empezando en la página 0.',
-        'El visor avanza páginas por tap derecho y retrocede por tap izquierdo; swipe arriba cierra.',
-        'La sección "Tras las cámaras" muestra al menos 4 fotos en grid de 2 columnas.',
-        'Tap en una foto abre un carrusel modal con todas las fotos de esa galería.',
-        'Cierre por gesto y por botón ✕ en la esquina superior izquierda.'
-    ],
-    uxNotes: [
-        'Los stories tienen un anillo dorado mientras no están vistos y gris cuando ya se han abierto.',
-        'El visor a pantalla completa NO oculta el status bar para no romper la sensación nativa.',
-        'Si la story tiene una sola página, el indicador de progreso se oculta.'
-    ],
-    metrics: [
-        'CTR del carrusel de stories (objetivo: 25%+ de los usuarios que ven Hoy)',
-        'Páginas vistas por sesión de visor (objetivo: 4+)',
-        'CTR de "Tras las cámaras" (objetivo: 12%+)'
-    ],
-    dependencies: [
-        'CMS necesita un nuevo content type "Story" con páginas ordenadas (imagen + caption opcional)',
-        'CMS necesita un content type "Galería" con N fotos para "Tras las cámaras"',
-        'Hoy v2 (`fan.hoy.v2-structure`) debe estar en producción primero'
-    ],
-    risks: [
-        'Stories cargan muchas imágenes — necesitamos lazy-load + WebP/AVIF para no penalizar consumo de datos.',
-        'El visor a pantalla completa colisiona con el side-menu si no se gestionan los gestos correctamente.'
-    ]
-});
-
-register('fan.hoy.gamification', {
-    title: 'Gamificación · predicciones de marcador y ranking local',
-    epic: 'Fan App · Engagement',
-    estimate: 'L (3 sprints)',
-    priority: 'Media',
-    context: 'Tenemos una base de aficionados muy activa pero sin ningún mecanismo lúdico que les invite a volver entre partidos. Las predicciones deportivas son una mecánica probada (Marca, AS, Mister) con altísima retención semanal.',
-    objective: 'Permitir al aficionado predecir el marcador exacto del próximo partido del primer equipo, otorgar puntos por aciertos parciales y totales, y mostrar un ranking local (amigos / madridistas) que se actualice tras cada partido.',
-    inScope: [
-        'Bloque de predicción dentro de Hoy v2 con dos selectores de número (0-9) por equipo',
-        'Botón "Enviar predicción" con confirmación visual',
-        'Sistema de puntos: 5 por resultado correcto (W/D/L), 10 por marcador exacto',
-        'Pantalla de ranking local accesible desde el bloque',
-        'Histórico de predicciones del usuario (mínimo últimos 10 partidos)'
-    ],
-    outOfScope: [
-        'Apuestas con dinero real',
-        'Predicciones para partidos que no sean del primer equipo masculino (en v1)',
-        'Ligas privadas con amigos (potencial v2)',
-        'Notificaciones push de "se cierra la predicción" (potencial v2)'
-    ],
-    userStories: [
-        'Como aficionado, quiero predecir el marcador antes del partido para sentirme parte del equipo.',
-        'Como aficionado, quiero ver si he acertado tras el partido para celebrar mi instinto futbolero.',
-        'Como aficionado, quiero ver mi ranking entre los demás madridistas para competir.',
-        'Como aficionado, quiero ver mi histórico de aciertos para presumir.'
-    ],
-    acceptanceCriteria: [
-        'El bloque sólo permite enviar predicción si quedan más de 30 minutos para el inicio del partido.',
-        'Una vez enviada, la predicción no se puede modificar.',
-        'Tras el final del partido, los puntos se calculan y persisten en backend.',
-        'El ranking se actualiza en máximo 5 minutos tras el final del partido.',
-        'El bloque muestra el estado de la predicción del usuario en el partido actual: "Pendiente", "Enviada: 2-1", "Acertada (+10pts)".',
-        'El ranking permite ordenar por puntos totales del año y de la temporada.'
-    ],
-    uxNotes: [
-        'Los selectores de número son ruedas verticales tipo iOS picker, no inputs de texto.',
-        'El estado "Acertada" se acompaña de una animación sutil (confetti o destello) la primera vez que se ve.',
-        'El ranking local se cabecera con el puesto del usuario destacado en gold.'
-    ],
-    metrics: [
-        'Tasa de envío de predicción por usuario activo en día de partido (objetivo: 35%+)',
-        'Retorno a la app el día siguiente al partido (objetivo: +25% sobre baseline)',
-        'Sesiones por semana en weeks con partido (objetivo: +1.5 sesiones)'
-    ],
-    dependencies: [
-        'API de partidos con timestamp de "kickoff" en zona horaria correcta',
-        'Backend para almacenar predicciones, puntos y ranking',
-        'Hoy v2 debe estar en producción'
-    ],
-    risks: [
-        'Diferencias horarias entre cliente y servidor pueden permitir enviar predicciones tarde — validar siempre en backend.',
-        'El ranking puede crecer mucho — paginar con cursor desde el inicio.',
-        'GDPR: el ranking expone alias / iniciales, nunca nombres completos.'
+        'Demasiados módulos activos a la vez pueden saturar el scroll. Mitigación: defaults curados y reordenación por el usuario.',
+        'La persistencia sólo local hace que la configuración se pierda entre dispositivos. Aceptable en mockup; backend en fase posterior.'
     ]
 });
 
@@ -530,140 +354,6 @@ register('fan.app.login-header', {
     risks: [
         'Usuarios con nombres muy largos romperán el layout — truncar a 14 caracteres + ellipsis.',
         'En modo oscuro la cabecera necesita su propia variante (validar contraste con WCAG AA).'
-    ]
-});
-
-register('fan.hoy.team-tabs', {
-    title: 'Pestañas por equipo en Hoy (filtro multi-deporte)',
-    epic: 'Fan App · Hoy',
-    estimate: 'M (2 sprints)',
-    priority: 'Media',
-    context: 'El Real Madrid no es sólo fútbol masculino: tenemos secciones de fútbol femenino y baloncesto cada vez más fuertes. Hoy v2 muestra todo mezclado, lo cual confunde a aficionados que sólo siguen una de las disciplinas.',
-    objective: 'Añadir 4 pestañas en la parte superior de Hoy v2 (Todo · Fútbol masc · Fútbol fem · Baloncesto) que filtren todo el contenido (próximos partidos, noticias, highlights, encuesta) por deporte. "Todo" mantiene el comportamiento actual.',
-    inScope: [
-        '4 pestañas horizontales con scroll snap si no entran en pantalla',
-        'Filtrado en cliente del contenido por equipo: partidos, noticias, highlights',
-        'Persistencia del filtro elegido entre sesiones',
-        'Animación sutil de transición entre filtros (fade-in del nuevo contenido)'
-    ],
-    outOfScope: [
-        'Pestañas con emojis (entrega aparte, ver fan.hoy.team-tabs.emoji)',
-        'Editor para activar/desactivar pestañas (entrega aparte, ver fan.hoy.team-tabs.editor)',
-        'Filtros adicionales (Cantera, Veteranos, etc.) en v1'
-    ],
-    userStories: [
-        'Como aficionado del baloncesto, quiero filtrar Hoy por mi deporte para no ver fútbol que no me interesa.',
-        'Como aficionado generalista, quiero ver todo mezclado por defecto para no perderme nada.',
-        'Como aficionada del fútbol femenino, quiero acceso rápido a contenido de mi equipo que hoy queda diluido.'
-    ],
-    acceptanceCriteria: [
-        'Las pestañas siempre aparecen arriba del todo en Hoy v2 cuando el feature está activo.',
-        'La pestaña "Todo" muestra el contenido sin filtrar (comportamiento original).',
-        'Las pestañas de equipo filtran partidos, noticias y highlights al deporte seleccionado.',
-        'La selección se persiste en localStorage y se mantiene tras matar y reabrir la app.',
-        'Si una pestaña no tiene contenido en ningún módulo, muestra empty state ("Próximamente publicaremos contenido de…").'
-    ],
-    uxNotes: [
-        'Pestañas con underline gold de 2px en la activa.',
-        'Cuando hay scroll horizontal, el último item visible se medio-corta para indicar más contenido a la derecha.',
-        'En tablets centrar las pestañas con max-width.'
-    ],
-    metrics: [
-        'Tasa de cambio de pestaña por sesión (objetivo: 35%+ usan al menos una pestaña distinta de "Todo")',
-        'Tiempo en Hoy de aficionados de fútbol fem y basket (objetivo: +50%)'
-    ],
-    dependencies: [
-        'Cada item de contenido (partido, noticia, highlight) debe llevar una etiqueta de deporte en el backend.',
-        'Hoy v2 (`fan.hoy.v2-structure`) debe estar en producción.'
-    ],
-    risks: [
-        'Si el backend tarda en etiquetar todo el catálogo histórico, los filtros darán huecos.',
-        'Validar que el filtro no oculte contenido cross-deporte importante (ej: notas del club que aplican a todos).'
-    ]
-});
-
-register('fan.hoy.team-tabs.emoji', {
-    title: 'Variante de pestañas con emojis (⚽ ⚽ 🏀)',
-    epic: 'Fan App · Hoy',
-    estimate: 'XS (<1 sprint)',
-    priority: 'Baja',
-    context: 'Las pestañas por equipo en texto plano funcionan, pero perdemos un punto de personalidad y reconocimiento visual. Probar una variante con emojis puede mejorar reconocimiento sin alterar la lógica.',
-    objective: 'Variante visual A/B testable de las pestañas por equipo donde el deporte se identifica con un emoji además del texto.',
-    inScope: [
-        'Pestañas con emoji + texto: "⚽ Masculino", "⚽ Femenino", "🏀 1er equipo"',
-        'Mantener comportamiento idéntico al de la variante texto-only'
-    ],
-    outOfScope: [
-        'Iconos custom del club (los emojis son del sistema operativo)',
-        'Animar los emojis'
-    ],
-    userStories: [
-        'Como producto, quiero comparar engagement entre la variante texto y la variante emoji para elegir la mejor.'
-    ],
-    acceptanceCriteria: [
-        'Cuando el flag está activo, las pestañas muestran emoji + texto en lugar de sólo texto.',
-        'El ancho de las pestañas se ajusta para que sigan entrando en una fila en mobile.',
-        'Funciona junto con `fan.hoy.team-tabs.editor`: las pestañas ocultas siguen ocultas.'
-    ],
-    uxNotes: [
-        'Los emojis no deben aparecer en pantallas con tipografía decorativa que se vea afectada.',
-        'En modo oscuro algunos emojis pierden contraste — comprobar y, si hace falta, añadir un fondo sutil.'
-    ],
-    metrics: [
-        'A/B test: CTR de pestañas (objetivo: detectar si emoji mejora >10%)',
-        'NPS qualitativo en focus group'
-    ],
-    dependencies: [
-        '`fan.hoy.team-tabs` debe estar en producción.'
-    ],
-    risks: [
-        'Algunos usuarios consideran los emojis "infantiles" — necesitamos data, no opinión, para decidir.'
-    ]
-});
-
-register('fan.hoy.team-tabs.editor', {
-    title: 'Editor de pestañas (activar / ocultar deportes)',
-    epic: 'Fan App · Hoy',
-    estimate: 'S (1 sprint)',
-    priority: 'Media',
-    context: 'Hay aficionados que sólo siguen un deporte y prefieren no ver siquiera la pestaña de los demás. Otros quieren ver todo. Necesitamos darles control sin obligarles a navegar a Ajustes.',
-    objective: 'Botón ⚙ junto a las pestañas de equipo que abre un editor donde el usuario puede activar / ocultar cada pestaña. La pestaña "Todo" siempre se muestra.',
-    inScope: [
-        'Botón ⚙ a la derecha de la barra de pestañas',
-        'Sheet modal que lista cada pestaña de equipo con un toggle',
-        'Persistencia inmediata de cambios (sin "Guardar")',
-        'La pestaña "Todo" no es modificable'
-    ],
-    outOfScope: [
-        'Reordenar las pestañas (potencial v2)',
-        'Crear pestañas custom'
-    ],
-    userStories: [
-        'Como aficionado del baloncesto, quiero ocultar las pestañas de fútbol para no verlas.',
-        'Como aficionado generalista, quiero asegurarme de que siempre tengo todas las pestañas activas.'
-    ],
-    acceptanceCriteria: [
-        'El botón ⚙ aparece junto a las pestañas cuando el flag está activo.',
-        'Tap abre un sheet con tres rows: "Fútbol masc", "Fútbol fem", "Baloncesto" cada uno con un toggle.',
-        'Toggle off oculta la pestaña inmediatamente sin necesidad de cerrar el sheet.',
-        'Si el usuario está viendo una pestaña que oculta, vuelve automáticamente a "Todo".',
-        'La preferencia se persiste en localStorage.',
-        'Cierre por tap en backdrop o botón "Cerrar".'
-    ],
-    uxNotes: [
-        'El sheet ocupa solo la altura necesaria (no full-screen).',
-        'Los toggles usan el componente nativo de la app, no custom.',
-        'Si el usuario oculta todas las pestañas de equipo, mostrar un toast suave: "Sigues viendo todo el contenido en \'Todo\'".'
-    ],
-    metrics: [
-        '% de usuarios que abren el editor (objetivo: 15%+)',
-        '% de usuarios que personalizan al menos una pestaña (objetivo: 8%+)'
-    ],
-    dependencies: [
-        '`fan.hoy.team-tabs` debe estar en producción.'
-    ],
-    risks: [
-        'Si el usuario oculta una pestaña por error, debería poder reactivarla fácilmente — el botón ⚙ siempre visible es la solución.'
     ]
 });
 
@@ -824,8 +514,7 @@ register('fan.sidemenu.v2.preferences', {
     acceptanceCriteria: [
         'La sección "Preferencias" agrupa al menos 4 filas mencionadas arriba.',
         'Cada fila tiene icono + label + chevron a la derecha.',
-        'Tap abre la hoja correspondiente.',
-        'Si `fan.hoy.team-tabs.editor` está activo, aparece una fila adicional "Pestañas de Hoy" como atajo.'
+        'Tap abre la hoja correspondiente.'
     ],
     uxNotes: [
         'El kicker de la sección está en uppercase, color secundario.',
