@@ -436,13 +436,6 @@ function fanInit({ tab = 'hoy', sub = 'directo', flags = [], extra } = {}) {
     state.sideMenuDetail = null;
     state.sideMenuSearch = '';
     state.newsId = null;
-    state.playingVideoId = null;
-    state.openMatchSummary = null;
-    state.openHighlightsAll = null;
-    state.openStory = null;
-    state.openBehindScenes = null;
-    state.openRanking = false;
-    state.hoyEditorOpen = false;
     flags.forEach(f => Flags.set(f, true));
     if (typeof extra === 'function') extra();
 }
@@ -663,176 +656,39 @@ registerFlow('vip.tickets.multi-share', {
         }
     ]
 });
-
-// ── Fan · Hoy v2 — 3 conceptos del PRD (A/B/C) ───────────────────
-// El concepto activo se controla con flags mutuamente excluyentes:
-// `fan.hoy.concept-{a,b,c}`. Toggleamos el flag adecuado en cada step
-// para que la identidad/cuerpo del frame cambie al cambiar de path.
-const _setConcept = (k) => {
-    Flags.set('fan.hoy.v2-options', true);
-    Flags.set(`fan.hoy.concept-${k}`, true);  // exclusive: apaga las otras
-};
-registerFlow('fan.hoy.v2-options', {
-    title: 'Hoy v2 · 3 conceptos (A/B/C)',
+// ── Fan · Hoy v2 — Mi Mix ────────────────────────────────────────
+registerFlow('fan.hoy.concept-mix', {
+    title: 'Hoy v2 — Mi Mix',
     snapshot: genericSnapshot, restore: genericRestore,
     init() {
-        fanInit({ tab: 'hoy', sub: 'directo',
-                  flags: ['fan.hoy.v2-options'] });
-        _setConcept('a');
-        // Reset transient state para que el primer step empiece limpio.
+        fanInit({ tab: 'hoy', sub: 'directo', flags: ['fan.hoy.concept-mix'] });
         state.hoyV2FeedIndex = 0;
-        state.hoyV2FeedFilter = 'all';
+        state.hoyV2MixFeedFilter = 'all';
+        state.hoyV2MixPickerOpen = false;
         state.hoyV2Prediction = null;
-        state.hoyV2PipOpen = true;
     },
     paths: [
         {
-            label: 'Concepto A · The Madrid Times (conservador)',
+            label: 'Recorrido por Mi Mix',
             steps: [
-                { caption: '1 · Sello editorial + match center',  async run() { _setConcept('a'); scrollScreen(0); } },
-                { caption: '2 · Racha Madridista (7 días)',       async run() { _setConcept('a'); scrollScreen(180); } },
-                { caption: '3 · Hoy en el Club + Próximos',       async run() { _setConcept('a'); scrollScreen(420); } },
-                { caption: '4 · Banner Tienda (-15%)',            async run() { _setConcept('a'); scrollScreen(900); } }
+                { caption: '1 · Cabecera + selector de equipos y jugadores', async run() { scrollScreen(0); } },
+                { caption: '2 · Próximos partidos (cards compactas)', async run() { scrollScreen(220); } },
+                { caption: '3 · Feed vertical 9:16', async run() {
+                    state.hoyV2MixFeedFilter = 'all'; state.hoyV2FeedIndex = 0; scrollScreen(520);
+                } },
+                { caption: '4 · Racha Madridista + Predictor', async run() {
+                    state.hoyV2Prediction = '2-1'; scrollScreen(900);
+                } },
+                { caption: '5 · Mini Noticias + Bernabéu hoy', async run() { scrollScreen(1300); } }
             ]
         },
         {
-            label: 'Concepto B · Madrid Live (recomendado, non-matchday)',
+            label: 'Editor del selector (3 pasos)',
             steps: [
-                { caption: '1 · Match strip + chips Para ti',     async run() {
-                    _setConcept('b'); Flags.set('fan.hoy.concept-b.matchday', false);
-                    state.hoyV2FeedIndex = 0; state.hoyV2FeedFilter = 'all';
-                    state.hoyV2Prediction = null; scrollScreen(0);
+                { caption: '1 · Selector con chips de favoritos', async run() {
+                    state.hoyV2MixPickerOpen = false; scrollScreen(0);
                 } },
-                { caption: '2 · Feed vertical 9:16 dominante',    async run() { scrollScreen(160); } },
-                { caption: '3 · Filtro Mbappé activo',            async run() {
-                    state.hoyV2FeedFilter = 'mbappe'; state.hoyV2FeedIndex = 0; scrollScreen(160);
-                } },
-                { caption: '4 · Predictor: 2-1 enviada (#428)',   async run() {
-                    state.hoyV2FeedFilter = 'all'; state.hoyV2Prediction = '2-1'; scrollScreen(580);
-                } },
-                { caption: '5 · Tiles: Tienda · Bernabéu · RMTV', async run() { scrollScreen(900); } }
-            ]
-        },
-        {
-            label: 'Concepto B · Modo Día de Partido',
-            steps: [
-                { caption: '1 · Marcador en directo 0-1 · 64\'',  async run() {
-                    _setConcept('b'); Flags.set('fan.hoy.concept-b.matchday', true);
-                    state.hoyV2Prediction = null; scrollScreen(0);
-                } },
-                { caption: '2 · Pin audio Carrusel + eventos',    async run() { scrollScreen(180); } },
-                { caption: '3 · Madridismo Live (chat moderado)', async run() { scrollScreen(320); } },
-                { caption: '4 · Stats en directo + Feed',         async run() { scrollScreen(540); } }
-            ]
-        },
-        {
-            label: 'Concepto C · Madrid Universe (ambicioso)',
-            steps: [
-                { caption: '1 · Identidad: 🔥27 · 🪙142',         async run() {
-                    _setConcept('c'); state.hoyV2PipOpen = true; scrollScreen(0);
-                } },
-                { caption: '2 · Stories + Feed ML',               async run() { scrollScreen(120); } },
-                { caption: '3 · PiP RMTV + Tu Peña Lavapiés',     async run() { scrollScreen(420); } },
-                { caption: '4 · Bernabéu hoy + Coleccionables',   async run() { scrollScreen(720); } }
-            ]
-        }
-    ]
-});
-
-// ── Fan · Hoy v2 — estructura modular ────────────────────────────
-registerFlow('fan.hoy.v2-structure', {
-    title: 'Hoy v2 — estructura modular',
-    snapshot: genericSnapshot, restore: genericRestore,
-    init() { fanInit({ tab: 'hoy', sub: 'directo', flags: ['fan.hoy.v2-structure'] }); },
-    paths: [
-        {
-            label: 'Recorrido principal por la nueva Hoy',
-            steps: [
-                { caption: '1 · Cabecera y próximo partido', async run() { scrollScreen(0); } },
-                { caption: '2 · Listado de noticias', async run() { scrollScreen(420); } },
-                { caption: '3 · Carrusel de highlights', async run() { scrollScreen(900); } },
-                { caption: '4 · Encuesta y cierre',     async run() { scrollScreen(1500); } }
-            ]
-        },
-        {
-            label: 'Detalle de noticia',
-            steps: [
-                { caption: '1 · Lista de noticias', async run() { scrollScreen(420); } },
-                { caption: '2 · Detalle abierto',   async run() {
-                    state.newsId = 'news-1';
-                    scrollScreen(0);
-                } }
-            ]
-        }
-    ]
-});
-
-// ── Fan · Stories + Tras las cámaras ─────────────────────────────
-registerFlow('fan.hoy.stories', {
-    title: 'Stories + Tras las cámaras',
-    snapshot: genericSnapshot, restore: genericRestore,
-    init() { fanInit({ tab: 'hoy', sub: 'directo',
-                       flags: ['fan.hoy.v2-structure', 'fan.hoy.stories'] }); },
-    paths: [
-        {
-            label: 'Carrusel de stories',
-            steps: [
-                { caption: '1 · Stories arriba del todo', async run() { scrollScreen(0); } },
-                { caption: '2 · Story abierto en pantalla completa', async run() {
-                    state.openStory = { storyId: 's1', pageIdx: 0 };
-                } }
-            ]
-        },
-        {
-            label: 'Tras las cámaras',
-            steps: [
-                { caption: '1 · Sección "Tras las cámaras"', async run() {
-                    state.openStory = null;
-                    scrollScreen(750);
-                } },
-                { caption: '2 · Galería abierta', async run() {
-                    state.openBehindScenes = 'bs-1';
-                } }
-            ]
-        }
-    ]
-});
-
-// ── Fan · Gamificación ───────────────────────────────────────────
-registerFlow('fan.hoy.gamification', {
-    title: 'Gamificación · predicciones y ranking',
-    snapshot: genericSnapshot, restore: genericRestore,
-    init() {
-        fanInit({ tab: 'hoy', sub: 'directo',
-                  flags: ['fan.hoy.v2-structure', 'fan.hoy.gamification'] });
-        // Reset predictions so step 1 captures the empty form.
-        state.predictions = {};
-        state.predictionDraft = {};
-    },
-    paths: [
-        {
-            label: 'Predecir el marcador del próximo partido',
-            steps: [
-                { caption: '1 · Bloque de predicción vacío', async run() {
-                    scrollScreen(380);
-                } },
-                { caption: '2 · Marcador rellenado', async run() {
-                    const m = (typeof HEADER_MATCHES !== 'undefined' && HEADER_MATCHES[0]) || { id: 'm1' };
-                    state.predictionDraft = { [m.id]: { home: 2, away: 1 } };
-                    scrollScreen(380);
-                } },
-                { caption: '3 · Predicción enviada', async run() {
-                    const m = (typeof HEADER_MATCHES !== 'undefined' && HEADER_MATCHES[0]) || { id: 'm1' };
-                    state.predictions = { [m.id]: { home: 2, away: 1, submittedAt: Date.now() } };
-                    state.predictionDraft = {};
-                    scrollScreen(380);
-                } }
-            ]
-        },
-        {
-            label: 'Ranking local',
-            steps: [
-                { caption: '1 · Ranking abierto', async run() { state.openRanking = true; } }
+                { caption: '2 · Editor abierto', async run() { state.hoyV2MixPickerOpen = true; } }
             ]
         }
     ]
@@ -870,76 +726,6 @@ registerFlow('fan.app.login-header', {
             ]
         }
     ]
-});
-
-// ── Fan · Pestañas por equipo en Hoy ─────────────────────────────
-registerFlow('fan.hoy.team-tabs', {
-    title: 'Pestañas por equipo en Hoy',
-    snapshot: genericSnapshot, restore: genericRestore,
-    init() {
-        fanInit({ tab: 'hoy', sub: 'directo',
-                  flags: ['fan.hoy.v2-structure', 'fan.hoy.team-tabs'] });
-        state.hoyTeamFilter = 'all';
-        state.hoyTabsVisible = { masc: true, fem: true, basket: true };
-        state.hoyTabsEmoji = false;
-    },
-    paths: [
-        {
-            label: 'Filtra Hoy por deporte',
-            steps: [
-                { caption: '1 · Pestañas Todo · Masc · Fem · Basket', async run() { state.hoyTeamFilter = 'all'; scrollScreen(0); } },
-                { caption: '2 · Filtrado a Fútbol masculino', async run() { state.hoyTeamFilter = 'masc'; scrollScreen(0); } },
-                { caption: '3 · Filtrado a Fútbol femenino',  async run() { state.hoyTeamFilter = 'fem'; scrollScreen(0); } },
-                { caption: '4 · Filtrado a Baloncesto',       async run() { state.hoyTeamFilter = 'basket'; scrollScreen(0); } }
-            ]
-        }
-    ]
-});
-
-// ── Fan · Pestañas con emojis (variante de team-tabs) ────────────
-registerFlow('fan.hoy.team-tabs.emoji', {
-    title: 'Pestañas por equipo · variante con emojis',
-    snapshot: genericSnapshot, restore: genericRestore,
-    init() {
-        fanInit({ tab: 'hoy', sub: 'directo',
-                  flags: ['fan.hoy.v2-structure', 'fan.hoy.team-tabs', 'fan.hoy.team-tabs.emoji'] });
-        state.hoyTeamFilter = 'all';
-        state.hoyTabsEmoji = true;
-    },
-    paths: [{
-        label: 'Pestañas con icono emoji',
-        steps: [
-            { caption: '1 · Variante "Todo · ⚽ Masc · ⚽ Fem · 🏀"', async run() { scrollScreen(0); } },
-            { caption: '2 · Filtrado a Baloncesto', async run() { state.hoyTeamFilter = 'basket'; scrollScreen(0); } }
-        ]
-    }]
-});
-
-// ── Fan · Editor de pestañas ─────────────────────────────────────
-registerFlow('fan.hoy.team-tabs.editor', {
-    title: 'Editor de pestañas (activar / ocultar)',
-    snapshot: genericSnapshot, restore: genericRestore,
-    init() {
-        fanInit({ tab: 'hoy', sub: 'directo',
-                  flags: ['fan.hoy.v2-structure', 'fan.hoy.team-tabs', 'fan.hoy.team-tabs.editor'] });
-        state.hoyTabsVisible = { masc: true, fem: true, basket: true };
-        state.hoyEditorOpen = false;
-    },
-    paths: [{
-        label: 'Ocultar la pestaña de Baloncesto',
-        steps: [
-            { caption: '1 · Botón ⚙ junto a las pestañas', async run() { scrollScreen(0); } },
-            { caption: '2 · Editor abierto', async run() { state.hoyEditorOpen = true; } },
-            { caption: '3 · Baloncesto desactivado', async run() {
-                state.hoyTabsVisible = { masc: true, fem: true, basket: false };
-            } },
-            { caption: '4 · Pestañas reducidas', async run() {
-                state.hoyEditorOpen = false;
-                state.hoyTeamFilter = 'all';
-                scrollScreen(0);
-            } }
-        ]
-    }]
 });
 
 // ── Fan · Side menu v2 ───────────────────────────────────────────
