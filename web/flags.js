@@ -56,7 +56,7 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.concept-mix.login-header',
-        label: 'D · Cabecera de bienvenida / login',
+        label: 'Mi Mix ·Cabecera de bienvenida / login',
         description: 'Cabecera persistente arriba con saludo + tier (Visitante / Socio / Madridista / Junior / Premium / Platinum). Tap cicla los estados.',
         category: 'Hoy',
         default: true,
@@ -65,7 +65,7 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.concept-mix.selector',
-        label: 'D · Selector de equipos y jugadores',
+        label: 'Mi Mix ·Selector de equipos y jugadores',
         description: 'Chips horizontales con tus equipos y jugadores favoritos. Botón "Configurar" abre editor en 3 pasos: 1) equipos · 2) jugadores · 3) lista reordenable. Persistido en localStorage.',
         category: 'Hoy',
         default: true,
@@ -74,8 +74,8 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.concept-mix.upcoming',
-        label: 'D · Próximos partidos (cards compactos)',
-        description: 'Carrusel horizontal de próximos partidos de los 3 equipos con cards más pequeñas que la Estructura modular. Una card por equipo con escudos, hora y competición.',
+        label: 'Mi Mix ·Próximos partidos (cards compactos)',
+        description: 'Carrusel horizontal de próximos partidos de los 3 equipos con cards compactas. Una card por equipo con escudos, hora y competición.',
         category: 'Hoy',
         default: true,
         requires: 'fan.hoy.concept-mix'
@@ -83,8 +83,8 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.concept-mix.feed',
-        label: 'D · Feed vertical 9:16',
-        description: 'Reusa el feed dominante del Concepto B. Filtra por el chip activo del selector cuando se toca un jugador o equipo.',
+        label: 'Mi Mix ·Feed vertical 9:16',
+        description: 'Feed vertical dominante 9:16. Filtra por el chip activo del selector cuando se toca un jugador o equipo.',
         category: 'Hoy',
         default: true,
         requires: 'fan.hoy.concept-mix'
@@ -92,8 +92,8 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.concept-mix.streak',
-        label: 'D · Racha Madridista',
-        description: 'Tile con 7 cuadritos representando los últimos 7 días, día actual con anillo dorado pulsante. Mismo patrón que Concepto A.',
+        label: 'Mi Mix ·Racha Madridista',
+        description: 'Tile con 7 cuadritos representando los últimos 7 días, día actual con anillo dorado pulsante.',
         category: 'Hoy',
         default: true,
         requires: 'fan.hoy.concept-mix'
@@ -101,8 +101,8 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.concept-mix.predictor',
-        label: 'D · Predictor del Madridista',
-        description: '4 pills con resultado + leaderboard mensual. Mismo patrón que Concepto B.',
+        label: 'Mi Mix ·Predictor del Madridista',
+        description: '4 pills con resultado + leaderboard mensual.',
         category: 'Hoy',
         default: true,
         requires: 'fan.hoy.concept-mix'
@@ -110,7 +110,7 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.concept-mix.news',
-        label: 'D · Mini Noticias',
+        label: 'Mi Mix ·Mini Noticias',
         description: 'Listado de 4 noticias en formato compacto (thumb 52px + título + kicker). Tap abre detalle.',
         category: 'Hoy',
         default: true,
@@ -119,7 +119,7 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.concept-mix.bernabeu',
-        label: 'D · Bernabéu hoy',
+        label: 'Mi Mix ·Bernabéu hoy',
         description: 'Tour Bernabéu (16:00) + Concierto (21:00) con CTAs Reservar / Cómo llegar.',
         category: 'Hoy',
         default: true,
@@ -128,7 +128,7 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.concept-mix.hi-fi',
-        label: 'D · Alta Fidelidad (mockups avanzados)',
+        label: 'Mi Mix ·Alta Fidelidad (mockups avanzados)',
         description: 'Sustituye los bloques de Mi Mix por sus versiones de alta fidelidad: date picker + match card con venue + escudos SVG en Partidos, carrusel "Para ti" con card grande + paginación, predictor con escudos RM y Barça, y Noticias con hero + grid de 2 columnas con etiquetas por equipo.',
         category: 'Hoy',
         default: false,

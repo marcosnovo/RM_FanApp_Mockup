@@ -306,6 +306,200 @@ register('fan.hoy.concept-mix', {
     ]
 });
 
+// ── Mi Mix · sub-funcionalidades (cada módulo es un sub-flag) ────
+register('fan.hoy.concept-mix.login-header', {
+    flagKey: 'fan.hoy.concept-mix.login-header',
+    title: 'Mi Mix · Cabecera de bienvenida / login con tier',
+    epic: 'Fan App · Hoy · Mi Mix',
+    estimate: 'S (1 sprint)',
+    priority: 'Media',
+    context: 'Módulo de Mi Mix. La cabecera persistente arriba del Hoy saluda al usuario y muestra su tier de socio, dando contexto de identidad antes de que empiece a hacer scroll.',
+    objective: 'Mostrar una cabecera con saludo + tier (Visitante / Socio / Madridista / Junior / Premium / Platinum) en lo alto de Mi Mix, con un tap que cicla los estados para demo.',
+    inScope: [
+        'Cabecera con nombre/saludo y badge de tier.',
+        'Tap sobre el cluster que cicla por los 6 estados de tier.',
+        'Estado "Visitante / Inicia sesión" cuando no hay sesión.'
+    ],
+    acceptanceCriteria: [
+        'La cabecera aparece arriba del scroll de Mi Mix cuando el sub-flag está ON.',
+        'El tap cambia de tier de forma cíclica y predecible.',
+        'El estado por defecto sin sesión invita a iniciar sesión.'
+    ],
+    uxNotes: [
+        'Reutiliza el patrón de la cabecera global de login para mantener coherencia visual.'
+    ],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.concept-mix.selector', {
+    flagKey: 'fan.hoy.concept-mix.selector',
+    title: 'Mi Mix · Selector de equipos y jugadores favoritos',
+    epic: 'Fan App · Hoy · Mi Mix',
+    estimate: 'M (2 sprints)',
+    priority: 'Alta',
+    context: 'Módulo clave de Mi Mix: permite al usuario declarar sus equipos y jugadores favoritos, que luego filtran el feed y las noticias del Hoy.',
+    objective: 'Ofrecer chips horizontales con los favoritos del usuario y un editor en 3 pasos (equipos · jugadores · lista reordenable) persistido en localStorage.',
+    inScope: [
+        'Chips horizontales de equipos y jugadores favoritos.',
+        'Botón "Configurar" que abre un editor en 3 pasos.',
+        'Reordenación de la lista de favoritos.',
+        'Persistencia de la selección en localStorage.'
+    ],
+    acceptanceCriteria: [
+        'La selección persiste al recargar la página.',
+        'El editor recorre los 3 pasos y permite añadir/quitar/reordenar.',
+        'Al tocar un chip, el feed y las noticias se filtran a ese contexto.'
+    ],
+    uxNotes: [
+        'Patrón estilo OneFootball: chips + bottom-sheet para configurar.'
+    ],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.concept-mix.upcoming', {
+    flagKey: 'fan.hoy.concept-mix.upcoming',
+    title: 'Mi Mix · Próximos partidos (cards compactas)',
+    epic: 'Fan App · Hoy · Mi Mix',
+    estimate: 'S (1 sprint)',
+    priority: 'Media',
+    context: 'Módulo de Mi Mix que resume el próximo partido de cada equipo seguido en cards compactas, sin robar protagonismo al resto del scroll.',
+    objective: 'Mostrar un carrusel horizontal con una card por equipo (escudos, hora y competición).',
+    inScope: [
+        'Carrusel horizontal de próximos partidos de los equipos seguidos.',
+        'Card compacta con escudos, hora y competición por equipo.'
+    ],
+    acceptanceCriteria: [
+        'Aparece una card por cada equipo seguido en el selector.',
+        'Cada card muestra escudos, hora y competición legibles.'
+    ],
+    uxNotes: ['Cards más pequeñas que el bloque de partido clásico para no dominar el Hoy.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.concept-mix.feed', {
+    flagKey: 'fan.hoy.concept-mix.feed',
+    title: 'Mi Mix · Feed vertical 9:16',
+    epic: 'Fan App · Hoy · Mi Mix',
+    estimate: 'M (2 sprints)',
+    priority: 'Alta',
+    context: 'El feed vertical dominante es el corazón consumible de Mi Mix: clips 9:16 navegables que mantienen al usuario dentro del Hoy.',
+    objective: 'Feed vertical 9:16 con navegación ↑/↓ entre clips, filtrable por el chip activo del selector.',
+    inScope: [
+        'Clips 9:16 con overlays de jugador, like y comentarios.',
+        'Navegación ↑/↓ entre clips.',
+        'Filtrado por el chip activo del selector (jugador/equipo).'
+    ],
+    acceptanceCriteria: [
+        'Las flechas ↑/↓ cambian de clip.',
+        'Al activar un chip de jugador/equipo, el feed se filtra a ese contexto.'
+    ],
+    uxNotes: ['Aspect 9:16 inmersivo, estilo TikTok/Reels.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.concept-mix.streak', {
+    flagKey: 'fan.hoy.concept-mix.streak',
+    title: 'Mi Mix · Racha Madridista (7 días)',
+    epic: 'Fan App · Hoy · Mi Mix',
+    estimate: 'S (1 sprint)',
+    priority: 'Baja',
+    context: 'Módulo de engagement de Mi Mix: una racha de visitas diarias que premia el hábito de abrir la app.',
+    objective: 'Mostrar un tile con 7 cuadritos (últimos 7 días) y el día actual destacado con un anillo dorado pulsante.',
+    inScope: [
+        'Tile con 7 días y estado de cada uno.',
+        'Día actual con anillo dorado pulsante.'
+    ],
+    acceptanceCriteria: [
+        'Se muestran 7 días con el actual destacado.',
+        'prefers-reduced-motion desactiva el pulso manteniendo el estado.'
+    ],
+    uxNotes: ['Microinteracción discreta; no debe competir con el feed.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.concept-mix.predictor', {
+    flagKey: 'fan.hoy.concept-mix.predictor',
+    title: 'Mi Mix · Predictor del Madridista',
+    epic: 'Fan App · Hoy · Mi Mix',
+    estimate: 'M (2 sprints)',
+    priority: 'Media',
+    context: 'Gamificación ligera de Mi Mix: predecir el marcador del próximo partido y competir en un leaderboard mensual.',
+    objective: 'Ofrecer 4 pills de resultado seleccionables + un leaderboard mensual con la posición del usuario.',
+    inScope: [
+        '4 pills de resultado clickables (una elección por partido).',
+        'Leaderboard mensual con posición del usuario.'
+    ],
+    acceptanceCriteria: [
+        'Al elegir un resultado se bloquean las demás opciones y se muestra la posición.',
+        'El leaderboard refleja la elección del usuario.'
+    ],
+    uxNotes: ['Sin apuestas ni dinero real; sólo puntos simbólicos.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.concept-mix.news', {
+    flagKey: 'fan.hoy.concept-mix.news',
+    title: 'Mi Mix · Mini Noticias',
+    epic: 'Fan App · Hoy · Mi Mix',
+    estimate: 'S (1 sprint)',
+    priority: 'Media',
+    context: 'Módulo editorial de Mi Mix: mantiene presencia de noticias sin romper el ritmo del feed.',
+    objective: 'Listado compacto de 4 noticias (thumb 52px + título + kicker) que abren el detalle al tocar.',
+    inScope: [
+        'Listado de 4 noticias en formato compacto.',
+        'Tap que abre el detalle de la noticia.',
+        'Filtrado por el equipo activo del selector.'
+    ],
+    acceptanceCriteria: [
+        'Se muestran 4 noticias con thumb, título y kicker.',
+        'El tap navega al detalle de la noticia.'
+    ],
+    uxNotes: ['Reutiliza el handler global [data-news-id] para abrir el detalle.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.concept-mix.bernabeu', {
+    flagKey: 'fan.hoy.concept-mix.bernabeu',
+    title: 'Mi Mix · Bernabéu hoy',
+    epic: 'Fan App · Hoy · Mi Mix',
+    estimate: 'S (1 sprint)',
+    priority: 'Baja',
+    context: 'Módulo de Mi Mix orientado a conversión: muestra qué pasa hoy en el Bernabéu (tour, conciertos) con CTAs.',
+    objective: 'Tarjeta con eventos del día del Bernabéu (Tour 16:00 + Concierto 21:00) y CTAs Reservar / Cómo llegar.',
+    inScope: [
+        'Eventos del día con hora.',
+        'CTAs "Reservar" y "Cómo llegar".'
+    ],
+    acceptanceCriteria: [
+        'Se listan al menos 2 eventos del día con su hora.',
+        'Cada evento ofrece sus CTAs.'
+    ],
+    uxNotes: ['Tono comercial pero integrado en el scroll, sin banner intrusivo.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.concept-mix.hi-fi', {
+    flagKey: 'fan.hoy.concept-mix.hi-fi',
+    title: 'Mi Mix · Alta Fidelidad (mockups avanzados)',
+    epic: 'Fan App · Hoy · Mi Mix',
+    estimate: 'M (2 sprints)',
+    priority: 'Media',
+    context: 'Variante de Mi Mix que sube el listón visual de los bloques para demos de alta fidelidad ante stakeholders.',
+    objective: 'Sustituir los bloques estándar de Mi Mix por sus versiones de alta fidelidad (date picker + match card con venue + escudos SVG, carrusel "Para ti" con card grande + paginación, predictor con escudos RM/Barça y Noticias con hero + grid de 2 columnas).',
+    inScope: [
+        'Partidos: date picker + match card con venue + escudos SVG.',
+        '"Para ti": carrusel con card grande + paginación.',
+        'Predictor con escudos RM y Barça.',
+        'Noticias con hero + grid de 2 columnas con etiquetas por equipo.'
+    ],
+    acceptanceCriteria: [
+        'Al activar el sub-flag, los bloques estándar se reemplazan por sus versiones hi-fi sin romper el scroll.',
+        'Los escudos se renderizan como SVG nítidos.'
+    ],
+    uxNotes: ['Pensado para capturas/demos; mayor coste visual que la versión base.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
 register('fan.app.login-header', {
     title: 'Cabecera global de login / bienvenida con tier',
     epic: 'Fan App · Identity',

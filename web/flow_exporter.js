@@ -694,6 +694,132 @@ registerFlow('fan.hoy.concept-mix', {
     ]
 });
 
+// ── Fan · Mi Mix · sub-funcionalidades ───────────────────────────
+// Helper: arranca Mi Mix con un sub-flag concreto activo y el state
+// transitorio del feed/predictor en limpio.
+function mixSubInit(subKey) {
+    fanInit({ tab: 'hoy', sub: 'directo', flags: ['fan.hoy.concept-mix', subKey] });
+    state.hoyV2FeedIndex = 0;
+    state.hoyV2MixFeedFilter = 'all';
+    state.hoyV2MixPickerOpen = false;
+    state.hoyV2Prediction = null;
+}
+
+registerFlow('fan.hoy.concept-mix.login-header', {
+    title: 'Mi Mix · Cabecera de bienvenida / login',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { mixSubInit('fan.hoy.concept-mix.login-header'); state.hoyAuthMock = { tierIdx: 0, name: 'Marcos' }; },
+    paths: [{
+        label: 'Cabecera con saludo + tier',
+        steps: [
+            { caption: '1 · Cabecera arriba del Hoy', async run() { scrollScreen(0); } },
+            { caption: '2 · Tier ciclado (Madridista)', async run() { state.hoyAuthMock = { tierIdx: 2, name: 'Marcos' }; scrollScreen(0); } }
+        ]
+    }]
+});
+
+registerFlow('fan.hoy.concept-mix.selector', {
+    title: 'Mi Mix · Selector de equipos y jugadores',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { mixSubInit('fan.hoy.concept-mix.selector'); },
+    paths: [{
+        label: 'Selector + editor (3 pasos)',
+        steps: [
+            { caption: '1 · Chips de favoritos', async run() { state.hoyV2MixPickerOpen = false; scrollScreen(0); } },
+            { caption: '2 · Editor de favoritos abierto', async run() { state.hoyV2MixPickerOpen = true; } }
+        ]
+    }]
+});
+
+registerFlow('fan.hoy.concept-mix.upcoming', {
+    title: 'Mi Mix · Próximos partidos (cards compactas)',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { mixSubInit('fan.hoy.concept-mix.upcoming'); },
+    paths: [{
+        label: 'Carrusel de próximos partidos',
+        steps: [
+            { caption: '1 · Cards compactas por equipo', async run() { scrollScreen(200); } }
+        ]
+    }]
+});
+
+registerFlow('fan.hoy.concept-mix.feed', {
+    title: 'Mi Mix · Feed vertical 9:16',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { mixSubInit('fan.hoy.concept-mix.feed'); },
+    paths: [{
+        label: 'Feed vertical dominante',
+        steps: [
+            { caption: '1 · Feed 9:16', async run() { state.hoyV2FeedIndex = 0; scrollScreen(450); } },
+            { caption: '2 · Siguiente clip', async run() { state.hoyV2FeedIndex = 1; scrollScreen(450); } }
+        ]
+    }]
+});
+
+registerFlow('fan.hoy.concept-mix.streak', {
+    title: 'Mi Mix · Racha Madridista',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { mixSubInit('fan.hoy.concept-mix.streak'); },
+    paths: [{
+        label: 'Racha de 7 días',
+        steps: [
+            { caption: '1 · Tile de racha (día actual destacado)', async run() { scrollScreen(850); } }
+        ]
+    }]
+});
+
+registerFlow('fan.hoy.concept-mix.predictor', {
+    title: 'Mi Mix · Predictor del Madridista',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { mixSubInit('fan.hoy.concept-mix.predictor'); },
+    paths: [{
+        label: 'Predictor + leaderboard',
+        steps: [
+            { caption: '1 · 4 pills de resultado', async run() { state.hoyV2Prediction = null; scrollScreen(1000); } },
+            { caption: '2 · Resultado 2-1 enviado', async run() { state.hoyV2Prediction = '2-1'; scrollScreen(1000); } }
+        ]
+    }]
+});
+
+registerFlow('fan.hoy.concept-mix.news', {
+    title: 'Mi Mix · Mini Noticias',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { mixSubInit('fan.hoy.concept-mix.news'); },
+    paths: [{
+        label: 'Listado de mini noticias',
+        steps: [
+            { caption: '1 · 4 noticias compactas', async run() { scrollScreen(1250); } },
+            { caption: '2 · Detalle de noticia', async run() { state.newsId = 'news-1'; scrollScreen(0); } }
+        ]
+    }]
+});
+
+registerFlow('fan.hoy.concept-mix.bernabeu', {
+    title: 'Mi Mix · Bernabéu hoy',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { mixSubInit('fan.hoy.concept-mix.bernabeu'); },
+    paths: [{
+        label: 'Eventos del Bernabéu hoy',
+        steps: [
+            { caption: '1 · Tour + Concierto con CTAs', async run() { scrollScreen(1500); } }
+        ]
+    }]
+});
+
+registerFlow('fan.hoy.concept-mix.hi-fi', {
+    title: 'Mi Mix · Alta Fidelidad (mockups avanzados)',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { mixSubInit('fan.hoy.concept-mix.hi-fi'); },
+    paths: [{
+        label: 'Mi Mix en alta fidelidad',
+        steps: [
+            { caption: '1 · Partidos hi-fi (date picker + venue)', async run() { scrollScreen(0); } },
+            { caption: '2 · "Para ti" carrusel grande', async run() { scrollScreen(450); } },
+            { caption: '3 · Predictor + Noticias hi-fi', async run() { scrollScreen(1000); } }
+        ]
+    }]
+});
+
 // ── Fan · Cabecera global de login/bienvenida ────────────────────
 registerFlow('fan.app.login-header', {
     title: 'Cabecera global de login / bienvenida',
