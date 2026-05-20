@@ -6628,19 +6628,26 @@ function renderHV2MixFeatured(idx) {
     if (!item) return '';
     const news = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []).find(n => n.id === item.newsId);
     const title = news ? news.title : item.headline;
+    const isVideo = item.media === 'video';
     return `
-        <section class="hv2-featured">
-            <div class="hv2-featured-hero" style="background: linear-gradient(155deg, ${item.c1} 0%, ${item.c2} 100%)">
+        <section class="hv2-featured ${isVideo ? 'is-video' : ''}" ${isVideo ? 'data-featured-video="1"' : ''}>
+            <div class="hv2-featured-hero">
+                <div class="hv2-featured-bg" style="background: linear-gradient(155deg, ${item.c1} 0%, ${item.c2} 100%)"></div>
                 <span class="hv2-featured-kicker">${item.kicker}</span>
-                <span class="hv2-featured-media">${item.media === 'video' ? I.play : I.photo}</span>
+                ${isVideo ? `
+                    <span class="hv2-featured-badge"><i class="hv2-featured-dot"></i>Auto</span>
+                    <span class="hv2-featured-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                ` : ''}
+                <span class="hv2-featured-media">${isVideo ? I.play : I.photo}</span>
                 <div class="hv2-featured-scrim"></div>
                 <h2 class="hv2-featured-headline">${item.headline}</h2>
+                ${isVideo ? '<div class="hv2-featured-progress"><span></span></div>' : ''}
             </div>
             <div class="hv2-featured-body">
                 <h3 class="hv2-featured-title">${title}</h3>
                 <p class="hv2-featured-teaser">${item.teaser}</p>
                 <button class="hv2-featured-cta" data-news-id="${item.newsId}">
-                    ${item.media === 'video' ? 'Ver noticia' : 'Leer noticia'}
+                    ${isVideo ? 'Ver noticia' : 'Leer noticia'}
                 </button>
             </div>
         </section>
@@ -6659,22 +6666,24 @@ function renderHV2ConceptMix() {
     }
 
     // Bloques modulares en el orden elegido por el usuario.
-    const blocks = Flags.getOrderedChildKeys('fan.hoy.concept-mix')
-        .filter(key => Flags.isEnabled(key) && typeof HV2_MIX_BLOCKS[key] === 'function')
-        .map(key => HV2_MIX_BLOCKS[key]() || '')
-        .filter(Boolean);
+    const orderedKeys = Flags.getOrderedChildKeys('fan.hoy.concept-mix')
+        .filter(key => Flags.isEnabled(key) && typeof HV2_MIX_BLOCKS[key] === 'function');
+    const blocks = orderedKeys.map(key => HV2_MIX_BLOCKS[key]() || '');
 
-    // Noticia destacada: intercala 3 bloques hero entre el resto de
-    // módulos (no contiguos), para que la Home alterne contenido propio
-    // con noticias destacadas como en la app de la NBA.
+    // Noticia destacada: intercala bloques hero entre el resto de
+    // módulos. La PRIMERA va siempre justo debajo de "Próximos partidos"
+    // (requisito de producto) y las siguientes se reparten más abajo.
     if (Flags.isEnabled('fan.hoy.concept-mix.featured')) {
         const featuredCount = Math.min(3, (typeof FEATURED_NEWS !== 'undefined' ? FEATURED_NEWS.length : 0));
-        const insertAfter = [1, 3, 5];   // posiciones repartidas a lo largo del scroll
+        const upIdx = orderedKeys.indexOf('fan.hoy.concept-mix.upcoming');
+        const anchor = upIdx >= 0 ? upIdx : 0;   // si no hay "upcoming", tras el 1er bloque
+        const insertAfter = new Set();
+        for (let j = 0; j < featuredCount; j++) insertAfter.add(anchor + j * 2);
         const out = [];
         let fi = 0;
         blocks.forEach((b, i) => {
             out.push(b);
-            if (fi < featuredCount && insertAfter.includes(i)) out.push(renderHV2MixFeatured(fi++));
+            if (fi < featuredCount && insertAfter.has(i)) out.push(renderHV2MixFeatured(fi++));
         });
         while (fi < featuredCount) out.push(renderHV2MixFeatured(fi++));   // sobrantes al final
         return `<div class="hv2-mix">${out.join('')}</div>`;
@@ -7807,6 +7816,26 @@ function attachListeners() {
     // Hoy V2 — Mi Mix (flag fan.hoy.concept-mix)
     attachHoyV2OptionsListeners();
     attachHoyV2MixListeners();
+    setupHV2FeaturedAutoplay();
+}
+
+// Autoplay simulado de las noticias destacadas de vídeo: cuando una
+// card de vídeo entra en el viewport del scroller del Hoy, se le añade
+// la clase `is-playing` que dispara el efecto Ken Burns + barra de
+// progreso + ecualizador (CSS). Al salir, se pausa. Sin vídeo real:
+// es una simulación puramente visual.
+let _hv2FeaturedObserver = null;
+function setupHV2FeaturedAutoplay() {
+    if (_hv2FeaturedObserver) { _hv2FeaturedObserver.disconnect(); _hv2FeaturedObserver = null; }
+    const cards = $$('[data-featured-video]');
+    if (!cards.length || typeof IntersectionObserver === 'undefined') return;
+    const root = document.querySelector('#hv2Scroll') || null;
+    _hv2FeaturedObserver = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            e.target.classList.toggle('is-playing', e.isIntersecting && e.intersectionRatio >= 0.55);
+        });
+    }, { root, threshold: [0, 0.55, 1] });
+    cards.forEach(c => _hv2FeaturedObserver.observe(c));
 }
 
 

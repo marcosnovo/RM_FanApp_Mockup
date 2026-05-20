@@ -16841,6 +16841,15 @@ input.has-mismatch {
     align-items: flex-end;
     overflow: hidden;
 }
+/* Capa de media (gradiente). Separada del hero para poder animarla
+   (Ken Burns) sin mover el titular/kicker que van por encima. */
+.hv2-featured-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    transform-origin: center;
+    will-change: transform;
+}
 .hv2-featured-kicker {
     position: absolute;
     top: 14px;
@@ -16918,8 +16927,105 @@ input.has-mismatch {
     background: #00529F;
     color: #fff;
 }
+
+/* ── Noticia destacada de VÍDEO: autoplay simulado al hacer scroll ──
+   La card recibe `.is-playing` vía IntersectionObserver cuando entra
+   en el viewport del scroller. Sin vídeo real: simulamos reproducción
+   con Ken Burns + barra de progreso + ecualizador. */
+.hv2-featured-badge {
+    position: absolute;
+    top: 13px;
+    right: 14px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+.hv2-featured-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #FEBE10;
+}
+/* Ecualizador (4 barras) que sólo se ve mientras "reproduce". */
+.hv2-featured-eq {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    z-index: 2;
+    display: none;
+    align-items: flex-end;
+    gap: 3px;
+    height: 16px;
+}
+.hv2-featured-eq i {
+    width: 3px;
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    border-radius: 2px;
+    transform-origin: bottom;
+}
+/* Barra de progreso de "reproducción". */
+.hv2-featured-progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    height: 3px;
+    background: rgba(255,255,255,0.22);
+}
+.hv2-featured-progress span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: #FEBE10;
+}
+
+/* Estado "reproduciendo" */
+.hv2-featured.is-playing .hv2-featured-media { opacity: 0; }
+.hv2-featured.is-playing .hv2-featured-dot { animation: hv2-feat-blink 1s steps(2, start) infinite; }
+.hv2-featured.is-playing .hv2-featured-bg { animation: hv2-feat-kenburns 9s ease-in-out infinite alternate; }
+.hv2-featured.is-playing .hv2-featured-eq { display: inline-flex; }
+.hv2-featured.is-playing .hv2-featured-eq i { animation: hv2-feat-eq 0.9s ease-in-out infinite; }
+.hv2-featured.is-playing .hv2-featured-eq i:nth-child(2) { animation-delay: 0.15s; }
+.hv2-featured.is-playing .hv2-featured-eq i:nth-child(3) { animation-delay: 0.3s; }
+.hv2-featured.is-playing .hv2-featured-eq i:nth-child(4) { animation-delay: 0.45s; }
+.hv2-featured.is-playing .hv2-featured-progress span { animation: hv2-feat-progress 9s linear infinite; }
+
+@keyframes hv2-feat-kenburns {
+    from { transform: scale(1) translate(0, 0); }
+    to   { transform: scale(1.12) translate(-2.5%, -2%); }
+}
+@keyframes hv2-feat-progress {
+    from { width: 0; }
+    to   { width: 100%; }
+}
+@keyframes hv2-feat-eq {
+    0%, 100% { transform: scaleY(0.35); }
+    50%      { transform: scaleY(1); }
+}
+@keyframes hv2-feat-blink {
+    50% { opacity: 0.3; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .hv2-featured-cta { transition: none; }
+    .hv2-featured.is-playing .hv2-featured-bg,
+    .hv2-featured.is-playing .hv2-featured-eq i,
+    .hv2-featured.is-playing .hv2-featured-progress span,
+    .hv2-featured.is-playing .hv2-featured-dot { animation: none; }
+    /* Sin animación, deja la barra de progreso completa para indicar
+       el estado "reproduciendo". */
+    .hv2-featured.is-playing .hv2-featured-progress span { width: 100%; }
 }
 
 /* Cabecera de bienvenida — el `app-topbar-slot` ya pinta su contenido
