@@ -478,6 +478,50 @@ register('fan.hoy.concept-mix.bernabeu', {
     dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
 });
 
+register('fan.hoy.concept-mix.featured', {
+    flagKey: 'fan.hoy.concept-mix.featured',
+    title: 'Mi Mix · Noticia destacada (bloques hero intercalados)',
+    epic: 'Fan App · Hoy · Mi Mix',
+    estimate: 'M (2 sprints)',
+    priority: 'Media',
+    context: 'Inspirado en la Home de la app de la NBA, donde las noticias destacadas aparecen como grandes bloques hero (imagen/vídeo a sangre + titular + CTA) intercalados con el resto de contenido. Da peso editorial a las historias clave sin sacarlas del flujo del Hoy.',
+    problem: 'Las mini-noticias compactas no transmiten la importancia de una historia destacada. Falta un formato de mayor impacto visual para empujar el contenido editorial estrella.',
+    objective: 'Añadir un formato de "noticia destacada": un bloque grande con media (imagen o vídeo), kicker, titular y botón "Leer/Ver noticia" que abre el detalle. Al activar el sub-flag se insertan 3 noticias destacadas distintas, intercaladas entre el resto de módulos de la Home.',
+    inScope: [
+        'Bloque hero con media grande (imagen/vídeo), kicker, titular y botón.',
+        'Botón que abre el detalle de la noticia (reutiliza el handler global [data-news-id]).',
+        '3 noticias destacadas distintas intercaladas (no contiguas) entre los demás módulos de Mi Mix.',
+        'Cada noticia con su gradiente/identidad y un indicador de play cuando es vídeo.'
+    ],
+    outOfScope: [
+        'Reproducción real de vídeo: el icono de play es indicativo y abre el detalle.',
+        'Curación automática de cuáles son las destacadas (en el mockup es una lista fija).',
+        'Aparición en la variante "Alta Fidelidad" (layout fijo aparte).'
+    ],
+    userStories: [
+        'Como usuario, quiero ver las noticias más importantes en un formato grande y atractivo dentro del Hoy.',
+        'Como editor, quiero destacar 3 historias clave intercaladas con el resto de la Home.'
+    ],
+    acceptanceCriteria: [
+        'Al activar el sub-flag aparecen 3 bloques de noticia destacada en posiciones no contiguas de la Home.',
+        'Cada bloque muestra media grande, kicker, titular y botón "Leer noticia" / "Ver noticia".',
+        'El botón abre el detalle de la noticia correspondiente.',
+        'Al desactivar el sub-flag, los bloques desaparecen y el resto de la Home queda intacto.'
+    ],
+    uxNotes: [
+        'Sigue el patrón NBA: media a sangre con titular en mayúsculas sobre un scrim oscuro y CTA outline ancho debajo.',
+        'Usa el sistema de diseño RM: azul #00529F para el CTA, tarjeta blanca redondeada.'
+    ],
+    metrics: [
+        'CTR a noticias desde los bloques destacados ≥ 2x el de las mini-noticias.',
+        '+10% de aperturas de detalle de noticia desde el Hoy.'
+    ],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).'],
+    risks: [
+        'Tres bloques grandes pueden alargar mucho el scroll. Mitigación: intercalado (no contiguo) y media optimizada.'
+    ]
+});
+
 register('fan.hoy.concept-mix.hi-fi', {
     flagKey: 'fan.hoy.concept-mix.hi-fi',
     title: 'Mi Mix · Alta Fidelidad (mockups avanzados)',
