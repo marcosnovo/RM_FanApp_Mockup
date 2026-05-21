@@ -17039,38 +17039,40 @@ input.has-mismatch {
    paddings/gaps/tamaños; no se oculta ni se trunca nada. */
 .home-bl-compact .home-top-row-fixed {
     padding-top: 52px;          /* sólo el alto del status-bar */
-    padding-bottom: 2px;
+    padding-bottom: 0;
     min-height: 0;
 }
-.home-bl-compact .home-top-center { height: 24px; }   /* la fila de dots ya no malgasta alto */
+.home-bl-compact .home-top-center { height: 18px; }   /* la fila de dots ya no malgasta alto */
 .home-bl-compact .home-top-mini-crest,
-.home-bl-compact .home-top-mini-crest > svg { width: 24px !important; height: 24px !important; }
-.home-bl-compact .home-top-btn { gap: 1px; }
+.home-bl-compact .home-top-mini-crest > svg { width: 22px !important; height: 22px !important; }
+.home-bl-compact .home-top-btn { gap: 0; }
 .home-bl-compact .home-top-btn-label-fade { font-size: 10px; }
-.home-bl-compact .home-match-area { padding-bottom: 0; }
-.home-bl-compact .match-card { padding: 0 16px 6px; }
+/* Pega el bloque de partido a la fila de iconos: sin banda muerta. */
+.home-bl-compact .home-match-area { padding-bottom: 0; margin-top: -4px; }
+.home-bl-compact .match-card { padding: 0 14px 4px; }
 .home-bl-compact .match-competition-row { padding: 0 0 4px; }
-.home-bl-compact .match-competition { font-size: 10px; padding: 3px 12px; }
+.home-bl-compact .match-competition { font-size: 10px; padding: 2px 11px; }
 .home-bl-compact .match-big-crest,
-.home-bl-compact .match-big-crest > svg { width: 34px !important; height: 34px !important; }
+.home-bl-compact .match-big-crest > svg { width: 32px !important; height: 32px !important; }
 .home-bl-compact .match-teams-row { margin-bottom: 0; align-items: center; }
-.home-bl-compact .match-team { gap: 4px; }
-.home-bl-compact .match-team-name { font-size: 12px; max-width: 100px; white-space: normal; }
-.home-bl-compact .match-score-big { font-size: 26px; gap: 10px; }
-.home-bl-compact .match-score-dash { font-size: 18px; }
-.home-bl-compact .match-date-upcoming { font-size: 13px; }
-.home-bl-compact .match-center-col { gap: 2px; min-width: 84px; padding: 0 4px; }
-.home-bl-compact .match-cal-btn { width: 42px; height: 30px; margin-top: 4px; }
-.home-bl-compact .match-status-pill { margin-top: 2px; padding: 2px 10px; font-size: 10px; }
+.home-bl-compact .match-team { gap: 2px; }
+.home-bl-compact .match-team-name { font-size: 12px; line-height: 1.1; max-width: 104px; white-space: normal; }
+.home-bl-compact .match-score-big { font-size: 24px; gap: 8px; }
+.home-bl-compact .match-score-dash { font-size: 16px; }
+.home-bl-compact .match-date-upcoming { font-size: 12px; }
+.home-bl-compact .match-center-col { gap: 1px; min-width: 78px; padding: 0 2px; }
+.home-bl-compact .match-cal-btn { width: 38px; height: 24px; margin-top: 2px; }
+.home-bl-compact .match-cal-btn > svg { width: 15px !important; height: 15px !important; }
+.home-bl-compact .match-status-pill { margin-top: 1px; padding: 2px 10px; font-size: 10px; }
 /* La línea de info se mantiene COMPLETA (sus 2 líneas), sólo más pequeña
    y pegada — nada de elipsis ni recortes. */
 .home-bl-compact .match-info {
-    margin-top: 4px;
+    margin-top: 3px;
     font-size: 11px;
-    line-height: 1.3;
+    line-height: 1.25;
 }
-.home-bl-compact .home-segment-bar { height: 40px; }   /* el `top` lo fija el JS = alto real del top-row */
-.home-bl-compact .home-segment-label { height: 36px; }
+.home-bl-compact .home-segment-bar { height: 36px; }   /* el `top` lo fija el JS = alto real del top-row */
+.home-bl-compact .home-segment-label { height: 32px; }
 
 /* ── 2) Header que se oculta al hacer scroll (.home-bl-autohide) ──
    Estilo X/Twitter: al bajar se esconde el top-row y la barra de
