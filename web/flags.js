@@ -144,15 +144,17 @@ const FLAGS = [
         requires: 'fan.hoy.concept-mix'
     },
 
-    // ── Posible backlog — Home experimental (sandbox de experimentos) ──
-    // Home alternativa, activable por flag, que reinterpreta la Home
-    // actual (header de partido + contenido de abajo) para probar ideas
-    // de compactación y densidad antes de comprometerlas a producto.
+    // ── Posible backlog — experimentos sobre la Home clásica ─────────
+    // NO es una pantalla aparte: con el flag a ON se fuerza la Home
+    // clásica match-centric (la misma `renderHoy`: header de partido +
+    // carrusel + segmentos + Directo) y se le aplican encima los 4
+    // sub-experimentos de abajo como modificadores. Pensado para demos
+    // y comparativas A/B antes de comprometer cambios a producto.
     {
         app: 'fan',
         key: 'fan.hoy.backlog',
-        label: 'Posible backlog (Home experimental)',
-        description: 'Home alternativa para probar ideas del backlog. Con el flag a OFF la pestaña Hoy se comporta como siempre; con el flag a ON se renderiza una Home experimental (mismo contenido que la actual) sobre la que se aplican los 4 sub-experimentos de abajo. Pensada para demos y comparativas.',
+        label: 'Posible backlog',
+        description: 'Activa los 4 experimentos del backlog SOBRE la Home actual (no es una pantalla nueva): al encenderlo, la pestaña Hoy muestra la Home clásica de partido y cada sub-experimento de abajo se aplica encima. Con todos los hijos a OFF se ve la Home tal cual es hoy.',
         category: 'Backlog',
         default: false
     },
@@ -177,8 +179,8 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.backlog.dense-feed',
-        label: 'Backlog · Feed compacto (estilo Twitter)',
-        description: 'Reorganiza el contenido de abajo (hoy carrusel + promo) en un feed de posts compactos con poco padding y tipografía ajustada, para maximizar el número de posts visibles en pantalla. Cada post abre su noticia.',
+        label: 'Backlog · Feed compacto (elementos Monterosa)',
+        description: 'Ajusta los elementos de Monterosa del feed (titular + media + barra de reacciones ❤️👏🤴🔥): con el flag a OFF se ven amplios como hoy; con el flag a ON se compactan (titular más pequeño, menos padding, media reducida) al estilo Twitter para maximizar el número de posts en pantalla. Cada tarjeta abre su noticia.',
         category: 'Backlog',
         default: false,
         requires: 'fan.hoy.backlog'

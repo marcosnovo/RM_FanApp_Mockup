@@ -404,6 +404,17 @@ function renderAppLoginBar() {
 function renderHoy() {
     const match = HEADER_MATCHES[state.matchIndex];
 
+    // ── Posible backlog (flag fan.hoy.backlog): experimentos que se
+    // aplican como modificadores sobre esta misma Home clásica ──────
+    const backlog       = Flags.isEnabled('fan.hoy.backlog');
+    const compactHeader = backlog && Flags.isEnabled('fan.hoy.backlog.compact-header');
+    const hideOnScroll  = backlog && Flags.isEnabled('fan.hoy.backlog.hide-on-scroll');
+    const wrapClass = [
+        'home-wrap',
+        compactHeader ? 'home-bl-compact'  : '',
+        hideOnScroll  ? 'home-bl-autohide' : ''
+    ].filter(Boolean).join(' ');
+
     // Upcoming matches only expose Directo/Jornada; finished & live expose all 4
     const upcoming = match.status === 'upcoming';
     const segments = upcoming
@@ -417,7 +428,7 @@ function renderHoy() {
     const smallAwayCrest = bigCrestFor(match.awayTeam);
 
     return `
-        <div class="home-wrap" id="homeWrap">
+        <div class="${wrapClass}" id="homeWrap">
             <!-- Fixed top row (morphs during scroll) -->
             <div class="home-top-row-fixed" id="homeTopRowFixed">
                 <button class="home-top-btn" id="btnSideMenu">
@@ -545,8 +556,18 @@ function renderHoySubContent(match) {
 // ── Directo content ─────────────────────────────────────────────
 function renderDirecto() {
     const i = state.heroIndex;
+
+    // Experimentos del "Posible backlog" que viven dentro del feed:
+    //  · stories    → carrusel de stories entre el header y el feed
+    //  · dense-feed → los elementos de Monterosa (tarjetas con barra de
+    //                 reacciones) en versión compacta tipo Twitter
+    const backlog = Flags.isEnabled('fan.hoy.backlog');
+    const stories = backlog && Flags.isEnabled('fan.hoy.backlog.stories');
+    const dense   = backlog && Flags.isEnabled('fan.hoy.backlog.dense-feed');
+
     return `
         <div class="directo-wrap">
+            ${stories ? renderHoyStories() : ''}
             <div class="hero-scroll" id="heroScroll">
                 ${HERO_ITEMS.map((h, idx) => `
                     <div class="hero-slide" data-hero-slide="${idx}">
@@ -569,6 +590,10 @@ function renderDirecto() {
                 </div>
                 <button class="hero-arrow next" data-hero-next>${I.chevronRight}</button>
             </div>
+
+            ${backlog ? `<div class="mont-reactions-row">${renderMontReactions(0)}</div>` : ''}
+
+            ${backlog ? renderMonterosaFeed(dense) : ''}
 
             <div class="home-promo">
                 <div class="home-promo-title">15% de DTO. en todas las equipaciones</div>
@@ -617,238 +642,101 @@ function setupHeroCarouselScroll() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// POSIBLE BACKLOG — Home experimental (flag 'fan.hoy.backlog')
-// Sandbox para probar 4 experimentos sobre la Home actual:
-//   · compact-header  → header de partido compacto (≤25-30%)
-//   · hide-on-scroll  → header que se oculta al bajar (tipo Twitter)
-//   · dense-feed      → contenido de abajo como feed de posts compactos
-//   · stories         → stories entre header y feed
-// Con los 4 sub-flags OFF imita la Home actual (header espacioso +
-// contenido de abajo en formato amplio). Reutiliza HEADER_MATCHES,
-// NEWS_ITEMS y los sub-contenidos de partido (resumen/stats/jornada).
+// POSIBLE BACKLOG — 4 experimentos sobre la Home clásica (renderHoy)
+//   · compact-header → CSS (.home-bl-compact) compacta el header de
+//                      partido manteniendo TODA la info → ≤25-30%.
+//   · hide-on-scroll → CSS (.home-bl-autohide) + setupHomeBacklogAutoHide:
+//                      el header se oculta al bajar y asoma al subir.
+//   · stories        → renderHoyStories(): carrusel entre header y feed.
+//   · dense-feed     → renderMonterosaFeed(): las tarjetas de Monterosa
+//                      (titular + media + barra de reacciones) en versión
+//                      compacta tipo Twitter para maximizar posts/pantalla.
+// Reutilizan HEADER_MATCHES, NEWS_ITEMS y el resto de la Home real.
 // ════════════════════════════════════════════════════════════════
 
 // Stories: club + jugadores favoritos. Tap marca como vista (sin sheet).
-function hbStoriesData() {
+function hoyStoriesData() {
     const players = (typeof HV2_MIX_PLAYERS !== 'undefined' ? HV2_MIX_PLAYERS : []);
     const club = { id: 'club', name: 'RM', initials: 'RM', color: '#00529F' };
     return [club, ...players.slice(0, 7)];
 }
 
-// Posts del feed: noticias reales + un post comercial (la promo 15%).
-function hbFeedPosts() {
-    const news = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []);
-    const teamName = id => ({ masc: 'Real Madrid', fem: 'Real Madrid Femenino', basket: 'Real Madrid Baloncesto' }[id] || 'Real Madrid');
-    const teamHandle = id => ({ masc: '@realmadrid', fem: '@RMfemenino', basket: '@RMBaloncesto' }[id] || '@realmadrid');
-    const posts = news.map(n => ({
-        type: 'news',
-        id: n.id,
-        author: teamName(n.teamId),
-        handle: teamHandle(n.teamId),
-        time: (n.date || '').slice(0, 5),
-        kicker: n.kind || '',
-        text: n.title,
-        sub: n.subtitle || '',
-        color: n.imageColor || '#26337a'
-    }));
-    const promo = {
-        type: 'promo', id: 'promo',
-        author: 'Tienda Real Madrid', handle: '@RMShop', time: '',
-        kicker: 'Patrocinado', text: '15% de DTO. en todas las equipaciones',
-        sub: 'Solo esta semana en la tienda oficial. Equipación 25/26 incluida.',
-        color: '#0B1A33'
-    };
-    if (posts.length > 2) posts.splice(2, 0, promo); else posts.push(promo);
-    return posts;
-}
-
-function renderHoyBacklog() {
-    const compact = Flags.isEnabled('fan.hoy.backlog.compact-header');
-    const hideOnScroll = Flags.isEnabled('fan.hoy.backlog.hide-on-scroll');
-    const dense = Flags.isEnabled('fan.hoy.backlog.dense-feed');
-    const stories = Flags.isEnabled('fan.hoy.backlog.stories');
-    const match = HEADER_MATCHES[state.matchIndex];
-
-    const upcoming = match.status === 'upcoming';
-    const segments = upcoming
-        ? [['directo', 'Directo'], ['jornada', 'Jornada']]
-        : [['directo', 'Directo'], ['resumen', 'Resumen'], ['estadisticas', 'Estadísticas'], ['jornada', 'Jornada']];
-    if (!segments.some(([k]) => k === state.sub)) state.sub = 'directo';
-
-    // En "Directo" mostramos el feed experimental (+ stories). El resto
-    // de segmentos reutilizan los sub-contenidos de partido existentes.
-    const body = (state.sub === 'directo')
-        ? `${stories ? renderHbStories() : ''}${renderHbFeed(dense)}`
-        : renderHoySubContent(match);
-
+function renderHoyStories() {
+    const stories = hoyStoriesData();
     return `
-        <div class="hb-wrap">
-            <div class="hb-scroll" id="hbScroll">
-                ${renderHbHeader(match, segments, compact, hideOnScroll)}
-                ${body}
-                <div style="height: 24px"></div>
-            </div>
-        </div>
-        ${renderSideMenu()}
-    `;
-}
-
-function renderHbHeader(match, segments, compact, hideOnScroll) {
-    const homeCrest = bigCrestFor(match.homeTeam);
-    const awayCrest = bigCrestFor(match.awayTeam);
-    const finished = match.status === 'finished' || match.status === 'live';
-    const center = finished
-        ? `${match.homeScore ?? 0} - ${match.awayScore ?? 0}`
-        : (match.dateString.split('·')[1] || '').trim() || match.dateString;
-    const compLine = (match.matchInfo || match.competition || '').split('\n')[0];
-
-    const dots = HEADER_MATCHES.map((_, i) =>
-        `<button class="hb-dot ${i === state.matchIndex ? 'active' : ''}" data-hb-match="${i}" aria-label="Partido ${i + 1}"></button>`
-    ).join('');
-
-    const segBar = `
-        <div class="hb-segments">
-            ${segments.map(([k, label]) => `
-                <button class="hb-seg ${state.sub === k ? 'active' : ''}" data-hb-sub="${k}">${label}</button>
-            `).join('')}
-        </div>`;
-
-    const headClass = `hb-header ${compact ? 'is-compact' : ''} ${hideOnScroll ? 'hb-header-autohide' : ''}`;
-
-    if (compact) {
-        // Tira única densa: perfil · partido · radio, con competición como
-        // kicker minúsculo y dots pequeños. Mantiene TODA la info.
-        return `
-            <header class="${headClass}" id="hbHeader">
-                <div class="hb-bar">
-                    <button class="hb-icon-btn" id="btnSideMenu" aria-label="Tu área">${I.personCircle}</button>
-                    <button class="hb-match-strip" data-hb-sub="directo">
-                        <span class="hb-crest sm">${homeCrest}</span>
-                        <span class="hb-strip-mid">
-                            <span class="hb-strip-comp">${compLine}</span>
-                            <span class="hb-strip-score">${center}</span>
-                        </span>
-                        <span class="hb-crest sm">${awayCrest}</span>
-                    </button>
-                    <button class="hb-icon-btn" aria-label="Radio">${I.radio}</button>
-                </div>
-                <div class="hb-dots compact">${dots}</div>
-                ${segBar}
-            </header>`;
-    }
-
-    // Header espacioso (baseline): card de partido amplia + segmentos.
-    return `
-        <header class="${headClass}" id="hbHeader">
-            <div class="hb-bar">
-                <button class="hb-icon-btn col" id="btnSideMenu" aria-label="Tu área">${I.personCircle}<span>Tu área</span></button>
-                <div class="hb-dots">${dots}</div>
-                <button class="hb-icon-btn col" aria-label="Radio">${I.radio}<span>Radio</span></button>
-            </div>
-            <div class="hb-matchcard">
-                <div class="hb-comp">${compLine}</div>
-                <div class="hb-teams">
-                    <div class="hb-team"><span class="hb-crest">${homeCrest}</span><span class="hb-team-name">${match.homeTeam}</span></div>
-                    <div class="hb-center">${center}</div>
-                    <div class="hb-team"><span class="hb-crest">${awayCrest}</span><span class="hb-team-name">${match.awayTeam}</span></div>
-                </div>
-            </div>
-            ${segBar}
-        </header>`;
-}
-
-function renderHbStories() {
-    const stories = hbStoriesData();
-    return `
-        <div class="hb-stories">
+        <div class="hoy-stories">
             ${stories.map(s => `
-                <button class="hb-story" data-hb-story="${s.id}">
-                    <span class="hb-story-ring">
-                        <span class="hb-story-av" style="background:${s.color}">${s.initials}</span>
+                <button class="hoy-story" data-hoy-story="${s.id}">
+                    <span class="hoy-story-ring">
+                        <span class="hoy-story-av" style="background:${s.color}">${s.initials}</span>
                     </span>
-                    <span class="hb-story-label">${s.name}</span>
+                    <span class="hoy-story-label">${s.short || s.name}</span>
                 </button>
             `).join('')}
         </div>`;
 }
 
-function renderHbFeed(dense) {
-    const posts = hbFeedPosts();
+// Barra de reacciones estilo Monterosa (❤️ 👏 🤴 🔥). Conteos
+// deterministas a partir de una semilla para que no cambien entre renders.
+function renderMontReactions(seed) {
+    const n = (m) => (((seed + 1) * m) % 190) + 6;
+    const reacts = [
+        ['❤️', 80 + n(137)],
+        ['👏', n(53)],
+        ['🤴', n(29)],
+        ['🔥', n(71)]
+    ];
+    return reacts.map(([e, c]) =>
+        `<span class="mont-react"><span class="mont-react-emoji">${e}</span><span class="mont-react-count">${c}</span></span>`
+    ).join('');
+}
+
+// Tarjetas de Monterosa a partir de las noticias reales: titular grande +
+// media + barra de reacciones, igual que la Home de producción.
+function renderMonterosaFeed(dense) {
+    const news = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []).slice(0, 6);
     return `
-        <div class="hb-feed ${dense ? 'is-dense' : ''}">
-            ${posts.map(renderHbPost).join('')}
+        <div class="mont-feed ${dense ? 'is-dense' : ''}">
+            ${news.map((n, idx) => renderMonterosaCard(n, idx)).join('')}
         </div>`;
 }
 
-function renderHbPost(p) {
-    const isPromo = p.type === 'promo';
-    const initials = isPromo ? '★'
-        : p.author.includes('Femenino') ? 'F'
-        : p.author.includes('Baloncesto') ? 'B'
-        : 'RM';
-    // Métricas deterministas a partir del id para no cambiar entre renders.
-    const n = typeof p.id === 'number' ? p.id : 7;
-    const likes = (n * 137 % 900) + 80;
-    const comments = (n * 53 % 120) + 6;
-    const attr = isPromo ? 'data-hb-store="1"' : `data-news-id="${p.id}"`;
+function renderMonterosaCard(n, idx) {
+    const color = n.imageColor || '#26337a';
     return `
-        <article class="hb-post ${isPromo ? 'is-promo' : ''}" ${attr} role="button" tabindex="0">
-            <div class="hb-post-avatar" style="background:${p.color}">${initials}</div>
-            <div class="hb-post-main">
-                <div class="hb-post-head">
-                    <span class="hb-post-author">${p.author}</span>
-                    <span class="hb-post-handle">${p.handle}</span>
-                    ${p.time ? `<span class="hb-post-dot">·</span><span class="hb-post-time">${p.time}</span>` : ''}
-                </div>
-                ${p.kicker ? `<span class="hb-post-kicker">${p.kicker}</span>` : ''}
-                <div class="hb-post-text">${p.text}</div>
-                ${p.sub ? `<div class="hb-post-sub">${p.sub}</div>` : ''}
-                <div class="hb-post-media" style="background:linear-gradient(150deg, ${p.color} 0%, #0B1220 130%)">${I.photo}</div>
-                ${isPromo
-                    ? `<div class="hb-post-actions"><span class="hb-post-shop">Comprar ${I.arrowUpRightSquare}</span></div>`
-                    : `<div class="hb-post-actions">
-                            <span>💬 ${comments}</span>
-                            <span>❤ ${likes}</span>
-                            <span>↗</span>
-                       </div>`}
-            </div>
+        <article class="mont-card" data-news-id="${n.id}" role="button" tabindex="0">
+            ${n.kind ? `<div class="mont-card-kicker">${n.kind}</div>` : ''}
+            <div class="mont-card-title">${n.title}</div>
+            <div class="mont-card-media" style="background:linear-gradient(150deg, ${color} 0%, #0B1220 135%)">${I.photo}</div>
+            <div class="mont-card-reactions">${renderMontReactions(idx + 1)}</div>
         </article>`;
 }
 
-// Auto-hide del header tipo Twitter: oculta al bajar, asoma al subir.
-let _hbLastScroll = 0;
-function setupHbHeaderAutoHide() {
-    const scroller = document.querySelector('#hbScroll');
-    const header = document.querySelector('#hbHeader');
-    if (!scroller || !header || !header.classList.contains('hb-header-autohide')) return;
-    _hbLastScroll = scroller.scrollTop;
+// Auto-hide del header tipo Twitter sobre el scroller real (#screenBody):
+// oculta el chrome (top row + barra de segmentos) al bajar, lo asoma al subir.
+let _homeBlLastY = 0;
+function setupHomeBacklogAutoHide() {
+    if (state.tab !== 'hoy') return;
+    const wrap = document.querySelector('.home-wrap.home-bl-autohide');
+    const scroller = $('#screenBody');
+    if (!wrap || !scroller) return;
+    _homeBlLastY = scroller.scrollTop;
     scroller.addEventListener('scroll', () => {
         const y = scroller.scrollTop;
-        const goingDown = y > _hbLastScroll;
-        if (y > 56 && goingDown) header.classList.add('is-hidden');
-        else header.classList.remove('is-hidden');
-        _hbLastScroll = y;
+        const goingDown = y > _homeBlLastY;
+        if (y > 120 && goingDown)      wrap.classList.add('is-chrome-hidden');
+        else if (y < _homeBlLastY - 4) wrap.classList.remove('is-chrome-hidden');
+        _homeBlLastY = y;
     }, { passive: true });
 }
 
 function attachHoyBacklogListeners() {
     if (!Flags.isEnabled('fan.hoy.backlog') || state.tab !== 'hoy' || state.app !== 'fan') return;
-    $$('[data-hb-match]').forEach(d => d.addEventListener('click', () => {
-        state.matchIndex = parseInt(d.dataset.hbMatch, 10);
-        state.statsTab = 0;
-        render();
-    }));
-    $$('[data-hb-sub]').forEach(b => b.addEventListener('click', () => {
-        state.sub = b.dataset.hbSub;
-        render();
-    }));
-    $$('[data-hb-store]').forEach(b => b.addEventListener('click', () => {
-        state.tab = 'tienda';
-        render();
-    }));
     // Stories: marcar como vista sin re-render (anillo → gris).
-    $$('[data-hb-story]').forEach(s => s.addEventListener('click', () => s.classList.add('is-seen')));
-    setupHbHeaderAutoHide();
+    $$('[data-hoy-story]').forEach(s => s.addEventListener('click', () => s.classList.add('is-seen')));
+    // Las tarjetas de Monterosa abren la noticia mediante el mismo
+    // [data-news-id] que el resto de la app (listener global ya existente).
+    setupHomeBacklogAutoHide();
 }
 
 // ── Resumen content ─────────────────────────────────────────────
@@ -6282,8 +6170,12 @@ function render() {
     } else {
         switch (state.tab) {
             case 'hoy':
+                // El "Posible backlog" aplica sus 4 experimentos SOBRE la Home
+                // clásica (match-centric) — la misma `renderHoy()` que ve el
+                // usuario —, así que con el flag a ON forzamos esa Home en vez
+                // de Mi Mix para que el baseline sea exactamente el actual.
                 content = Flags.isEnabled('fan.hoy.backlog')
-                    ? renderHoyBacklog()
+                    ? renderHoy()
                     : Flags.isEnabled('fan.hoy.concept-mix')
                         ? renderHoyV2Mix()
                         : renderHoy();
