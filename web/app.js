@@ -404,11 +404,11 @@ function renderAppLoginBar() {
 function renderHoy() {
     const match = HEADER_MATCHES[state.matchIndex];
 
-    // ── Posible backlog (flag fan.hoy.backlog): experimentos que se
-    // aplican como modificadores sobre esta misma Home clásica ──────
-    const backlog       = Flags.isEnabled('fan.hoy.backlog');
-    const compactHeader = backlog && Flags.isEnabled('fan.hoy.backlog.compact-header');
-    const hideOnScroll  = backlog && Flags.isEnabled('fan.hoy.backlog.hide-on-scroll');
+    // ── Posible backlog: cada experimento se aplica SÓLO si su sub-flag
+    // está activo. `isEnabled` ya cascadea con el padre, así que el flag
+    // padre por sí solo no añade ninguna clase (la Home no cambia) ──────
+    const compactHeader = Flags.isEnabled('fan.hoy.backlog.compact-header');
+    const hideOnScroll  = Flags.isEnabled('fan.hoy.backlog.hide-on-scroll');
     const wrapClass = [
         'home-wrap',
         compactHeader ? 'home-bl-compact'  : '',
@@ -557,13 +557,14 @@ function renderHoySubContent(match) {
 function renderDirecto() {
     const i = state.heroIndex;
 
-    // Experimentos del "Posible backlog" que viven dentro del feed:
+    // El feed de elementos de Monterosa (hero + reacciones, tarjetas con
+    // titular + media + barra de reacciones) es el BASELINE: se ve siempre,
+    // igual que en la app real. Los experimentos del backlog sólo lo tocan
+    // si su sub-flag está activo:
     //  · stories    → carrusel de stories entre el header y el feed
-    //  · dense-feed → los elementos de Monterosa (tarjetas con barra de
-    //                 reacciones) en versión compacta tipo Twitter
-    const backlog = Flags.isEnabled('fan.hoy.backlog');
-    const stories = backlog && Flags.isEnabled('fan.hoy.backlog.stories');
-    const dense   = backlog && Flags.isEnabled('fan.hoy.backlog.dense-feed');
+    //  · dense-feed → MISMOS elementos, pero aprovechando mejor el espacio
+    const stories = Flags.isEnabled('fan.hoy.backlog.stories');
+    const dense   = Flags.isEnabled('fan.hoy.backlog.dense-feed');
 
     return `
         <div class="directo-wrap">
@@ -591,9 +592,9 @@ function renderDirecto() {
                 <button class="hero-arrow next" data-hero-next>${I.chevronRight}</button>
             </div>
 
-            ${backlog ? `<div class="mont-reactions-row">${renderMontReactions(0)}</div>` : ''}
+            <div class="mont-reactions-row">${renderMontReactions(0)}</div>
 
-            ${backlog ? renderMonterosaFeed(dense) : ''}
+            ${renderMonterosaFeed(dense)}
 
             <div class="home-promo">
                 <div class="home-promo-title">15% de DTO. en todas las equipaciones</div>
@@ -642,16 +643,17 @@ function setupHeroCarouselScroll() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// POSIBLE BACKLOG — 4 experimentos sobre la Home clásica (renderHoy)
+// POSIBLE BACKLOG — modificadores opcionales de la Home actual.
+// El feed de Monterosa (hero + reacciones + tarjetas) es BASELINE: se
+// ve siempre. Cada experimento sólo actúa si su sub-flag está activo:
 //   · compact-header → CSS (.home-bl-compact) compacta el header de
 //                      partido manteniendo TODA la info → ≤25-30%.
 //   · hide-on-scroll → CSS (.home-bl-autohide) + setupHomeBacklogAutoHide:
 //                      el header se oculta al bajar y asoma al subir.
 //   · stories        → renderHoyStories(): carrusel entre header y feed.
-//   · dense-feed     → renderMonterosaFeed(): las tarjetas de Monterosa
-//                      (titular + media + barra de reacciones) en versión
-//                      compacta tipo Twitter para maximizar posts/pantalla.
-// Reutilizan HEADER_MATCHES, NEWS_ITEMS y el resto de la Home real.
+//   · dense-feed     → .mont-feed.is-dense: reorganiza los MISMOS bloques
+//                      del feed (miniatura lateral + menos padding) para
+//                      que quepan más posts, sin cambiar el contenido.
 // ════════════════════════════════════════════════════════════════
 
 // Stories: club + jugadores favoritos. Tap marca como vista (sin sheet).
@@ -691,23 +693,43 @@ function renderMontReactions(seed) {
     ).join('');
 }
 
-// Tarjetas de Monterosa a partir de las noticias reales: titular grande +
-// media + barra de reacciones, igual que la Home de producción.
+// Bloques del feed que reproducen las secciones de la Home real
+// (LA SÉPTIMA, efeméride con CTA "Más información", noticias). Mezcla
+// piezas fijas con noticias reales de NEWS_ITEMS.
+function montFeedBlocks() {
+    const news = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []);
+    const blocks = [
+        { kicker: 'Especial',  title: 'LA SÉPTIMA.',                                   color: '#1f6f8b', newsId: news[0]?.id },
+        { kicker: 'Historia',  title: '28 años desde la conquista de la Séptima Copa de Europa', color: '#0B1A33', cta: 'Más información', newsId: news[6]?.id }
+    ];
+    // Noticias reales del club como el resto de tarjetas del feed.
+    news.slice(2, 6).forEach(n => blocks.push({
+        kicker: n.kind, title: n.title, color: n.imageColor, newsId: n.id
+    }));
+    return blocks;
+}
+
+// Feed de elementos de Monterosa. `dense` reorganiza los MISMOS bloques
+// para aprovechar mejor el espacio (miniatura lateral + menos padding),
+// sin cambiar el contenido.
 function renderMonterosaFeed(dense) {
-    const news = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []).slice(0, 6);
     return `
         <div class="mont-feed ${dense ? 'is-dense' : ''}">
-            ${news.map((n, idx) => renderMonterosaCard(n, idx)).join('')}
+            ${montFeedBlocks().map((b, idx) => renderMonterosaCard(b, idx)).join('')}
         </div>`;
 }
 
-function renderMonterosaCard(n, idx) {
-    const color = n.imageColor || '#26337a';
+function renderMonterosaCard(b, idx) {
+    const color = b.color || '#26337a';
+    const attr = b.newsId != null ? `data-news-id="${b.newsId}"` : '';
     return `
-        <article class="mont-card" data-news-id="${n.id}" role="button" tabindex="0">
-            ${n.kind ? `<div class="mont-card-kicker">${n.kind}</div>` : ''}
-            <div class="mont-card-title">${n.title}</div>
+        <article class="mont-card" ${attr} role="button" tabindex="0">
+            <div class="mont-card-text">
+                ${b.kicker ? `<div class="mont-card-kicker">${b.kicker}</div>` : ''}
+                <div class="mont-card-title">${b.title}</div>
+            </div>
             <div class="mont-card-media" style="background:linear-gradient(150deg, ${color} 0%, #0B1220 135%)">${I.photo}</div>
+            ${b.cta ? `<button class="mont-card-cta" ${attr}>${b.cta} ${I.arrowUpRightSquare}</button>` : ''}
             <div class="mont-card-reactions">${renderMontReactions(idx + 1)}</div>
         </article>`;
 }
@@ -6170,15 +6192,13 @@ function render() {
     } else {
         switch (state.tab) {
             case 'hoy':
-                // El "Posible backlog" aplica sus 4 experimentos SOBRE la Home
-                // clásica (match-centric) — la misma `renderHoy()` que ve el
-                // usuario —, así que con el flag a ON forzamos esa Home en vez
-                // de Mi Mix para que el baseline sea exactamente el actual.
-                content = Flags.isEnabled('fan.hoy.backlog')
-                    ? renderHoy()
-                    : Flags.isEnabled('fan.hoy.concept-mix')
-                        ? renderHoyV2Mix()
-                        : renderHoy();
+                // El "Posible backlog" NO es una Home aparte ni cambia de Home:
+                // sus experimentos se aplican como modificadores dentro de la
+                // propia `renderHoy()`/`renderDirecto()` y sólo cuando se activa
+                // su sub-flag concreto. El padre por sí solo no cambia nada.
+                content = Flags.isEnabled('fan.hoy.concept-mix')
+                    ? renderHoyV2Mix()
+                    : renderHoy();
                 break;
             case 'noticias':   content = renderNoticias();   break;
             case 'calendario': content = renderCalendario(); break;

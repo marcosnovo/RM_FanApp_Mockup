@@ -17125,13 +17125,14 @@ input.has-mismatch {
 }
 
 /* ── 4) Elementos de Monterosa (.mont-*) ─────────────────────────
-   Tarjetas del feed: titular + media + barra de reacciones. En modo
-   amplio (baseline) replican la Home actual; en .is-dense se compactan
-   tipo Twitter para ver más posts por pantalla. */
+   Baseline (siempre visible): tarjetas amplias = titular + media grande
+   + barra de reacciones, como en la app real. El experimento "Feed
+   Compacto" (.is-dense) NO cambia el contenido: reorganiza los MISMOS
+   bloques con miniatura lateral y menos padding para que quepan más. */
 .mont-reactions-row {
     display: flex;
     gap: 22px;
-    padding: 4px 18px 10px;
+    padding: 4px 18px 12px;
     border-bottom: 1px solid var(--rm-border, #e6e8ec);
     margin: 0 14px;
 }
@@ -17142,7 +17143,7 @@ input.has-mismatch {
     background: transparent;
     border: none;
     border-bottom: 1px solid var(--rm-border, #e6e8ec);
-    padding: 16px 4px;
+    padding: 18px 4px;
     cursor: pointer;
     display: block;
 }
@@ -17152,12 +17153,12 @@ input.has-mismatch {
     margin-bottom: 6px;
 }
 .mont-card-title {
-    font-size: 19px; font-weight: 800; line-height: 1.2;
+    font-size: 20px; font-weight: 800; line-height: 1.2;
     color: var(--rm-text);
     letter-spacing: -0.2px;
 }
 .mont-card-media {
-    margin-top: 12px;
+    margin-top: 14px;
     aspect-ratio: 16 / 9;
     border-radius: 14px;
     display: flex; align-items: center; justify-content: center;
@@ -17165,9 +17166,22 @@ input.has-mismatch {
     overflow: hidden;
 }
 .mont-card-media svg { width: 38px; height: 38px; }
+.mont-card-cta {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%;
+    margin-top: 14px;
+    padding: 14px 18px;
+    border: none;
+    border-radius: var(--radius-xx-large, 24px);
+    background: var(--gradient-01-primary, linear-gradient(135deg, #5B4DFF, #3E31FA));
+    color: #fff;
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    cursor: pointer;
+}
+.mont-card-cta svg { width: 16px; height: 16px; }
 .mont-card-reactions {
     display: flex; gap: 22px;
-    margin-top: 12px;
+    margin-top: 14px;
 }
 .mont-react { display: inline-flex; align-items: center; gap: 6px; }
 .mont-react-emoji { font-size: 15px; line-height: 1; }
@@ -17177,21 +17191,36 @@ input.has-mismatch {
     font-variant-numeric: tabular-nums;
 }
 
-/* Modo denso (estilo Twitter): titular más pequeño, media reducida,
-   menos padding y reacciones más apretadas → más posts por pantalla. */
-.mont-feed.is-dense .mont-card { padding: 10px 4px; }
+/* Feed Compacto: mismos bloques, mejor uso del espacio. La media pasa a
+   miniatura lateral, el titular se limita a 2 líneas, se quita el CTA y
+   se aprieta el padding → caben muchos más posts sin perder contenido. */
+.mont-feed.is-dense .mont-card {
+    display: grid;
+    grid-template-columns: 1fr 96px;
+    grid-template-areas:
+        "text  media"
+        "react media";
+    column-gap: 12px;
+    align-items: start;
+    padding: 11px 4px;
+}
+.mont-feed.is-dense .mont-card-text { grid-area: text; }
 .mont-feed.is-dense .mont-card-kicker { margin-bottom: 2px; font-size: 10px; }
 .mont-feed.is-dense .mont-card-title {
-    font-size: 15px; line-height: 1.25;
+    font-size: 14px; line-height: 1.25;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .mont-feed.is-dense .mont-card-media {
-    margin-top: 8px;
+    grid-area: media;
+    margin-top: 0;
+    width: 96px; height: 72px;
     aspect-ratio: auto;
-    height: 96px;
     border-radius: 10px;
+    align-self: center;
 }
-.mont-feed.is-dense .mont-card-reactions { margin-top: 8px; gap: 16px; }
+.mont-feed.is-dense .mont-card-media svg { width: 26px; height: 26px; }
+.mont-feed.is-dense .mont-card-cta { display: none; }
+.mont-feed.is-dense .mont-card-reactions { grid-area: react; margin-top: 8px; gap: 16px; }
 .mont-feed.is-dense .mont-react-emoji { font-size: 13px; }
 .mont-feed.is-dense .mont-react-count { font-size: 12px; }
 
