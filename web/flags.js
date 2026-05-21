@@ -144,15 +144,16 @@ const FLAGS = [
         requires: 'fan.hoy.concept-mix'
     },
 
-    // ── Posible backlog — Home experimental (sandbox de experimentos) ──
-    // Home alternativa, activable por flag, que reinterpreta la Home
-    // actual (header de partido + contenido de abajo) para probar ideas
-    // de compactación y densidad antes de comprometerlas a producto.
+    // ── Posible backlog — agrupador de experimentos ─────────────────
+    // El padre por sí solo NO cambia nada: la Home se ve exactamente
+    // igual que hoy. Sólo agrupa los 4 sub-experimentos; cada uno se
+    // aplica como modificador de la Home actual cuando se activa su
+    // propio sub-flag. Pensado para demos y comparativas A/B.
     {
         app: 'fan',
         key: 'fan.hoy.backlog',
-        label: 'Posible backlog (Home experimental)',
-        description: 'Home alternativa para probar ideas del backlog. Con el flag a OFF la pestaña Hoy se comporta como siempre; con el flag a ON se renderiza una Home experimental (mismo contenido que la actual) sobre la que se aplican los 4 sub-experimentos de abajo. Pensada para demos y comparativas.',
+        label: 'Posible backlog',
+        description: 'Agrupa los 4 experimentos del backlog. Por sí solo NO cambia nada: la Home se ve igual que hoy. Cada experimento se activa con su propio sub-flag de abajo y modifica la Home actual sin sustituirla.',
         category: 'Backlog',
         default: false
     },
@@ -177,8 +178,8 @@ const FLAGS = [
     {
         app: 'fan',
         key: 'fan.hoy.backlog.dense-feed',
-        label: 'Backlog · Feed compacto (estilo Twitter)',
-        description: 'Reorganiza el contenido de abajo (hoy carrusel + promo) en un feed de posts compactos con poco padding y tipografía ajustada, para maximizar el número de posts visibles en pantalla. Cada post abre su noticia.',
+        label: 'Backlog · Feed compacto',
+        description: 'Reorganiza los MISMOS elementos del feed de Monterosa (titular + media + reacciones ❤️👏🤴🔥) para aprovechar mejor el espacio: la imagen pasa a miniatura lateral, el titular se limita a 2 líneas y se aprieta el padding, de modo que caben más posts en pantalla sin cambiar el contenido. Con el flag a OFF se ven en el formato amplio actual.',
         category: 'Backlog',
         default: false,
         requires: 'fan.hoy.backlog'
