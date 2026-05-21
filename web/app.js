@@ -616,6 +616,241 @@ function setupHeroCarouselScroll() {
     }, { passive: true });
 }
 
+// ════════════════════════════════════════════════════════════════
+// POSIBLE BACKLOG — Home experimental (flag 'fan.hoy.backlog')
+// Sandbox para probar 4 experimentos sobre la Home actual:
+//   · compact-header  → header de partido compacto (≤25-30%)
+//   · hide-on-scroll  → header que se oculta al bajar (tipo Twitter)
+//   · dense-feed      → contenido de abajo como feed de posts compactos
+//   · stories         → stories entre header y feed
+// Con los 4 sub-flags OFF imita la Home actual (header espacioso +
+// contenido de abajo en formato amplio). Reutiliza HEADER_MATCHES,
+// NEWS_ITEMS y los sub-contenidos de partido (resumen/stats/jornada).
+// ════════════════════════════════════════════════════════════════
+
+// Stories: club + jugadores favoritos. Tap marca como vista (sin sheet).
+function hbStoriesData() {
+    const players = (typeof HV2_MIX_PLAYERS !== 'undefined' ? HV2_MIX_PLAYERS : []);
+    const club = { id: 'club', name: 'RM', initials: 'RM', color: '#00529F' };
+    return [club, ...players.slice(0, 7)];
+}
+
+// Posts del feed: noticias reales + un post comercial (la promo 15%).
+function hbFeedPosts() {
+    const news = (typeof NEWS_ITEMS !== 'undefined' ? NEWS_ITEMS : []);
+    const teamName = id => ({ masc: 'Real Madrid', fem: 'Real Madrid Femenino', basket: 'Real Madrid Baloncesto' }[id] || 'Real Madrid');
+    const teamHandle = id => ({ masc: '@realmadrid', fem: '@RMfemenino', basket: '@RMBaloncesto' }[id] || '@realmadrid');
+    const posts = news.map(n => ({
+        type: 'news',
+        id: n.id,
+        author: teamName(n.teamId),
+        handle: teamHandle(n.teamId),
+        time: (n.date || '').slice(0, 5),
+        kicker: n.kind || '',
+        text: n.title,
+        sub: n.subtitle || '',
+        color: n.imageColor || '#26337a'
+    }));
+    const promo = {
+        type: 'promo', id: 'promo',
+        author: 'Tienda Real Madrid', handle: '@RMShop', time: '',
+        kicker: 'Patrocinado', text: '15% de DTO. en todas las equipaciones',
+        sub: 'Solo esta semana en la tienda oficial. Equipación 25/26 incluida.',
+        color: '#0B1A33'
+    };
+    if (posts.length > 2) posts.splice(2, 0, promo); else posts.push(promo);
+    return posts;
+}
+
+function renderHoyBacklog() {
+    const compact = Flags.isEnabled('fan.hoy.backlog.compact-header');
+    const hideOnScroll = Flags.isEnabled('fan.hoy.backlog.hide-on-scroll');
+    const dense = Flags.isEnabled('fan.hoy.backlog.dense-feed');
+    const stories = Flags.isEnabled('fan.hoy.backlog.stories');
+    const match = HEADER_MATCHES[state.matchIndex];
+
+    const upcoming = match.status === 'upcoming';
+    const segments = upcoming
+        ? [['directo', 'Directo'], ['jornada', 'Jornada']]
+        : [['directo', 'Directo'], ['resumen', 'Resumen'], ['estadisticas', 'Estadísticas'], ['jornada', 'Jornada']];
+    if (!segments.some(([k]) => k === state.sub)) state.sub = 'directo';
+
+    // En "Directo" mostramos el feed experimental (+ stories). El resto
+    // de segmentos reutilizan los sub-contenidos de partido existentes.
+    const body = (state.sub === 'directo')
+        ? `${stories ? renderHbStories() : ''}${renderHbFeed(dense)}`
+        : renderHoySubContent(match);
+
+    return `
+        <div class="hb-wrap">
+            <div class="hb-scroll" id="hbScroll">
+                ${renderHbHeader(match, segments, compact, hideOnScroll)}
+                ${body}
+                <div style="height: 24px"></div>
+            </div>
+        </div>
+        ${renderSideMenu()}
+    `;
+}
+
+function renderHbHeader(match, segments, compact, hideOnScroll) {
+    const homeCrest = bigCrestFor(match.homeTeam);
+    const awayCrest = bigCrestFor(match.awayTeam);
+    const finished = match.status === 'finished' || match.status === 'live';
+    const center = finished
+        ? `${match.homeScore ?? 0} - ${match.awayScore ?? 0}`
+        : (match.dateString.split('·')[1] || '').trim() || match.dateString;
+    const compLine = (match.matchInfo || match.competition || '').split('\n')[0];
+
+    const dots = HEADER_MATCHES.map((_, i) =>
+        `<button class="hb-dot ${i === state.matchIndex ? 'active' : ''}" data-hb-match="${i}" aria-label="Partido ${i + 1}"></button>`
+    ).join('');
+
+    const segBar = `
+        <div class="hb-segments">
+            ${segments.map(([k, label]) => `
+                <button class="hb-seg ${state.sub === k ? 'active' : ''}" data-hb-sub="${k}">${label}</button>
+            `).join('')}
+        </div>`;
+
+    const headClass = `hb-header ${compact ? 'is-compact' : ''} ${hideOnScroll ? 'hb-header-autohide' : ''}`;
+
+    if (compact) {
+        // Tira única densa: perfil · partido · radio, con competición como
+        // kicker minúsculo y dots pequeños. Mantiene TODA la info.
+        return `
+            <header class="${headClass}" id="hbHeader">
+                <div class="hb-bar">
+                    <button class="hb-icon-btn" id="btnSideMenu" aria-label="Tu área">${I.personCircle}</button>
+                    <button class="hb-match-strip" data-hb-sub="directo">
+                        <span class="hb-crest sm">${homeCrest}</span>
+                        <span class="hb-strip-mid">
+                            <span class="hb-strip-comp">${compLine}</span>
+                            <span class="hb-strip-score">${center}</span>
+                        </span>
+                        <span class="hb-crest sm">${awayCrest}</span>
+                    </button>
+                    <button class="hb-icon-btn" aria-label="Radio">${I.radio}</button>
+                </div>
+                <div class="hb-dots compact">${dots}</div>
+                ${segBar}
+            </header>`;
+    }
+
+    // Header espacioso (baseline): card de partido amplia + segmentos.
+    return `
+        <header class="${headClass}" id="hbHeader">
+            <div class="hb-bar">
+                <button class="hb-icon-btn col" id="btnSideMenu" aria-label="Tu área">${I.personCircle}<span>Tu área</span></button>
+                <div class="hb-dots">${dots}</div>
+                <button class="hb-icon-btn col" aria-label="Radio">${I.radio}<span>Radio</span></button>
+            </div>
+            <div class="hb-matchcard">
+                <div class="hb-comp">${compLine}</div>
+                <div class="hb-teams">
+                    <div class="hb-team"><span class="hb-crest">${homeCrest}</span><span class="hb-team-name">${match.homeTeam}</span></div>
+                    <div class="hb-center">${center}</div>
+                    <div class="hb-team"><span class="hb-crest">${awayCrest}</span><span class="hb-team-name">${match.awayTeam}</span></div>
+                </div>
+            </div>
+            ${segBar}
+        </header>`;
+}
+
+function renderHbStories() {
+    const stories = hbStoriesData();
+    return `
+        <div class="hb-stories">
+            ${stories.map(s => `
+                <button class="hb-story" data-hb-story="${s.id}">
+                    <span class="hb-story-ring">
+                        <span class="hb-story-av" style="background:${s.color}">${s.initials}</span>
+                    </span>
+                    <span class="hb-story-label">${s.name}</span>
+                </button>
+            `).join('')}
+        </div>`;
+}
+
+function renderHbFeed(dense) {
+    const posts = hbFeedPosts();
+    return `
+        <div class="hb-feed ${dense ? 'is-dense' : ''}">
+            ${posts.map(renderHbPost).join('')}
+        </div>`;
+}
+
+function renderHbPost(p) {
+    const isPromo = p.type === 'promo';
+    const initials = isPromo ? '★'
+        : p.author.includes('Femenino') ? 'F'
+        : p.author.includes('Baloncesto') ? 'B'
+        : 'RM';
+    // Métricas deterministas a partir del id para no cambiar entre renders.
+    const n = typeof p.id === 'number' ? p.id : 7;
+    const likes = (n * 137 % 900) + 80;
+    const comments = (n * 53 % 120) + 6;
+    const attr = isPromo ? 'data-hb-store="1"' : `data-news-id="${p.id}"`;
+    return `
+        <article class="hb-post ${isPromo ? 'is-promo' : ''}" ${attr} role="button" tabindex="0">
+            <div class="hb-post-avatar" style="background:${p.color}">${initials}</div>
+            <div class="hb-post-main">
+                <div class="hb-post-head">
+                    <span class="hb-post-author">${p.author}</span>
+                    <span class="hb-post-handle">${p.handle}</span>
+                    ${p.time ? `<span class="hb-post-dot">·</span><span class="hb-post-time">${p.time}</span>` : ''}
+                </div>
+                ${p.kicker ? `<span class="hb-post-kicker">${p.kicker}</span>` : ''}
+                <div class="hb-post-text">${p.text}</div>
+                ${p.sub ? `<div class="hb-post-sub">${p.sub}</div>` : ''}
+                <div class="hb-post-media" style="background:linear-gradient(150deg, ${p.color} 0%, #0B1220 130%)">${I.photo}</div>
+                ${isPromo
+                    ? `<div class="hb-post-actions"><span class="hb-post-shop">Comprar ${I.arrowUpRightSquare}</span></div>`
+                    : `<div class="hb-post-actions">
+                            <span>💬 ${comments}</span>
+                            <span>❤ ${likes}</span>
+                            <span>↗</span>
+                       </div>`}
+            </div>
+        </article>`;
+}
+
+// Auto-hide del header tipo Twitter: oculta al bajar, asoma al subir.
+let _hbLastScroll = 0;
+function setupHbHeaderAutoHide() {
+    const scroller = document.querySelector('#hbScroll');
+    const header = document.querySelector('#hbHeader');
+    if (!scroller || !header || !header.classList.contains('hb-header-autohide')) return;
+    _hbLastScroll = scroller.scrollTop;
+    scroller.addEventListener('scroll', () => {
+        const y = scroller.scrollTop;
+        const goingDown = y > _hbLastScroll;
+        if (y > 56 && goingDown) header.classList.add('is-hidden');
+        else header.classList.remove('is-hidden');
+        _hbLastScroll = y;
+    }, { passive: true });
+}
+
+function attachHoyBacklogListeners() {
+    if (!Flags.isEnabled('fan.hoy.backlog') || state.tab !== 'hoy' || state.app !== 'fan') return;
+    $$('[data-hb-match]').forEach(d => d.addEventListener('click', () => {
+        state.matchIndex = parseInt(d.dataset.hbMatch, 10);
+        state.statsTab = 0;
+        render();
+    }));
+    $$('[data-hb-sub]').forEach(b => b.addEventListener('click', () => {
+        state.sub = b.dataset.hbSub;
+        render();
+    }));
+    $$('[data-hb-store]').forEach(b => b.addEventListener('click', () => {
+        state.tab = 'tienda';
+        render();
+    }));
+    // Stories: marcar como vista sin re-render (anillo → gris).
+    $$('[data-hb-story]').forEach(s => s.addEventListener('click', () => s.classList.add('is-seen')));
+    setupHbHeaderAutoHide();
+}
+
 // ── Resumen content ─────────────────────────────────────────────
 function renderResumen(match) {
     if (match.status === 'upcoming') {
@@ -6047,9 +6282,11 @@ function render() {
     } else {
         switch (state.tab) {
             case 'hoy':
-                content = Flags.isEnabled('fan.hoy.concept-mix')
-                    ? renderHoyV2Mix()
-                    : renderHoy();
+                content = Flags.isEnabled('fan.hoy.backlog')
+                    ? renderHoyBacklog()
+                    : Flags.isEnabled('fan.hoy.concept-mix')
+                        ? renderHoyV2Mix()
+                        : renderHoy();
                 break;
             case 'noticias':   content = renderNoticias();   break;
             case 'calendario': content = renderCalendario(); break;
@@ -7817,6 +8054,9 @@ function attachListeners() {
     attachHoyV2OptionsListeners();
     attachHoyV2MixListeners();
     setupHV2FeaturedAutoplay();
+
+    // Posible backlog — Home experimental (flag fan.hoy.backlog)
+    attachHoyBacklogListeners();
 }
 
 // Autoplay simulado de las noticias destacadas de vídeo: cuando una

@@ -143,6 +143,55 @@ const FLAGS = [
         default: false,
         requires: 'fan.hoy.concept-mix'
     },
+
+    // ── Posible backlog — Home experimental (sandbox de experimentos) ──
+    // Home alternativa, activable por flag, que reinterpreta la Home
+    // actual (header de partido + contenido de abajo) para probar ideas
+    // de compactación y densidad antes de comprometerlas a producto.
+    {
+        app: 'fan',
+        key: 'fan.hoy.backlog',
+        label: 'Posible backlog (Home experimental)',
+        description: 'Home alternativa para probar ideas del backlog. Con el flag a OFF la pestaña Hoy se comporta como siempre; con el flag a ON se renderiza una Home experimental (mismo contenido que la actual) sobre la que se aplican los 4 sub-experimentos de abajo. Pensada para demos y comparativas.',
+        category: 'Backlog',
+        default: false
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.backlog.compact-header',
+        label: 'Backlog · Header compacto',
+        description: 'Compacta el header de partido a una sola tira densa + barra de segmentos fina, manteniendo TODA la info actual (perfil, escudos, equipos, fecha/hora, competición, radio y segmentos). Objetivo: que el header desplegado ocupe ≤25-30% de la pantalla.',
+        category: 'Backlog',
+        default: false,
+        requires: 'fan.hoy.backlog'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.backlog.hide-on-scroll',
+        label: 'Backlog · Header que se oculta al hacer scroll',
+        description: 'Interacción tipo X/Twitter: el header se oculta al hacer scroll hacia abajo y vuelve a asomarse en cuanto el usuario hace scroll hacia arriba. Maximiza el contenido visible.',
+        category: 'Backlog',
+        default: false,
+        requires: 'fan.hoy.backlog'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.backlog.dense-feed',
+        label: 'Backlog · Feed compacto (estilo Twitter)',
+        description: 'Reorganiza el contenido de abajo (hoy carrusel + promo) en un feed de posts compactos con poco padding y tipografía ajustada, para maximizar el número de posts visibles en pantalla. Cada post abre su noticia.',
+        category: 'Backlog',
+        default: false,
+        requires: 'fan.hoy.backlog'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.backlog.stories',
+        label: 'Backlog · Stories entre header y feed',
+        description: 'Carrusel de stories (círculos con borde gradiente) entre el header y el feed. Tamaño contenido para no penalizar el espacio del feed.',
+        category: 'Backlog',
+        default: false,
+        requires: 'fan.hoy.backlog'
+    },
     {
         app: 'fan',
         key: 'fan.app.login-header',
