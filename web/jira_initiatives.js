@@ -544,6 +544,128 @@ register('fan.hoy.concept-mix.hi-fi', {
     dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
 });
 
+// ── Posible backlog — Home experimental y sus 4 experimentos ─────
+register('fan.hoy.backlog', {
+    flagKey: 'fan.hoy.backlog',
+    title: 'Posible backlog · Home experimental (sandbox de experimentos)',
+    epic: 'Fan App · Hoy · Backlog',
+    estimate: 'M (2-3 sprints, sandbox)',
+    priority: 'Media',
+    context: 'Tras alinear con dirección un plan iterativo para evolucionar la Home, necesitamos un espacio para probar ideas concretas (compactar el header, ocultarlo al hacer scroll, densificar el contenido de abajo como un feed y añadir stories) sin comprometerlas a producción ni tocar la Home actual.',
+    problem: 'No hay forma de comparar "lo de hoy" con cada idea del backlog de forma aislada y demostrable ante stakeholders. Validar a ojo sobre slides no convence.',
+    objective: 'Una Home experimental activable por flag que, con los sub-experimentos OFF, imita la Home actual, y permite encender cada experimento por separado para comparar y medir.',
+    inScope: [
+        'Pantalla Hoy alternativa bajo `fan.hoy.backlog` (no toca la Home clásica ni Mi Mix).',
+        '4 sub-experimentos toggleables: header compacto, header auto-ocultable, feed denso, stories.',
+        'Reutiliza el contenido actual (partido, noticias, promo) y los sub-contenidos de partido (resumen/stats/jornada).'
+    ],
+    outOfScope: [
+        'Cambios en la Home de producción.',
+        'Backend/contenido nuevo: usa los mocks existentes.'
+    ],
+    acceptanceCriteria: [
+        'Con el flag ON y los 4 sub-flags OFF, la Home se parece a la actual.',
+        'Cada sub-experimento se puede activar/desactivar de forma independiente.',
+        'Al desactivar el flag, la pestaña Hoy vuelve a su comportamiento normal.'
+    ],
+    uxNotes: ['Es un sandbox de demo/medición, no un destino final: las ideas que ganen se promocionan a la Home real.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.backlog.compact-header', {
+    flagKey: 'fan.hoy.backlog.compact-header',
+    title: 'Backlog · Header de partido compacto (≤25-30%)',
+    epic: 'Fan App · Hoy · Backlog',
+    estimate: 'M (2 sprints)',
+    priority: 'Alta',
+    context: 'El header de partido actual (fila superior + carrusel de partidos + barra de segmentos) ocupa demasiado alto y empuja el contenido. Queremos el header lo más pequeño posible manteniendo la MISMA información.',
+    problem: 'Un header alto reduce el contenido visible above-the-fold y obliga a hacer scroll para llegar a lo importante.',
+    objective: 'Compactar el header a ≤25-30% de la pantalla (idealmente menos) preservando toda la info: perfil, escudos, equipos, fecha/hora o marcador, competición, radio y segmentos.',
+    inScope: [
+        'Colapsar el carrusel de partidos en una tira única densa (escudo · marcador/hora · escudo) con la competición como kicker minúsculo.',
+        'Cambiar el carrusel por dots pequeños para alternar de partido.',
+        'Barra de segmentos fina (Directo/Resumen/Estadísticas/Jornada).'
+    ],
+    acceptanceCriteria: [
+        'El header desplegado ocupa ≤30% del alto del frame (objetivo 25% o menos).',
+        'No se pierde ninguna información respecto al header actual.',
+        'Sigue permitiendo cambiar de partido y de segmento.'
+    ],
+    uxNotes: [
+        'Mi enfoque: una sola fila densa con iconos en vez de botones etiquetados, marcador/hora centrado, competición en kicker de 9-10px y segmentos en una barra fina. Tipografía ajustada y padding mínimo.'
+    ],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.backlog.hide-on-scroll', {
+    flagKey: 'fan.hoy.backlog.hide-on-scroll',
+    title: 'Backlog · Header que se oculta al hacer scroll (tipo X/Twitter)',
+    epic: 'Fan App · Hoy · Backlog',
+    estimate: 'S (1 sprint)',
+    priority: 'Media',
+    context: 'En apps como X/Twitter el header se esconde al bajar para dejar todo el alto al contenido y reaparece en cuanto subes.',
+    problem: 'Un header siempre visible resta espacio al contenido durante la lectura/scroll.',
+    objective: 'Ocultar el header al hacer scroll hacia abajo y volver a mostrarlo al hacer scroll hacia arriba.',
+    inScope: [
+        'Detección de dirección de scroll sobre el scroller del Hoy.',
+        'Ocultar (translateY) al bajar pasado un umbral; mostrar al subir.',
+        'Transición suave; respeta prefers-reduced-motion.'
+    ],
+    acceptanceCriteria: [
+        'Al bajar más de ~56px el header se oculta.',
+        'Al hacer el más mínimo scroll hacia arriba, reaparece.',
+        'Sin parpadeos ni saltos de layout.'
+    ],
+    uxNotes: ['Combina muy bien con el header compacto: doble ganancia de espacio.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.backlog.dense-feed', {
+    flagKey: 'fan.hoy.backlog.dense-feed',
+    title: 'Backlog · Feed compacto (estilo Twitter) en el contenido de abajo',
+    epic: 'Fan App · Hoy · Backlog',
+    estimate: 'M (2 sprints)',
+    priority: 'Alta',
+    context: 'El contenido de abajo de la Home (hoy un carrusel + una promo de 15%) usa títulos y padding muy grandes y se ven muy pocos elementos por pantalla.',
+    problem: 'Baja densidad = poco contenido visible = menos descubrimiento y menos scroll-through.',
+    objective: 'Reorganizar el contenido de abajo como un feed de posts compactos (avatar + autor + texto + acciones), con poco padding y tipografía ajustada, para maximizar posts visibles. Cada post abre su noticia; la promo es un post patrocinado.',
+    inScope: [
+        'Feed de posts a partir de las noticias + un post patrocinado (la promo 15%).',
+        'Modo denso: oculta subtítulo y media, recorta el texto y aprieta el padding.',
+        'Tap en un post abre su detalle; el post patrocinado lleva a Tienda.'
+    ],
+    acceptanceCriteria: [
+        'En modo denso se ven sensiblemente más posts por pantalla que en el modo amplio.',
+        'Cada post mantiene autor, hora y acciones; el texto se recorta a 2 líneas.',
+        'El post patrocinado se distingue y lleva a la Tienda.'
+    ],
+    uxNotes: ['Patrón timeline tipo X: divisores en vez de tarjetas, avatar a la izquierda, texto a la derecha.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
+register('fan.hoy.backlog.stories', {
+    flagKey: 'fan.hoy.backlog.stories',
+    title: 'Backlog · Stories entre header y feed',
+    epic: 'Fan App · Hoy · Backlog',
+    estimate: 'S (1 sprint)',
+    priority: 'Baja',
+    context: 'Las stories (círculos con borde gradiente) son un patrón conocido para destacar contenido efímero de jugadores/club.',
+    problem: 'Falta un punto de entrada ligero y visual a contenido destacado, sin penalizar el espacio del feed.',
+    objective: 'Carrusel de stories entre el header y el feed, de tamaño contenido para no robar espacio al feed.',
+    inScope: [
+        'Carrusel horizontal de stories (club + jugadores favoritos).',
+        'Tamaño compacto (anillo ~56px + etiqueta).',
+        'Estado "vista" al pulsar (anillo gradiente → gris).'
+    ],
+    acceptanceCriteria: [
+        'Las stories aparecen entre header y feed y hacen scroll horizontal.',
+        'Pulsar una story la marca como vista.',
+        'No empujan el feed de forma significativa (altura contenida).'
+    ],
+    uxNotes: ['Sin visor de story a pantalla completa en esta fase: el foco es validar el punto de entrada y su coste de espacio.'],
+    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
+});
+
 register('fan.app.login-header', {
     title: 'Cabecera global de login / bienvenida con tier',
     epic: 'Fan App · Identity',

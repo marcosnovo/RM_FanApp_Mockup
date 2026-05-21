@@ -446,6 +446,17 @@ function scrollScreen(top) {
     if (sb) sb.scrollTop = top;
 }
 
+// La Home backlog tiene su propio scroller (#hbScroll); si existe se
+// scrollea ese, si no caemos al scroller general.
+function scrollHb(top) {
+    const el = document.querySelector('#hbScroll');
+    if (el) el.scrollTop = top; else scrollScreen(top);
+}
+function backlogInit(subKey) {
+    fanInit({ tab: 'hoy', sub: 'directo',
+              flags: subKey ? ['fan.hoy.backlog', subKey] : ['fan.hoy.backlog'] });
+}
+
 // ── VIP · Reparto múltiple de tickets ───────────────────────────
 registerFlow('vip.tickets.multi-share', {
     title: 'Reparto múltiple de tickets',
@@ -830,6 +841,68 @@ registerFlow('fan.hoy.concept-mix.hi-fi', {
             { caption: '1 · Partidos hi-fi (date picker + venue)', async run() { scrollScreen(0); } },
             { caption: '2 · "Para ti" carrusel grande', async run() { scrollScreen(450); } },
             { caption: '3 · Predictor + Noticias hi-fi', async run() { scrollScreen(1000); } }
+        ]
+    }]
+});
+
+// ── Fan · Posible backlog — Home experimental + 4 experimentos ───
+registerFlow('fan.hoy.backlog', {
+    title: 'Posible backlog · Home experimental',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { backlogInit(); },
+    paths: [{
+        label: 'Baseline (sin experimentos) vs experimentos',
+        steps: [
+            { caption: '1 · Home experimental (baseline, como hoy)', async run() { scrollHb(0); } },
+            { caption: '2 · Header compacto', async run() { Flags.set('fan.hoy.backlog.compact-header', true); scrollHb(0); } },
+            { caption: '3 · + Stories', async run() { Flags.set('fan.hoy.backlog.stories', true); scrollHb(0); } },
+            { caption: '4 · + Feed compacto', async run() { Flags.set('fan.hoy.backlog.dense-feed', true); scrollHb(0); } }
+        ]
+    }]
+});
+registerFlow('fan.hoy.backlog.compact-header', {
+    title: 'Backlog · Header compacto',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { backlogInit('fan.hoy.backlog.compact-header'); },
+    paths: [{
+        label: 'Header compacto (≤25-30%)',
+        steps: [
+            { caption: '1 · Header de partido compacto, misma info', async run() { scrollHb(0); } }
+        ]
+    }]
+});
+registerFlow('fan.hoy.backlog.hide-on-scroll', {
+    title: 'Backlog · Header que se oculta al hacer scroll',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { backlogInit('fan.hoy.backlog.hide-on-scroll'); },
+    paths: [{
+        label: 'Auto-hide tipo Twitter',
+        steps: [
+            { caption: '1 · Header visible (arriba del todo)', async run() { scrollHb(0); } },
+            { caption: '2 · Header oculto al bajar', async run() { scrollHb(420); } }
+        ]
+    }]
+});
+registerFlow('fan.hoy.backlog.dense-feed', {
+    title: 'Backlog · Feed compacto (estilo Twitter)',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { backlogInit('fan.hoy.backlog.dense-feed'); },
+    paths: [{
+        label: 'Feed denso: más posts por pantalla',
+        steps: [
+            { caption: '1 · Feed compacto', async run() { scrollHb(0); } },
+            { caption: '2 · Más abajo en el feed', async run() { scrollHb(360); } }
+        ]
+    }]
+});
+registerFlow('fan.hoy.backlog.stories', {
+    title: 'Backlog · Stories entre header y feed',
+    snapshot: genericSnapshot, restore: genericRestore,
+    init() { backlogInit('fan.hoy.backlog.stories'); },
+    paths: [{
+        label: 'Stories entre header y feed',
+        steps: [
+            { caption: '1 · Carrusel de stories', async run() { scrollHb(0); } }
         ]
     }]
 });

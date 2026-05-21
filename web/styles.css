@@ -17028,6 +17028,223 @@ input.has-mismatch {
     .hv2-featured.is-playing .hv2-featured-progress span { width: 100%; }
 }
 
+/* ════════════════════════════════════════════════════════════════
+   POSIBLE BACKLOG — Home experimental (flag fan.hoy.backlog)
+   ──────────────────────────────────────────────────────────────── */
+.hb-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: #F2F3F5;
+}
+.hb-scroll {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ── Header (sticky; se oculta con .is-hidden si autohide) ───────── */
+.hb-header {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    background: #fff;
+    border-bottom: 1px solid #E6E8EC;
+    padding-top: 52px;   /* buffer del status-bar del frame */
+    transition: transform 0.26s ease;
+    will-change: transform;
+}
+.hb-header.is-hidden { transform: translateY(-100%); }
+
+.hb-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 14px 6px;
+}
+.hb-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #0B1220;
+    cursor: pointer;
+    padding: 4px;
+}
+.hb-icon-btn svg { width: 26px; height: 26px; }
+.hb-icon-btn.col { flex-direction: column; gap: 2px; font-size: 10px; color: #475569; }
+.hb-icon-btn.col svg { width: 24px; height: 24px; color: #0B1220; }
+
+.hb-dots { display: flex; gap: 6px; align-items: center; justify-content: center; }
+.hb-dots.compact { padding: 0 0 6px; }
+.hb-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #CBD5E1; border: none; padding: 0; cursor: pointer;
+}
+.hb-dot.active { background: #00529F; width: 18px; border-radius: 3px; }
+
+/* Header espacioso (baseline) */
+.hb-matchcard { padding: 4px 16px 12px; text-align: center; }
+.hb-comp { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #64748B; margin-bottom: 10px; }
+.hb-teams { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.hb-team { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 92px; }
+.hb-team-name { font-size: 13px; font-weight: 700; color: #0B1220; line-height: 1.1; }
+.hb-crest { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; }
+.hb-crest svg { width: 100%; height: 100%; }
+.hb-crest.sm { width: 26px; height: 26px; }
+.hb-center { font-size: 26px; font-weight: 800; color: #0B1220; min-width: 64px; }
+
+/* Header compacto (≤25-30%): una tira densa + segmentos finos */
+.hb-header.is-compact { padding-top: 50px; }
+.hb-header.is-compact .hb-bar { padding: 2px 12px 2px; }
+.hb-match-strip {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: #F4F6F9;
+    border: none;
+    border-radius: 10px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+.hb-strip-mid { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+.hb-strip-comp { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; color: #64748B; }
+.hb-strip-score { font-size: 15px; font-weight: 800; color: #0B1220; }
+
+/* Barra de segmentos (común) */
+.hb-segments {
+    display: flex;
+    gap: 4px;
+    padding: 0 10px;
+    overflow-x: auto;
+    border-top: 1px solid #F1F3F5;
+}
+.hb-segments::-webkit-scrollbar { display: none; }
+.hb-seg {
+    flex: 0 0 auto;
+    background: transparent;
+    border: none;
+    padding: 9px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #94A3B8;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+}
+.hb-seg.active { color: #0B1220; border-bottom-color: #00529F; font-weight: 700; }
+.hb-header.is-compact .hb-seg { padding: 7px 10px; font-size: 12px; }
+
+/* ── Stories entre header y feed ─────────────────────────────────── */
+.hb-stories {
+    display: flex;
+    gap: 12px;
+    padding: 10px 14px;
+    overflow-x: auto;
+    background: #fff;
+    border-bottom: 1px solid #E6E8EC;
+}
+.hb-stories::-webkit-scrollbar { display: none; }
+.hb-story {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 58px;
+}
+.hb-story-ring {
+    width: 56px; height: 56px; border-radius: 50%;
+    padding: 2px;
+    background: linear-gradient(135deg, #FEBE10, #C62828 55%, #00529F);
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.hb-story.is-seen .hb-story-ring { background: #CBD5E1; }
+.hb-story-av {
+    width: 100%; height: 100%; border-radius: 50%;
+    border: 2px solid #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 14px;
+}
+.hb-story-label {
+    font-size: 11px; color: #475569; max-width: 58px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── Feed de posts (estilo Twitter) ──────────────────────────────── */
+.hb-feed { background: #fff; }
+.hb-post {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    background: #fff;
+    border: none;
+    border-bottom: 1px solid #E6E8EC;
+    padding: 14px 16px;
+    cursor: pointer;
+}
+.hb-post-avatar {
+    flex: 0 0 auto;
+    width: 42px; height: 42px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 14px;
+}
+.hb-post-main { flex: 1; min-width: 0; }
+.hb-post-head { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.hb-post-author { font-size: 14px; font-weight: 700; color: #0B1220; }
+.hb-post-handle, .hb-post-time, .hb-post-dot { font-size: 13px; color: #64748B; }
+.hb-post-kicker {
+    display: inline-block; margin-top: 2px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+    color: #00529F; text-transform: uppercase;
+}
+.hb-post-text { font-size: 14px; line-height: 1.35; color: #0B1220; margin-top: 3px; }
+.hb-post-sub { font-size: 13px; line-height: 1.4; color: #475569; margin-top: 4px; }
+.hb-post-media {
+    margin-top: 10px;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.85);
+    overflow: hidden;
+}
+.hb-post-media svg { width: 34px; height: 34px; }
+.hb-post-actions {
+    display: flex; gap: 22px; margin-top: 10px;
+    font-size: 13px; color: #64748B;
+}
+.hb-post-shop {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #00529F; font-weight: 700;
+}
+.hb-post-shop svg { width: 14px; height: 14px; }
+.hb-post.is-promo { background: #FAFBFD; }
+
+/* Modo denso: oculta subtítulo y media, recorta el texto a 2 líneas y
+   aprieta el padding para maximizar posts por pantalla (tipo Twitter). */
+.hb-feed.is-dense .hb-post { padding: 9px 14px; gap: 10px; }
+.hb-feed.is-dense .hb-post-avatar { width: 34px; height: 34px; font-size: 12px; }
+.hb-feed.is-dense .hb-post-sub,
+.hb-feed.is-dense .hb-post-media { display: none; }
+.hb-feed.is-dense .hb-post-text {
+    font-size: 13px; margin-top: 1px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.hb-feed.is-dense .hb-post-actions { margin-top: 6px; font-size: 12px; gap: 18px; }
+.hb-feed.is-dense .hb-post-kicker { margin-top: 1px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .hb-header { transition: none; }
+}
+
 /* Cabecera de bienvenida — el `app-topbar-slot` ya pinta su contenido
    con su propia caja, sólo aseguramos un buffer arriba para el status-bar. */
 .hv2-mix-header {
