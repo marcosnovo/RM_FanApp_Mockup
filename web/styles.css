@@ -17034,9 +17034,9 @@ input.has-mismatch {
    ──────────────────────────────────────────────────────────────── */
 
 /* ── 1) Header compacto (.home-bl-compact) ───────────────────────
-   Objetivo: header lo más pequeño posible (≤25-30%) manteniendo TODA
-   la info y SIN cortar texto. La compactación es puro recorte de
-   paddings/gaps/tamaños; no se oculta ni se trunca nada. */
+   Objetivo: header lo más pequeño posible (≤25-30%) mostrando TODOS los
+   datos con jerarquía clara y SIN cortar nada. La tarjeta de partido se
+   sustituye por un marcador horizontal denso (.mcx-card). */
 .home-bl-compact .home-top-row-fixed {
     padding-top: 52px;          /* sólo el alto del status-bar */
     padding-bottom: 0;
@@ -17044,35 +17044,83 @@ input.has-mismatch {
 }
 .home-bl-compact .home-top-center { height: 18px; }   /* la fila de dots ya no malgasta alto */
 .home-bl-compact .home-top-mini-crest,
-.home-bl-compact .home-top-mini-crest > svg { width: 22px !important; height: 22px !important; }
+.home-bl-compact .home-top-mini-crest > svg { width: 20px !important; height: 20px !important; }
 .home-bl-compact .home-top-btn { gap: 0; }
 .home-bl-compact .home-top-btn-label-fade { font-size: 10px; }
-/* Pega el bloque de partido a la fila de iconos: sin banda muerta. */
-.home-bl-compact .home-match-area { padding-bottom: 0; margin-top: -4px; }
-.home-bl-compact .match-card { padding: 0 14px 4px; }
-.home-bl-compact .match-competition-row { padding: 0 0 4px; }
-.home-bl-compact .match-competition { font-size: 10px; padding: 2px 11px; }
-.home-bl-compact .match-big-crest,
-.home-bl-compact .match-big-crest > svg { width: 32px !important; height: 32px !important; }
-.home-bl-compact .match-teams-row { margin-bottom: 0; align-items: center; }
-.home-bl-compact .match-team { gap: 2px; }
-.home-bl-compact .match-team-name { font-size: 12px; line-height: 1.1; max-width: 104px; white-space: normal; }
-.home-bl-compact .match-score-big { font-size: 24px; gap: 8px; }
-.home-bl-compact .match-score-dash { font-size: 16px; }
-.home-bl-compact .match-date-upcoming { font-size: 12px; }
-.home-bl-compact .match-center-col { gap: 1px; min-width: 78px; padding: 0 2px; }
-.home-bl-compact .match-cal-btn { width: 38px; height: 24px; margin-top: 2px; }
-.home-bl-compact .match-cal-btn > svg { width: 15px !important; height: 15px !important; }
-.home-bl-compact .match-status-pill { margin-top: 1px; padding: 2px 10px; font-size: 10px; }
-/* La línea de info se mantiene COMPLETA (sus 2 líneas), sólo más pequeña
-   y pegada — nada de elipsis ni recortes. */
-.home-bl-compact .match-info {
-    margin-top: 3px;
-    font-size: 11px;
-    line-height: 1.25;
-}
+.home-bl-compact .home-match-area { padding-bottom: 0; margin-top: -2px; }
 .home-bl-compact .home-segment-bar { height: 36px; }   /* el `top` lo fija el JS = alto real del top-row */
 .home-bl-compact .home-segment-label { height: 32px; }
+
+/* Marcador compacto horizontal: competición (kicker) · equipos+resultado
+   (principal) · fecha y lugar (secundario). */
+.mcx-card {
+    min-width: 100%;
+    padding: 2px 14px 8px;
+    text-align: center;
+    color: #fff;
+}
+.mcx-comp {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #ffffffc4;
+    margin-bottom: 7px;
+}
+.mcx-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.mcx-team {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.mcx-right { flex-direction: row-reverse; }
+.mcx-crest,
+.mcx-crest > svg { width: 30px !important; height: 30px !important; flex: 0 0 auto; }
+.mcx-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.15;
+    min-width: 0;
+    text-align: left;
+}
+.mcx-right .mcx-name { text-align: right; }
+.mcx-center {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    min-width: 70px;
+}
+.mcx-mid { display: flex; align-items: center; gap: 8px; }
+.mcx-time { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mcx-score { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mcx-cal {
+    width: 30px; height: 24px;
+    border: 1px solid #ffffff3d; border-radius: 8px;
+    background: transparent; color: #ffffffd1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.mcx-cal > svg { width: 14px !important; height: 14px !important; }
+.mcx-status {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.4px;
+    text-transform: uppercase; color: #c9cee0;
+}
+.mcx-status.live { color: #6ee7a0; }
+.mcx-info {
+    margin-top: 8px;
+    font-size: 11px;
+    line-height: 1.3;
+    color: #ffffff99;
+}
 
 /* ── 2) Header que se oculta al hacer scroll (.home-bl-autohide) ──
    Estilo X/Twitter: al bajar se esconde el top-row y la barra de

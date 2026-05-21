@@ -461,7 +461,7 @@ function renderHoy() {
                     <div class="match-carousel" id="matchCarousel">
                         <button class="carousel-nav prev" data-carousel-prev>${I.chevronLeft}</button>
                         <div class="match-carousel-track" id="matchTrack" style="transform: translateX(-${state.matchIndex * 100}%)">
-                            ${HEADER_MATCHES.map(m => renderMatchCard(m)).join('')}
+                            ${HEADER_MATCHES.map(m => renderMatchCard(m, compactHeader)).join('')}
                         </div>
                         <button class="carousel-nav next" data-carousel-next>${I.chevronRight}</button>
                     </div>
@@ -484,7 +484,7 @@ function renderHoy() {
     `;
 }
 
-function renderMatchCard(match) {
+function renderMatchCard(match, compact) {
     const homeCrest = bigCrestFor(match.homeTeam);
     const awayCrest = bigCrestFor(match.awayTeam);
     const dateStr = match.dateString.replace(' · ', ' - ');
@@ -492,6 +492,46 @@ function renderMatchCard(match) {
 
     // Competition badge label (shorter)
     const compLabel = match.competition === 'LALIGA EA SPORTS' ? 'LA LIGA' : match.competition;
+
+    // ── Compact card (backlog · header compacto) ───────────────────
+    // Marcador horizontal denso: escudo + nombre a cada lado, marcador o
+    // hora en el centro. Toda la info se conserva (competición arriba,
+    // fecha + lugar abajo) con jerarquía clara y mínima altura.
+    if (compact) {
+        const parts = match.dateString.split(' · ');
+        const dayPart = parts[0] || match.dateString;
+        const timePart = parts[1] || '';
+        const flatInfo = `${dayPart} · ${(match.matchInfo || '').replace(/\n/g, ' · ')}`;
+        let center;
+        if (isUpcoming) {
+            center = `<div class="mcx-mid">
+                        <span class="mcx-time">${timePart}</span>
+                        <button class="mcx-cal" aria-label="Añadir al calendario">${I.calendarPlus}</button>
+                      </div>`;
+        } else {
+            const pill = match.status === 'live'
+                ? `<span class="mcx-status live">En vivo</span>`
+                : `<span class="mcx-status">Final</span>`;
+            center = `<span class="mcx-score">${match.homeScore ?? 0} - ${match.awayScore ?? 0}</span>${pill}`;
+        }
+        return `
+            <div class="mcx-card">
+                <div class="mcx-comp">${compLabel}</div>
+                <div class="mcx-row">
+                    <div class="mcx-team">
+                        <span class="mcx-crest">${homeCrest}</span>
+                        <span class="mcx-name">${match.homeTeam}</span>
+                    </div>
+                    <div class="mcx-center">${center}</div>
+                    <div class="mcx-team mcx-right">
+                        <span class="mcx-name">${match.awayTeam}</span>
+                        <span class="mcx-crest">${awayCrest}</span>
+                    </div>
+                </div>
+                <div class="mcx-info">${flatInfo}</div>
+            </div>
+        `;
+    }
 
     // Status pill below score
     let statusPill = '';
