@@ -17034,51 +17034,57 @@ input.has-mismatch {
    ──────────────────────────────────────────────────────────────── */
 
 /* ── 1) Header compacto (.home-bl-compact) ───────────────────────
-   Objetivo: header desplegado ≤ 25-30% de la pantalla manteniendo
-   TODA la info (perfil, escudos, equipos, fecha/hora o marcador,
-   competición, radio, segmentos y la línea de info del partido). */
+   Objetivo: header lo más pequeño posible (≤25-30%) manteniendo TODA
+   la info y SIN cortar texto. La compactación es puro recorte de
+   paddings/gaps/tamaños; no se oculta ni se trunca nada. */
 .home-bl-compact .home-top-row-fixed {
-    padding-top: 56px;          /* sólo lo justo para el status-bar */
-    padding-bottom: 4px;
-    min-height: 78px;
+    padding-top: 52px;          /* sólo el alto del status-bar */
+    padding-bottom: 2px;
+    min-height: 0;
 }
-.home-bl-compact .home-match-area { padding-bottom: 2px; }
-.home-bl-compact .match-card { padding: 0 16px 8px; }
-.home-bl-compact .match-competition-row { padding: 0 0 6px; }
+.home-bl-compact .home-top-center { height: 24px; }   /* la fila de dots ya no malgasta alto */
+.home-bl-compact .home-top-mini-crest,
+.home-bl-compact .home-top-mini-crest > svg { width: 24px !important; height: 24px !important; }
+.home-bl-compact .home-top-btn { gap: 1px; }
+.home-bl-compact .home-top-btn-label-fade { font-size: 10px; }
+.home-bl-compact .home-match-area { padding-bottom: 0; }
+.home-bl-compact .match-card { padding: 0 16px 6px; }
+.home-bl-compact .match-competition-row { padding: 0 0 4px; }
 .home-bl-compact .match-competition { font-size: 10px; padding: 3px 12px; }
 .home-bl-compact .match-big-crest,
 .home-bl-compact .match-big-crest > svg { width: 34px !important; height: 34px !important; }
+.home-bl-compact .match-teams-row { margin-bottom: 0; align-items: center; }
 .home-bl-compact .match-team { gap: 4px; }
-.home-bl-compact .match-team-name { font-size: 12px; }
+.home-bl-compact .match-team-name { font-size: 12px; max-width: 100px; white-space: normal; }
 .home-bl-compact .match-score-big { font-size: 26px; gap: 10px; }
 .home-bl-compact .match-score-dash { font-size: 18px; }
-.home-bl-compact .match-date-upcoming { font-size: 11px; }
-.home-bl-compact .match-center-col { gap: 2px; min-width: 96px; }
-.home-bl-compact .match-cal-btn { width: 42px; height: 32px; margin-top: 4px; }
+.home-bl-compact .match-date-upcoming { font-size: 13px; }
+.home-bl-compact .match-center-col { gap: 2px; min-width: 84px; padding: 0 4px; }
+.home-bl-compact .match-cal-btn { width: 42px; height: 30px; margin-top: 4px; }
 .home-bl-compact .match-status-pill { margin-top: 2px; padding: 2px 10px; font-size: 10px; }
-/* La línea de info se mantiene (no se pierde información) pero se aprieta
-   a una sola línea con elipsis para no robar altura. */
+/* La línea de info se mantiene COMPLETA (sus 2 líneas), sólo más pequeña
+   y pegada — nada de elipsis ni recortes. */
 .home-bl-compact .match-info {
-    margin-top: 6px;
+    margin-top: 4px;
     font-size: 11px;
     line-height: 1.3;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
-.home-bl-compact .home-segment-bar { height: 42px; top: 78px; }
-.home-bl-compact .home-segment-label { height: 38px; }
+.home-bl-compact .home-segment-bar { height: 40px; }   /* el `top` lo fija el JS = alto real del top-row */
+.home-bl-compact .home-segment-label { height: 36px; }
 
 /* ── 2) Header que se oculta al hacer scroll (.home-bl-autohide) ──
-   Estilo X/Twitter: al bajar se esconde el chrome sticky (top row +
-   barra de segmentos); al subir reaparece. */
+   Estilo X/Twitter: al bajar se esconde el top-row y la barra de
+   segmentos sube a ocupar su sitio; al subir reaparece todo. El alto
+   real del top-row lo expone el JS en --home-toprow-h. */
 .home-bl-autohide .home-top-row-fixed,
 .home-bl-autohide .home-segment-bar {
-    transition: transform 0.26s ease, top 0.26s ease;
+    transition: transform 0.26s ease;
     will-change: transform;
 }
 .home-bl-autohide.is-chrome-hidden .home-top-row-fixed { transform: translateY(-100%); }
-.home-bl-autohide.is-chrome-hidden .home-segment-bar   { top: 0; }
+.home-bl-autohide.is-chrome-hidden .home-segment-bar {
+    transform: translateY(calc(-1 * var(--home-toprow-h, 92px)));
+}
 @media (prefers-reduced-motion: reduce) {
     .home-bl-autohide .home-top-row-fixed,
     .home-bl-autohide .home-segment-bar { transition: none; }
@@ -17191,38 +17197,16 @@ input.has-mismatch {
     font-variant-numeric: tabular-nums;
 }
 
-/* Feed Compacto: mismos bloques, mejor uso del espacio. La media pasa a
-   miniatura lateral, el titular se limita a 2 líneas, se quita el CTA y
-   se aprieta el padding → caben muchos más posts sin perder contenido. */
-.mont-feed.is-dense .mont-card {
-    display: grid;
-    grid-template-columns: 1fr 96px;
-    grid-template-areas:
-        "text  media"
-        "react media";
-    column-gap: 12px;
-    align-items: start;
-    padding: 11px 4px;
-}
-.mont-feed.is-dense .mont-card-text { grid-area: text; }
-.mont-feed.is-dense .mont-card-kicker { margin-bottom: 2px; font-size: 10px; }
-.mont-feed.is-dense .mont-card-title {
-    font-size: 14px; line-height: 1.25;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.mont-feed.is-dense .mont-card-media {
-    grid-area: media;
-    margin-top: 0;
-    width: 96px; height: 72px;
-    aspect-ratio: auto;
-    border-radius: 10px;
-    align-self: center;
-}
-.mont-feed.is-dense .mont-card-media svg { width: 26px; height: 26px; }
-.mont-feed.is-dense .mont-card-cta { display: none; }
-.mont-feed.is-dense .mont-card-reactions { grid-area: react; margin-top: 8px; gap: 16px; }
-.mont-feed.is-dense .mont-react-emoji { font-size: 13px; }
-.mont-feed.is-dense .mont-react-count { font-size: 12px; }
+/* Feed Compacto: NO encoge la imagen ni el contenido (sigue siendo un
+   feed tipo red social, con media grande a todo el ancho). Lo que mejora
+   es el uso del espacio: menos padding entre tarjetas, márgenes internos
+   más justos y tipografías secundarias algo menores → caben más posts. */
+.mont-feed.is-dense .mont-card { padding: 10px 4px; }
+.mont-feed.is-dense .mont-card-kicker { margin-bottom: 3px; font-size: 10px; }
+.mont-feed.is-dense .mont-card-title { font-size: 18px; line-height: 1.2; }
+.mont-feed.is-dense .mont-card-media { margin-top: 8px; }   /* sigue 16:9 a todo el ancho */
+.mont-feed.is-dense .mont-card-cta { margin-top: 8px; padding: 10px 16px; font-size: 14px; }
+.mont-feed.is-dense .mont-card-reactions { margin-top: 8px; gap: 18px; }
 
 /* Cabecera de bienvenida — el `app-topbar-slot` ya pinta su contenido
    con su propia caja, sólo aseguramos un buffer arriba para el status-bar. */

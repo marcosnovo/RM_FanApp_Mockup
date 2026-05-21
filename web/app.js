@@ -6336,6 +6336,19 @@ function setupHomeScrollMorph() {
 
     const matchHeight = matchArea.offsetHeight || 210;
 
+    // Ancla la barra de segmentos justo bajo el top-row midiendo su alto
+    // real (varía con el header compacto). También lo exponemos como
+    // --home-toprow-h para el auto-hide tipo Twitter.
+    const segBar = $('.home-segment-bar');
+    const wrap = $('#homeWrap');
+    const syncTopRow = () => {
+        const h = Math.round(fixed.offsetHeight);
+        if (segBar) segBar.style.top = h + 'px';
+        if (wrap) wrap.style.setProperty('--home-toprow-h', h + 'px');
+    };
+    syncTopRow();
+    requestAnimationFrame(syncTopRow);   // re-mide tras el layout final
+
     const onScroll = () => {
         const y = scroller.scrollTop;
         // 0 = fully expanded, 1 = fully collapsed
