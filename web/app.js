@@ -410,6 +410,12 @@ function renderHoy() {
     const compactHeader = Flags.isEnabled('fan.hoy.backlog.compact-header');
     const hideOnScroll  = Flags.isEnabled('fan.hoy.backlog.hide-on-scroll');
     const stories       = Flags.isEnabled('fan.hoy.backlog.stories');
+    // Estilo de la tarjeta de partido cuando el header compacto está activo:
+    // A) escudos · B) píldora · C) ticker (sub-flags excluyentes; A por defecto).
+    const compactStyle = !compactHeader ? null
+        : Flags.isEnabled('fan.hoy.backlog.compact-header.style-ticker')  ? 'C'
+        : Flags.isEnabled('fan.hoy.backlog.compact-header.style-pildora') ? 'B'
+        : 'A';
     const wrapClass = [
         'home-wrap',
         compactHeader ? 'home-bl-compact'  : '',
@@ -463,7 +469,7 @@ function renderHoy() {
                     <div class="match-carousel" id="matchCarousel">
                         <button class="carousel-nav prev" data-carousel-prev>${I.chevronLeft}</button>
                         <div class="match-carousel-track" id="matchTrack" style="transform: translateX(-${state.matchIndex * 100}%)">
-                            ${HEADER_MATCHES.map(m => renderMatchCard(m, compactHeader)).join('')}
+                            ${HEADER_MATCHES.map(m => renderMatchCard(m, compactStyle)).join('')}
                         </div>
                         <button class="carousel-nav next" data-carousel-next>${I.chevronRight}</button>
                     </div>
@@ -495,44 +501,72 @@ function renderMatchCard(match, compact) {
     // Competition badge label (shorter)
     const compLabel = match.competition === 'LALIGA EA SPORTS' ? 'LA LIGA' : match.competition;
 
-    // ── Compact card (backlog · header compacto) ───────────────────
-    // Marcador horizontal denso: escudo + nombre a cada lado, marcador o
-    // hora en el centro. Toda la info se conserva (competición arriba,
-    // fecha + lugar abajo) con jerarquía clara y mínima altura.
+    // ── Header compacto (backlog) — 3 estilos seleccionables ────────
+    // `compact` llega como 'A' (escudos), 'B' (píldora) o 'C' (ticker).
     if (compact) {
         const parts = match.dateString.split(' · ');
         const dayPart = parts[0] || match.dateString;
         const timePart = parts[1] || '';
         const flatInfo = `${dayPart} · ${(match.matchInfo || '').replace(/\n/g, ' · ')}`;
-        let center;
+        const abbr = (n) => n.replace(/[().]/g, '').trim().split(/\s+/)[0].slice(0, 3).toUpperCase();
+        const scoreInline = `${match.homeScore ?? 0}-${match.awayScore ?? 0}`;
+        const centerInline = isUpcoming ? timePart : scoreInline;
+
+        // B) Marcador en píldora
+        if (compact === 'B') {
+            return `
+                <div class="mcb-card">
+                    <div class="mcb-comp">${compLabel}</div>
+                    <div class="mcb-pill">
+                        <span class="mcb-crest">${homeCrest}</span>
+                        <span class="mcb-score">${centerInline}</span>
+                        <span class="mcb-crest">${awayCrest}</span>
+                    </div>
+                    <div class="mcb-info">${match.homeTeam} · ${match.awayTeam} · ${flatInfo}</div>
+                </div>`;
+        }
+
+        // C) Ticker de una línea
+        if (compact === 'C') {
+            return `
+                <div class="mct-card">
+                    <span class="mct-comp">${compLabel.replace('CHAMPIONS LEAGUE', 'CHAMPIONS')}</span>
+                    <span class="mct-crest">${homeCrest}</span>
+                    <span class="mct-abbr">${abbr(match.homeTeam)}</span>
+                    <span class="mct-score">${centerInline}</span>
+                    <span class="mct-abbr">${abbr(match.awayTeam)}</span>
+                    <span class="mct-crest">${awayCrest}</span>
+                    <span class="mct-date">${dayPart}</span>
+                </div>`;
+        }
+
+        // A) Escudos protagonistas (vertical compacto) — por defecto
+        let centerA;
         if (isUpcoming) {
-            center = `<div class="mcx-mid">
-                        <span class="mcx-time">${timePart}</span>
-                        <button class="mcx-cal" aria-label="Añadir al calendario">${I.calendarPlus}</button>
-                      </div>`;
+            centerA = `<span class="mca-time">${timePart}</span>
+                       <button class="mca-cal" aria-label="Añadir al calendario">${I.calendarPlus}</button>`;
         } else {
             const pill = match.status === 'live'
-                ? `<span class="mcx-status live">En vivo</span>`
-                : `<span class="mcx-status">Final</span>`;
-            center = `<span class="mcx-score">${match.homeScore ?? 0} - ${match.awayScore ?? 0}</span>${pill}`;
+                ? `<span class="mca-status live">En vivo</span>`
+                : `<span class="mca-status">Final</span>`;
+            centerA = `<span class="mca-score">${match.homeScore ?? 0} - ${match.awayScore ?? 0}</span>${pill}`;
         }
         return `
-            <div class="mcx-card">
-                <div class="mcx-comp">${compLabel}</div>
-                <div class="mcx-row">
-                    <div class="mcx-team">
-                        <span class="mcx-crest">${homeCrest}</span>
-                        <span class="mcx-name">${match.homeTeam}</span>
+            <div class="mca-card">
+                <div class="mca-comp">${compLabel}</div>
+                <div class="mca-row">
+                    <div class="mca-team">
+                        <span class="mca-crest">${homeCrest}</span>
+                        <span class="mca-name">${match.homeTeam}</span>
                     </div>
-                    <div class="mcx-center">${center}</div>
-                    <div class="mcx-team mcx-right">
-                        <span class="mcx-name">${match.awayTeam}</span>
-                        <span class="mcx-crest">${awayCrest}</span>
+                    <div class="mca-center">${centerA}</div>
+                    <div class="mca-team">
+                        <span class="mca-crest">${awayCrest}</span>
+                        <span class="mca-name">${match.awayTeam}</span>
                     </div>
                 </div>
-                <div class="mcx-info">${flatInfo}</div>
-            </div>
-        `;
+                <div class="mca-info">${flatInfo}</div>
+            </div>`;
     }
 
     // Status pill below score

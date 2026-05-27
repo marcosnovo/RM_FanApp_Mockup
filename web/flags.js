@@ -161,10 +161,40 @@ const FLAGS = [
         app: 'fan',
         key: 'fan.hoy.backlog.compact-header',
         label: 'Backlog · Header compacto',
-        description: 'Compacta el header de partido a una sola tira densa + barra de segmentos fina, manteniendo TODA la info actual (perfil, escudos, equipos, fecha/hora, competición, radio y segmentos). Objetivo: que el header desplegado ocupe ≤25-30% de la pantalla.',
+        description: 'Compacta el header de partido a una sola tira densa + barra de segmentos fina, manteniendo TODA la info actual (perfil, escudos, equipos, fecha/hora, competición, radio y segmentos). Objetivo: que el header desplegado ocupe ≤25-30% de la pantalla. El estilo de la tarjeta de partido se elige con los sub-flags de abajo (A/B/C).',
         category: 'Backlog',
         default: false,
         requires: 'fan.hoy.backlog'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.backlog.compact-header.style-escudos',
+        label: 'Header compacto · A) Escudos protagonistas',
+        description: 'Mantiene la jerarquía de la tarjeta normal (escudo grande arriba, nombre debajo, marcador en el centro) pero escalada y simétrica. Reconocible y "premium". Excluyente con B y C.',
+        category: 'Backlog',
+        default: true,
+        requires: 'fan.hoy.backlog.compact-header',
+        exclusive: 'hoy-compact-style'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.backlog.compact-header.style-pildora',
+        label: 'Header compacto · B) Marcador en píldora',
+        description: 'Escudo–marcador–escudo dentro de un chip redondeado centrado; competición arriba y una línea fina con nombres + fecha + lugar debajo. Look de widget deportivo. Excluyente con A y C.',
+        category: 'Backlog',
+        default: false,
+        requires: 'fan.hoy.backlog.compact-header',
+        exclusive: 'hoy-compact-style'
+    },
+    {
+        app: 'fan',
+        key: 'fan.hoy.backlog.compact-header.style-ticker',
+        label: 'Header compacto · C) Ticker de una línea',
+        description: 'Todo en una sola fila tipo barra de marcador (chip competición · escudo ABREV marcador ABREV escudo · fecha). La más compacta en altura, con nombres abreviados. Excluyente con A y B.',
+        category: 'Backlog',
+        default: false,
+        requires: 'fan.hoy.backlog.compact-header',
+        exclusive: 'hoy-compact-style'
     },
     {
         app: 'fan',
