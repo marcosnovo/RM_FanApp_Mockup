@@ -6558,6 +6558,11 @@ function setupHomeScrollMorph() {
             el.style.opacity = Math.max(0, 1 - p / 0.55);
             el.style.height = (14 * Math.max(0, 1 - p / 0.55)) + 'px';
         });
+
+        // El top-row encoge al colapsar (los labels pasan de 14→0px), así que
+        // re-anclamos la barra de segmentos a su alto REAL en cada scroll para
+        // que queden siempre pegados (sin hueco blanco entre header y tabs).
+        syncTopRow();
     };
     onScroll();
     scroller.addEventListener('scroll', onScroll, { passive: true });
