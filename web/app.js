@@ -411,10 +411,11 @@ function renderHoy() {
     const hideOnScroll  = Flags.isEnabled('fan.hoy.backlog.hide-on-scroll');
     const stories       = Flags.isEnabled('fan.hoy.backlog.stories');
     // Estilo de la tarjeta de partido cuando el header compacto está activo:
-    // A) escudos · B) píldora (sub-flags excluyentes; A por defecto).
+    // COL) colapsable (por defecto) · A) escudos · B) píldora (excluyentes).
     const compactStyle = !compactHeader ? null
+        : Flags.isEnabled('fan.hoy.backlog.compact-header.style-escudos') ? 'A'
         : Flags.isEnabled('fan.hoy.backlog.compact-header.style-pildora') ? 'B'
-        : 'A';
+        : 'COL';
     const wrapClass = [
         'home-wrap',
         compactHeader ? 'home-bl-compact'  : '',
@@ -532,6 +533,37 @@ function renderMatchCard(match, compact) {
 
         // Estado bajo el marcador: en directo / final / (próximo no lleva)
         const statusTag = isLive ? liveTag : (isUpcoming ? '' : `<span class="mc-final">Final</span>`);
+
+        // COL) Colapsable: marcador en UNA línea (nombres a los lados en ancho
+        // fijo, escudos+marcador SIEMPRE centrados) + botón explícito que
+        // despliega el detalle (competición, fecha, estadio, fase, goleadores).
+        if (compact === 'COL') {
+            const centerCol = isUpcoming
+                ? `<span class="mcc-score">${timePart}</span>`
+                : `<span class="mcc-score">${match.homeScore ?? 0} - ${match.awayScore ?? 0}</span>`;
+            const scorers = (!isUpcoming && (match.homeScorers || match.awayScorers))
+                ? `<div class="mcc-scorers"><span>${match.homeScorers || ''}</span><span>${match.awayScorers || ''}</span></div>`
+                : '';
+            return `
+                <div class="mcc-card" data-mcc>
+                    <div class="mcc-bar">
+                        <span class="mcc-name mcc-name-home">${match.homeTeam}</span>
+                        <span class="mcc-crest">${homeCrest}</span>
+                        <span class="mcc-score-wrap">${centerCol}</span>
+                        <span class="mcc-crest">${awayCrest}</span>
+                        <span class="mcc-name mcc-name-away">${match.awayTeam}</span>
+                    </div>
+                    ${isLive ? `<div class="mcc-livebar">${liveTag}</div>` : ''}
+                    <div class="mcc-details">
+                        <div class="mcc-comp">${compLabel}</div>
+                        ${metaHTML}
+                        ${scorers}
+                    </div>
+                    <button class="mcc-toggle" data-mcc-toggle aria-expanded="false">
+                        <span class="mcc-toggle-label">Ver detalles del partido</span>${I.chevronDown}
+                    </button>
+                </div>`;
+        }
 
         // B) Marcador en píldora (contenido, nombre bajo el escudo)
         if (compact === 'B') {
@@ -995,6 +1027,15 @@ function attachHoyBacklogListeners() {
     setupHoyStoriesPull();
     // Stories: marcar como vista sin re-render (anillo → gris).
     $$('[data-hoy-story]').forEach(s => s.addEventListener('click', () => s.classList.add('is-seen')));
+    // Header compacto colapsable: el botón despliega/oculta el detalle.
+    $$('[data-mcc-toggle]').forEach(btn => btn.addEventListener('click', () => {
+        const card = btn.closest('[data-mcc]');
+        if (!card) return;
+        const exp = card.classList.toggle('is-expanded');
+        btn.setAttribute('aria-expanded', exp ? 'true' : 'false');
+        const lbl = btn.querySelector('.mcc-toggle-label');
+        if (lbl) lbl.textContent = exp ? 'Ocultar detalles' : 'Ver detalles del partido';
+    }));
     // Las tarjetas de Monterosa abren la noticia mediante el mismo
     // [data-news-id] que el resto de la app (listener global ya existente).
     setupHomeBacklogAutoHide();

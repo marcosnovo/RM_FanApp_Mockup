@@ -168,9 +168,9 @@ const FLAGS = [
     },
     {
         app: 'fan',
-        key: 'fan.hoy.backlog.compact-header.style-escudos',
-        label: 'Header compacto · A) Escudos protagonistas',
-        description: 'Mantiene la jerarquía de la tarjeta normal (escudo grande arriba, nombre debajo, marcador en el centro) pero escalada y simétrica. Nombre pegado al escudo. Estado en directo con punto rojo + minuto. Excluyente con B.',
+        key: 'fan.hoy.backlog.compact-header.style-colapsable',
+        label: 'Header compacto · Colapsable (recomendado)',
+        description: 'Por defecto solo el marcador centrado (escudo + nombre + resultado/hora) en una tira mínima, con un botón "Ver detalles del partido" que despliega fecha, estadio, fase y goleadores. Máxima ganancia de espacio (el feed sube hasta ~21%). Excluyente con A y B.',
         category: 'Backlog',
         default: true,
         requires: 'fan.hoy.backlog.compact-header',
@@ -178,9 +178,19 @@ const FLAGS = [
     },
     {
         app: 'fan',
+        key: 'fan.hoy.backlog.compact-header.style-escudos',
+        label: 'Header compacto · A) Escudos protagonistas',
+        description: 'Mantiene la jerarquía de la tarjeta normal (escudo grande arriba, nombre debajo, marcador en el centro) pero escalada y simétrica. Nombre pegado al escudo. Estado en directo con punto rojo + minuto. Excluyente con Colapsable y B.',
+        category: 'Backlog',
+        default: false,
+        requires: 'fan.hoy.backlog.compact-header',
+        exclusive: 'hoy-compact-style'
+    },
+    {
+        app: 'fan',
         key: 'fan.hoy.backlog.compact-header.style-pildora',
         label: 'Header compacto · B) Marcador en píldora',
-        description: 'El marcador (escudo + nombre a cada lado, resultado/hora en el centro) dentro de una píldora redondeada contenida. Nombre pegado al escudo. Estado en directo con punto rojo + minuto. Excluyente con A.',
+        description: 'El marcador (escudo + nombre a cada lado, resultado/hora en el centro) dentro de una píldora redondeada contenida. Nombre pegado al escudo. Estado en directo con punto rojo + minuto. Excluyente con Colapsable y A.',
         category: 'Backlog',
         default: false,
         requires: 'fan.hoy.backlog.compact-header',

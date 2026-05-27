@@ -17101,6 +17101,30 @@ input.has-mismatch {
 .mc-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff3b30; animation: mcLivePulse 1.2s ease-in-out infinite; }
 @keyframes mcLivePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
 
+/* COL) Header compacto colapsable: marcador en UNA línea + botón "ver detalles".
+   Los nombres ocupan un ancho FIJO a cada lado (con ellipsis), así el núcleo
+   escudo–marcador–escudo queda SIEMPRE centrado pase lo que pase con el largo
+   de los nombres. El detalle (competición, fecha, estadio, fase, goleadores)
+   está oculto y se despliega con el botón. */
+.mcc-card { min-width: 100%; padding: 6px 14px 8px; text-align: center; color: #fff; box-sizing: border-box; }
+.mcc-bar { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.mcc-name { flex: 0 0 88px; width: 88px; font-size: 12px; font-weight: 700; color: #fff; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcc-name-home { text-align: right; }
+.mcc-name-away { text-align: left; }
+.mcc-crest, .mcc-crest > svg { width: 30px !important; height: 30px !important; flex: 0 0 auto; }
+.mcc-score-wrap { flex: 0 0 auto; }
+.mcc-score { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; padding: 0 4px; }
+.mcc-livebar { margin-top: 4px; }
+/* Detalle desplegable (acordeón) */
+.mcc-comp { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #ffffffc4; margin-bottom: 6px; }
+.mcc-details { max-height: 0; overflow: hidden; opacity: 0; transition: max-height .3s ease, opacity .2s ease, margin-top .3s ease; }
+.mcc-card.is-expanded .mcc-details { max-height: 200px; opacity: 1; margin-top: 9px; }
+.mcc-scorers { display: flex; justify-content: space-between; gap: 12px; font-size: 10px; color: #ffffff99; margin-top: 6px; padding: 0 6px; }
+/* Botón explícito de desplegar */
+.mcc-toggle { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 14px; border-radius: 999px; background: #ffffff1c; border: 1px solid #ffffff33; color: #fff; font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.mcc-toggle svg { width: 14px !important; height: 14px !important; transition: transform .25s ease; }
+.mcc-card.is-expanded .mcc-toggle svg { transform: rotate(180deg); }
+
 /* ── 2) Header que se oculta al hacer scroll (.home-bl-autohide) ──
    Estilo X/Twitter: al bajar se esconde el top-row y la barra de
    segmentos sube a ocupar su sitio; al subir reaparece todo. El alto
