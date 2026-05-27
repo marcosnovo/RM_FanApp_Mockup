@@ -875,17 +875,22 @@ function renderMonterosaCard(b, idx) {
 // oculta el chrome (top row + barra de segmentos) al bajar, lo asoma al subir.
 let _homeBlLastY = 0;
 function setupHomeBacklogAutoHide() {
-    if (state.tab !== 'hoy') return;
-    const wrap = document.querySelector('.home-wrap.home-bl-autohide');
     const scroller = $('#screenBody');
-    if (!wrap || !scroller) return;
+    if (!scroller || scroller.dataset.homeAutohide === '1') return;
+    scroller.dataset.homeAutohide = '1'; // enlazar una sola vez; el scroller persiste
     _homeBlLastY = scroller.scrollTop;
+    // El wrap se recrea en cada render, así que lo resolvemos DINÁMICAMENTE
+    // dentro del handler (no lo capturamos): si lo capturáramos, tras un
+    // re-render el listener apuntaría a un nodo desconectado y el chrome
+    // nunca se ocultaría.
     scroller.addEventListener('scroll', () => {
+        const wrap = document.querySelector('.home-wrap.home-bl-autohide');
         const y = scroller.scrollTop;
-        const goingDown = y > _homeBlLastY;
-        if (y > 120 && goingDown)      wrap.classList.add('is-chrome-hidden');
-        else if (y < _homeBlLastY - 4) wrap.classList.remove('is-chrome-hidden');
+        const prevY = _homeBlLastY;
         _homeBlLastY = y;
+        if (!wrap) return;
+        if (y > 120 && y > prevY)       wrap.classList.add('is-chrome-hidden');
+        else if (y < prevY - 4)         wrap.classList.remove('is-chrome-hidden');
     }, { passive: true });
 }
 
