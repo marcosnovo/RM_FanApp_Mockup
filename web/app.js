@@ -409,6 +409,7 @@ function renderHoy() {
     // padre por sí solo no añade ninguna clase (la Home no cambia) ──────
     const compactHeader = Flags.isEnabled('fan.hoy.backlog.compact-header');
     const hideOnScroll  = Flags.isEnabled('fan.hoy.backlog.hide-on-scroll');
+    const stories       = Flags.isEnabled('fan.hoy.backlog.stories');
     const wrapClass = [
         'home-wrap',
         compactHeader ? 'home-bl-compact'  : '',
@@ -455,8 +456,9 @@ function renderHoy() {
                 </button>
             </div>
 
-            <!-- Scrollable area: match carousel + segment bar + content -->
+            <!-- Scrollable area: stories (Telegram) + match carousel + segment bar + content -->
             <div class="home-scroll-content">
+                ${stories ? renderHoyStories() : ''}
                 <div class="home-match-area">
                     <div class="match-carousel" id="matchCarousel">
                         <button class="carousel-nav prev" data-carousel-prev>${I.chevronLeft}</button>
@@ -601,14 +603,13 @@ function renderDirecto() {
     // titular + media + barra de reacciones) es el BASELINE: se ve siempre,
     // igual que en la app real. Los experimentos del backlog sólo lo tocan
     // si su sub-flag está activo:
-    //  · stories    → carrusel de stories entre el header y el feed
+    //  · stories    → carrusel de stories arriba del todo (estilo Telegram),
+    //                 oculto por defecto; se renderiza desde renderHoy().
     //  · dense-feed → MISMOS elementos, pero aprovechando mejor el espacio
-    const stories = Flags.isEnabled('fan.hoy.backlog.stories');
     const dense   = Flags.isEnabled('fan.hoy.backlog.dense-feed');
 
     return `
         <div class="directo-wrap">
-            ${stories ? renderHoyStories() : ''}
             <div class="hero-scroll" id="heroScroll">
                 ${HERO_ITEMS.map((h, idx) => `
                     <div class="hero-slide" data-hero-slide="${idx}">
@@ -807,58 +808,74 @@ function setupHoyStoriesPull() {
     if (!scroller || scroller.dataset.hoyPull === '1') return;
     scroller.dataset.hoyPull = '1'; // enlazar una sola vez; el scroller persiste
 
-    const THRESHOLD = 0.5; // fracción de la altura para que "enganche"
-    let dragging = false;
+    const THRESHOLD = 0.4; // fracción de la altura para que "enganche"
+    let dragging = false;   // hay un puntero/dedo presionado arriba del todo
+    let active = false;     // el gesto ya se reconoció como "pull" descendente
     let startY = 0;
     let wheelAccum = 0;
 
-    const wrapEl  = () => document.querySelector('[data-hoy-stories-wrap]');
-    const fullH   = (w) => { const i = w.querySelector('.hoy-stories'); return i ? i.offsetHeight : 92; };
-    const isOpen  = (w) => w.classList.contains('is-open');
-    const setH    = (w, px) => { w.style.height = px + 'px'; };
+    const wrapEl   = () => document.querySelector('[data-hoy-stories-wrap]');
+    const fullH    = (w) => { const i = w.querySelector('.hoy-stories'); return i ? i.offsetHeight : 92; };
+    const isOpen   = (w) => w.classList.contains('is-open');
+    const setH     = (w, px) => { w.style.height = px + 'px'; };
     const snapOpen  = (w) => { w.classList.remove('is-dragging'); w.classList.add('is-open'); setH(w, fullH(w)); };
     const snapClose = (w) => { w.classList.remove('is-dragging', 'is-open'); setH(w, 0); };
+    const pointY   = (e) => (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
 
-    // ── Touch ──────────────────────────────────────────────────────
-    scroller.addEventListener('touchstart', (e) => {
+    // El mockup simula el scroll con arrastre de RATÓN (no usa touch nativo),
+    // así que escuchamos ambos. Sólo iniciamos el "pull" si el feed está
+    // arriba del todo y las stories están ocultas.
+    const onDown = (e) => {
         const w = wrapEl();
-        if (!w || scroller.scrollTop > 0) return;
-        startY = e.touches[0].clientY;
+        if (!w || isOpen(w) || scroller.scrollTop > 0) return;
         dragging = true;
-        w.classList.add('is-dragging');
-    }, { passive: true });
+        active = false;
+        startY = pointY(e);
+    };
 
-    scroller.addEventListener('touchmove', (e) => {
+    const onMove = (e) => {
         if (!dragging) return;
         const w = wrapEl();
         if (!w) return;
         const full = fullH(w);
-        const delta = e.touches[0].clientY - startY;
-        const base = isOpen(w) ? full : 0;
-        const h = Math.max(0, Math.min(full, base + delta));
-        setH(w, h);
-        if (h > 0 && h < full && scroller.scrollTop <= 0) {
-            e.preventDefault(); // evita el rebote nativo mientras revelamos
+        const delta = pointY(e) - startY;
+        if (!active) {
+            if (delta > 4 && scroller.scrollTop <= 0) {
+                active = true;
+                w.classList.add('is-dragging');
+            } else {
+                return;
+            }
         }
-    }, { passive: false });
+        setH(w, Math.max(0, Math.min(full, delta)));
+        if (e.cancelable) e.preventDefault();
+    };
 
-    scroller.addEventListener('touchend', () => {
+    const onUp = () => {
         if (!dragging) return;
         dragging = false;
         const w = wrapEl();
-        if (!w) return;
+        if (!w || !active) { active = false; return; }
+        active = false;
         const h = parseFloat(w.style.height) || 0;
         if (h >= fullH(w) * THRESHOLD) snapOpen(w); else snapClose(w);
-    });
+    };
 
-    // Estando abierto, al desplazar el feed hacia abajo se colapsa.
+    scroller.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    scroller.addEventListener('touchstart', onDown, { passive: true });
+    scroller.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+
+    // Estando abierto, al desplazar el feed hacia abajo se colapsa (Telegram).
     scroller.addEventListener('scroll', () => {
         if (dragging) return;
         const w = wrapEl();
         if (w && isOpen(w) && scroller.scrollTop > 8) snapClose(w);
     }, { passive: true });
 
-    // ── Wheel (escritorio, para poder probarlo sin touch) ──────────
+    // Rueda/trackpad: overscroll hacia arriba revela; hacia abajo colapsa.
     scroller.addEventListener('wheel', (e) => {
         const w = wrapEl();
         if (!w) return;
@@ -868,7 +885,7 @@ function setupHoyStoriesPull() {
             w.classList.add('is-dragging');
             setH(w, Math.min(full, wheelAccum));
             if (wheelAccum >= full * THRESHOLD) { snapOpen(w); wheelAccum = 0; }
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
         } else if (isOpen(w) && e.deltaY > 0) {
             snapClose(w);
             wheelAccum = 0;
