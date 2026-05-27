@@ -703,21 +703,13 @@ function hoyStoriesData() {
     return [club, ...players.slice(0, 7)];
 }
 
-// Estilo "Telegram colapsado": por defecto sólo una tira mínima con
-// avatares solapados (footprint ~44px). Al pulsar se despliega el
-// carrusel completo de stories; al volver a pulsar se colapsa.
+// Estilo Telegram: por defecto NO ocupa espacio (altura 0). Las stories
+// se revelan tirando hacia abajo (overscroll) cuando el feed está arriba
+// del todo; ver setupHoyStoriesPull().
 function renderHoyStories() {
     const stories = hoyStoriesData();
-    const stack = stories.slice(0, 5).map((s, idx) => `
-        <span class="hoy-strip-av" style="background:${s.color}; z-index:${10 - idx}">${s.initials}</span>
-    `).join('');
     return `
         <div class="hoy-stories-wrap" data-hoy-stories-wrap>
-            <button class="hoy-stories-strip" data-hoy-strip aria-expanded="false">
-                <span class="hoy-strip-stack">${stack}</span>
-                <span class="hoy-strip-text">Stories<span class="hoy-strip-count">${stories.length}</span></span>
-                <span class="hoy-strip-chevron">${I.chevronDown}</span>
-            </button>
             <div class="hoy-stories" role="region">
                 ${stories.map(s => `
                     <button class="hoy-story" data-hoy-story="${s.id}">
@@ -805,15 +797,91 @@ function setupHomeBacklogAutoHide() {
     }, { passive: true });
 }
 
+// Stories estilo Telegram: ocultas (altura 0) hasta que el usuario tira
+// hacia abajo estando arriba del todo del feed. El gesto crece la altura
+// siguiendo al dedo; al soltar, si pasa el umbral se queda abierto, si no
+// se colapsa. Estando abierto, al hacer scroll hacia abajo se vuelve a
+// ocultar. Soporta touch (móvil/mockup) y wheel (escritorio para probar).
+function setupHoyStoriesPull() {
+    const scroller = $('#screenBody');
+    if (!scroller || scroller.dataset.hoyPull === '1') return;
+    scroller.dataset.hoyPull = '1'; // enlazar una sola vez; el scroller persiste
+
+    const THRESHOLD = 0.5; // fracción de la altura para que "enganche"
+    let dragging = false;
+    let startY = 0;
+    let wheelAccum = 0;
+
+    const wrapEl  = () => document.querySelector('[data-hoy-stories-wrap]');
+    const fullH   = (w) => { const i = w.querySelector('.hoy-stories'); return i ? i.offsetHeight : 92; };
+    const isOpen  = (w) => w.classList.contains('is-open');
+    const setH    = (w, px) => { w.style.height = px + 'px'; };
+    const snapOpen  = (w) => { w.classList.remove('is-dragging'); w.classList.add('is-open'); setH(w, fullH(w)); };
+    const snapClose = (w) => { w.classList.remove('is-dragging', 'is-open'); setH(w, 0); };
+
+    // ── Touch ──────────────────────────────────────────────────────
+    scroller.addEventListener('touchstart', (e) => {
+        const w = wrapEl();
+        if (!w || scroller.scrollTop > 0) return;
+        startY = e.touches[0].clientY;
+        dragging = true;
+        w.classList.add('is-dragging');
+    }, { passive: true });
+
+    scroller.addEventListener('touchmove', (e) => {
+        if (!dragging) return;
+        const w = wrapEl();
+        if (!w) return;
+        const full = fullH(w);
+        const delta = e.touches[0].clientY - startY;
+        const base = isOpen(w) ? full : 0;
+        const h = Math.max(0, Math.min(full, base + delta));
+        setH(w, h);
+        if (h > 0 && h < full && scroller.scrollTop <= 0) {
+            e.preventDefault(); // evita el rebote nativo mientras revelamos
+        }
+    }, { passive: false });
+
+    scroller.addEventListener('touchend', () => {
+        if (!dragging) return;
+        dragging = false;
+        const w = wrapEl();
+        if (!w) return;
+        const h = parseFloat(w.style.height) || 0;
+        if (h >= fullH(w) * THRESHOLD) snapOpen(w); else snapClose(w);
+    });
+
+    // Estando abierto, al desplazar el feed hacia abajo se colapsa.
+    scroller.addEventListener('scroll', () => {
+        if (dragging) return;
+        const w = wrapEl();
+        if (w && isOpen(w) && scroller.scrollTop > 8) snapClose(w);
+    }, { passive: true });
+
+    // ── Wheel (escritorio, para poder probarlo sin touch) ──────────
+    scroller.addEventListener('wheel', (e) => {
+        const w = wrapEl();
+        if (!w) return;
+        const full = fullH(w);
+        if (!isOpen(w) && scroller.scrollTop <= 0 && e.deltaY < 0) {
+            wheelAccum += -e.deltaY;
+            w.classList.add('is-dragging');
+            setH(w, Math.min(full, wheelAccum));
+            if (wheelAccum >= full * THRESHOLD) { snapOpen(w); wheelAccum = 0; }
+            e.preventDefault();
+        } else if (isOpen(w) && e.deltaY > 0) {
+            snapClose(w);
+            wheelAccum = 0;
+        } else {
+            wheelAccum = 0;
+        }
+    }, { passive: false });
+}
+
 function attachHoyBacklogListeners() {
     if (!Flags.isEnabled('fan.hoy.backlog') || state.tab !== 'hoy' || state.app !== 'fan') return;
-    // Stories: la tira colapsada despliega/colapsa el carrusel completo.
-    $$('[data-hoy-strip]').forEach(strip => strip.addEventListener('click', () => {
-        const wrap = strip.closest('[data-hoy-stories-wrap]');
-        if (!wrap) return;
-        const open = wrap.classList.toggle('is-open');
-        strip.setAttribute('aria-expanded', open ? 'true' : 'false');
-    }));
+    // Stories: gesto "tirar para desplegar" estilo Telegram.
+    setupHoyStoriesPull();
     // Stories: marcar como vista sin re-render (anillo → gris).
     $$('[data-hoy-story]').forEach(s => s.addEventListener('click', () => s.classList.add('is-seen')));
     // Las tarjetas de Monterosa abren la noticia mediante el mismo

@@ -17141,60 +17141,27 @@ input.has-mismatch {
 }
 
 /* ── 3) Stories entre el header y el feed (.hoy-stories) ──────────
-   Estilo "Telegram colapsado": por defecto sólo se ve una tira mínima
-   con avatares solapados (≈44px). Al pulsarla se despliega el carrusel
-   completo, evitando penalizar el espacio del feed de forma permanente. */
-.hoy-stories-wrap { background: var(--rm-bg); }
+   Estilo Telegram: por defecto NO ocupa espacio (altura 0). Se revelan
+   tirando hacia abajo (pull-to-reveal, ver setupHoyStoriesPull en app.js).
+   La altura la controla JS; aquí sólo definimos el colapso y la transición
+   de "snap" al soltar. */
+.hoy-stories-wrap {
+    height: 0;
+    overflow: hidden;
+    background: var(--rm-bg);
+    transition: height .3s cubic-bezier(.22, .61, .36, 1);
+}
+/* Mientras el dedo arrastra seguimos al gesto sin animación. */
+.hoy-stories-wrap.is-dragging { transition: none; }
 
-/* Tira colapsada (estado por defecto) */
-.hoy-stories-strip {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 8px 14px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-}
-.hoy-strip-stack { display: inline-flex; align-items: center; }
-.hoy-strip-av {
-    width: 28px; height: 28px; border-radius: 50%;
-    border: 2px solid var(--rm-bg);
-    display: inline-flex; align-items: center; justify-content: center;
-    color: #fff; font-weight: 800; font-size: 10px;
-    box-shadow: 0 1px 2px rgba(0,0,0,.12);
-}
-.hoy-strip-av + .hoy-strip-av { margin-left: -12px; }
-.hoy-strip-text {
-    font-size: 13px; font-weight: 700;
-    color: var(--rm-text, #0f172a);
-    display: inline-flex; align-items: center; gap: 6px;
-}
-.hoy-strip-count {
-    font-size: 11px; font-weight: 700; color: #fff;
-    background: var(--rm-primary, #00529F);
-    min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
-    display: inline-flex; align-items: center; justify-content: center;
-}
-.hoy-strip-chevron {
-    margin-left: auto;
-    width: 18px; height: 18px; color: var(--rm-text-secondary, #475569);
-    transition: transform .2s ease;
-}
-.hoy-strip-chevron svg { width: 100%; height: 100%; }
-.hoy-stories-wrap.is-open .hoy-strip-chevron { transform: rotate(180deg); }
-
-/* Carrusel completo (sólo visible al expandir) */
 .hoy-stories {
-    display: none;
+    display: flex;
     gap: 12px;
-    padding: 6px 14px 6px;
+    padding: 10px 14px 8px;
     overflow-x: auto;
     scrollbar-width: none;
     background: var(--rm-bg);
 }
-.hoy-stories-wrap.is-open .hoy-stories { display: flex; }
 .hoy-stories::-webkit-scrollbar { display: none; }
 .hoy-story {
     flex: 0 0 auto;
