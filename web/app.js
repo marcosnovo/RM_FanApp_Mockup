@@ -491,6 +491,24 @@ function renderHoy() {
     `;
 }
 
+// Meta-info del partido para el header compacto (estilos A y B). Dos niveles:
+//   · logística (con iconos): fecha + estadio
+//   · contexto (sutil): deporte · equipo · fase de competición
+function renderCompactMeta(dayPart, matchInfo) {
+    const pin = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>`;
+    const segs = (matchInfo || '').replace(/\n/g, ' · ').split(' · ').map(s => s.trim()).filter(Boolean);
+    const venue = segs.length ? segs[segs.length - 1] : '';
+    const context = segs.slice(0, -1);
+    return `
+        <div class="mc-meta">
+            <div class="mc-meta-primary">
+                <span class="mc-meta-item">${I.calendar}${dayPart}</span>
+                ${venue ? `<span class="mc-meta-item">${pin}${venue}</span>` : ''}
+            </div>
+            ${context.length ? `<div class="mc-meta-secondary">${context.join(' · ')}</div>` : ''}
+        </div>`;
+}
+
 function renderMatchCard(match, compact) {
     const homeCrest = bigCrestFor(match.homeTeam);
     const awayCrest = bigCrestFor(match.awayTeam);
@@ -508,7 +526,7 @@ function renderMatchCard(match, compact) {
         const parts = match.dateString.split(' · ');
         const dayPart = parts[0] || match.dateString;
         const timePart = parts[1] || '';
-        const flatInfo = `${dayPart} · ${(match.matchInfo || '').replace(/\n/g, ' · ')}`;
+        const metaHTML = renderCompactMeta(dayPart, match.matchInfo);
         const isLive = match.status === 'live';
         const liveTag = `<span class="mc-live"><i class="mc-live-dot"></i>EN VIVO${match.minute ? ` · ${match.minute}` : ''}</span>`;
 
@@ -537,7 +555,7 @@ function renderMatchCard(match, compact) {
                             <span class="mcb-name">${match.awayTeam}</span>
                         </div>
                     </div>
-                    <div class="mcb-info">${flatInfo}</div>
+                    ${metaHTML}
                 </div>`;
         }
 
@@ -563,7 +581,7 @@ function renderMatchCard(match, compact) {
                         <span class="mca-name">${match.awayTeam}</span>
                     </div>
                 </div>
-                <div class="mca-info">${flatInfo}</div>
+                ${metaHTML}
             </div>`;
     }
 
