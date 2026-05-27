@@ -17135,9 +17135,24 @@ input.has-mismatch {
     will-change: transform;
 }
 .home-bl-autohide.is-chrome-hidden .home-top-row-fixed { transform: translateY(-100%); }
+/* La barra de segmentos sube hasta JUSTO debajo de la status bar (safe area
+   de 58px), no hasta arriba del todo, para no taparse con el reloj/notch.
+   Su ::before cubre de oscuro la franja de la status bar (el top-row, que la
+   tapaba, ya está oculto). */
 .home-bl-autohide.is-chrome-hidden .home-segment-bar {
-    transform: translateY(calc(-1 * var(--home-toprow-h, 92px)));
+    transform: translateY(calc(-1 * (var(--home-toprow-h, 92px) - 58px)));
 }
+.home-bl-autohide .home-segment-bar::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 100%;
+    height: 58px;
+    background: var(--rm-dark);
+    opacity: 0;
+    transition: opacity 0.26s ease;
+    pointer-events: none;
+}
+.home-bl-autohide.is-chrome-hidden .home-segment-bar::before { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
     .home-bl-autohide .home-top-row-fixed,
     .home-bl-autohide .home-segment-bar { transition: none; }
