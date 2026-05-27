@@ -17141,11 +17141,23 @@ input.has-mismatch {
 }
 
 /* ── 3) Stories entre el header y el feed (.hoy-stories) ──────────
-   Tamaño contenido para no penalizar el espacio del feed. */
+   Estilo Telegram: por defecto NO ocupa espacio (altura 0). Se revelan
+   tirando hacia abajo (pull-to-reveal, ver setupHoyStoriesPull en app.js).
+   La altura la controla JS; aquí sólo definimos el colapso y la transición
+   de "snap" al soltar. */
+.hoy-stories-wrap {
+    height: 0;
+    overflow: hidden;
+    background: var(--rm-bg);
+    transition: height .3s cubic-bezier(.22, .61, .36, 1);
+}
+/* Mientras el dedo arrastra seguimos al gesto sin animación. */
+.hoy-stories-wrap.is-dragging { transition: none; }
+
 .hoy-stories {
     display: flex;
     gap: 12px;
-    padding: 12px 14px 6px;
+    padding: 10px 14px 8px;
     overflow-x: auto;
     scrollbar-width: none;
     background: var(--rm-bg);
