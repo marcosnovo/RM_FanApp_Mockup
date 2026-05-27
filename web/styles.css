@@ -17068,25 +17068,32 @@ input.has-mismatch {
 .mca-time { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .mca-cal { width: 30px; height: 24px; border: 1px solid #ffffff3d; border-radius: 8px; background: transparent; color: #ffffffd1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .mca-cal > svg { width: 14px !important; height: 14px !important; }
-.mca-status { font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #c9cee0; }
-.mca-status.live { color: #6ee7a0; }
 .mca-info { margin-top: 9px; font-size: 11px; line-height: 1.3; color: #ffffff99; }
 
-/* B) Marcador en píldora */
+/* B) Marcador en píldora (contenido; nombre pegado al escudo) */
 .mcb-card { min-width: 100%; padding: 4px 14px 10px; text-align: center; color: #fff; box-sizing: border-box; }
 .mcb-comp { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #ffffffc4; margin-bottom: 9px; }
-.mcb-pill { display: inline-flex; align-items: center; gap: 14px; padding: 7px 18px; border-radius: 999px; background: #ffffff14; border: 1px solid #ffffff1f; }
-.mcb-crest, .mcb-crest > svg { width: 32px !important; height: 32px !important; }
-.mcb-score { font-size: 23px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mcb-box {
+    display: inline-flex; align-items: center; justify-content: center; gap: 14px;
+    max-width: 100%; padding: 8px 18px; border-radius: 16px;
+    background: #ffffff12; border: 1px solid #ffffff1f; box-sizing: border-box;
+}
+.mcb-team { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.mcb-crest, .mcb-crest > svg { width: 30px !important; height: 30px !important; }
+.mcb-name { font-size: 11px; font-weight: 700; color: #fff; line-height: 1.1; max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcb-center { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 0 0 auto; }
+.mcb-center-main { display: flex; align-items: center; gap: 7px; }
+.mcb-score { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mcb-time { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mcb-cal { width: 28px; height: 22px; border: 1px solid #ffffff3d; border-radius: 7px; background: transparent; color: #ffffffd1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.mcb-cal > svg { width: 13px !important; height: 13px !important; }
 .mcb-info { margin-top: 10px; font-size: 11px; line-height: 1.3; color: #ffffffa6; }
 
-/* C) Ticker de una línea */
-.mct-card { min-width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 14px; color: #fff; box-sizing: border-box; }
-.mct-comp { font-size: 9px; font-weight: 800; letter-spacing: 0.6px; color: #0f2145; background: #FEBE10; padding: 3px 7px; border-radius: 6px; text-transform: uppercase; flex: 0 0 auto; }
-.mct-crest, .mct-crest > svg { width: 24px !important; height: 24px !important; flex: 0 0 auto; }
-.mct-abbr { font-size: 14px; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
-.mct-score { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; color: #fff; padding: 0 4px; }
-.mct-date { font-size: 10px; color: #ffffff99; margin-left: 6px; flex: 0 0 auto; }
+/* Estado del partido (compartido por A y B) */
+.mc-final { font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #c9cee0; }
+.mc-live { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #ff5a5f; }
+.mc-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff3b30; animation: mcLivePulse 1.2s ease-in-out infinite; }
+@keyframes mcLivePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
 
 /* ── 2) Header que se oculta al hacer scroll (.home-bl-autohide) ──
    Estilo X/Twitter: al bajar se esconde el top-row y la barra de

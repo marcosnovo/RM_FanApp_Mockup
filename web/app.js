@@ -411,9 +411,8 @@ function renderHoy() {
     const hideOnScroll  = Flags.isEnabled('fan.hoy.backlog.hide-on-scroll');
     const stories       = Flags.isEnabled('fan.hoy.backlog.stories');
     // Estilo de la tarjeta de partido cuando el header compacto está activo:
-    // A) escudos · B) píldora · C) ticker (sub-flags excluyentes; A por defecto).
+    // A) escudos · B) píldora (sub-flags excluyentes; A por defecto).
     const compactStyle = !compactHeader ? null
-        : Flags.isEnabled('fan.hoy.backlog.compact-header.style-ticker')  ? 'C'
         : Flags.isEnabled('fan.hoy.backlog.compact-header.style-pildora') ? 'B'
         : 'A';
     const wrapClass = [
@@ -501,42 +500,44 @@ function renderMatchCard(match, compact) {
     // Competition badge label (shorter)
     const compLabel = match.competition === 'LALIGA EA SPORTS' ? 'LA LIGA' : match.competition;
 
-    // ── Header compacto (backlog) — 3 estilos seleccionables ────────
-    // `compact` llega como 'A' (escudos), 'B' (píldora) o 'C' (ticker).
+    // ── Header compacto (backlog) — 2 estilos seleccionables ────────
+    // `compact` llega como 'A' (escudos) o 'B' (píldora). En ambos el nombre
+    // va pegado al escudo y el estado en directo se marca con punto rojo
+    // pulsante + "EN VIVO" + minuto.
     if (compact) {
         const parts = match.dateString.split(' · ');
         const dayPart = parts[0] || match.dateString;
         const timePart = parts[1] || '';
         const flatInfo = `${dayPart} · ${(match.matchInfo || '').replace(/\n/g, ' · ')}`;
-        const abbr = (n) => n.replace(/[().]/g, '').trim().split(/\s+/)[0].slice(0, 3).toUpperCase();
-        const scoreInline = `${match.homeScore ?? 0}-${match.awayScore ?? 0}`;
-        const centerInline = isUpcoming ? timePart : scoreInline;
+        const isLive = match.status === 'live';
+        const liveTag = `<span class="mc-live"><i class="mc-live-dot"></i>EN VIVO${match.minute ? ` · ${match.minute}` : ''}</span>`;
 
-        // B) Marcador en píldora
+        // Estado bajo el marcador: en directo / final / (próximo no lleva)
+        const statusTag = isLive ? liveTag : (isUpcoming ? '' : `<span class="mc-final">Final</span>`);
+
+        // B) Marcador en píldora (contenido, nombre bajo el escudo)
         if (compact === 'B') {
+            const centerB = isUpcoming
+                ? `<span class="mcb-time">${timePart}</span><button class="mcb-cal" aria-label="Añadir al calendario">${I.calendarPlus}</button>`
+                : `<span class="mcb-score">${match.homeScore ?? 0} - ${match.awayScore ?? 0}</span>`;
             return `
                 <div class="mcb-card">
                     <div class="mcb-comp">${compLabel}</div>
-                    <div class="mcb-pill">
-                        <span class="mcb-crest">${homeCrest}</span>
-                        <span class="mcb-score">${centerInline}</span>
-                        <span class="mcb-crest">${awayCrest}</span>
+                    <div class="mcb-box">
+                        <div class="mcb-team">
+                            <span class="mcb-crest">${homeCrest}</span>
+                            <span class="mcb-name">${match.homeTeam}</span>
+                        </div>
+                        <div class="mcb-center">
+                            <div class="mcb-center-main">${centerB}</div>
+                            ${statusTag}
+                        </div>
+                        <div class="mcb-team">
+                            <span class="mcb-crest">${awayCrest}</span>
+                            <span class="mcb-name">${match.awayTeam}</span>
+                        </div>
                     </div>
-                    <div class="mcb-info">${match.homeTeam} · ${match.awayTeam} · ${flatInfo}</div>
-                </div>`;
-        }
-
-        // C) Ticker de una línea
-        if (compact === 'C') {
-            return `
-                <div class="mct-card">
-                    <span class="mct-comp">${compLabel.replace('CHAMPIONS LEAGUE', 'CHAMPIONS')}</span>
-                    <span class="mct-crest">${homeCrest}</span>
-                    <span class="mct-abbr">${abbr(match.homeTeam)}</span>
-                    <span class="mct-score">${centerInline}</span>
-                    <span class="mct-abbr">${abbr(match.awayTeam)}</span>
-                    <span class="mct-crest">${awayCrest}</span>
-                    <span class="mct-date">${dayPart}</span>
+                    <div class="mcb-info">${flatInfo}</div>
                 </div>`;
         }
 
@@ -546,10 +547,7 @@ function renderMatchCard(match, compact) {
             centerA = `<span class="mca-time">${timePart}</span>
                        <button class="mca-cal" aria-label="Añadir al calendario">${I.calendarPlus}</button>`;
         } else {
-            const pill = match.status === 'live'
-                ? `<span class="mca-status live">En vivo</span>`
-                : `<span class="mca-status">Final</span>`;
-            centerA = `<span class="mca-score">${match.homeScore ?? 0} - ${match.awayScore ?? 0}</span>${pill}`;
+            centerA = `<span class="mca-score">${match.homeScore ?? 0} - ${match.awayScore ?? 0}</span>${statusTag}`;
         }
         return `
             <div class="mca-card">
