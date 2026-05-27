@@ -703,18 +703,31 @@ function hoyStoriesData() {
     return [club, ...players.slice(0, 7)];
 }
 
+// Estilo "Telegram colapsado": por defecto sólo una tira mínima con
+// avatares solapados (footprint ~44px). Al pulsar se despliega el
+// carrusel completo de stories; al volver a pulsar se colapsa.
 function renderHoyStories() {
     const stories = hoyStoriesData();
+    const stack = stories.slice(0, 5).map((s, idx) => `
+        <span class="hoy-strip-av" style="background:${s.color}; z-index:${10 - idx}">${s.initials}</span>
+    `).join('');
     return `
-        <div class="hoy-stories">
-            ${stories.map(s => `
-                <button class="hoy-story" data-hoy-story="${s.id}">
-                    <span class="hoy-story-ring">
-                        <span class="hoy-story-av" style="background:${s.color}">${s.initials}</span>
-                    </span>
-                    <span class="hoy-story-label">${s.short || s.name}</span>
-                </button>
-            `).join('')}
+        <div class="hoy-stories-wrap" data-hoy-stories-wrap>
+            <button class="hoy-stories-strip" data-hoy-strip aria-expanded="false">
+                <span class="hoy-strip-stack">${stack}</span>
+                <span class="hoy-strip-text">Stories<span class="hoy-strip-count">${stories.length}</span></span>
+                <span class="hoy-strip-chevron">${I.chevronDown}</span>
+            </button>
+            <div class="hoy-stories" role="region">
+                ${stories.map(s => `
+                    <button class="hoy-story" data-hoy-story="${s.id}">
+                        <span class="hoy-story-ring">
+                            <span class="hoy-story-av" style="background:${s.color}">${s.initials}</span>
+                        </span>
+                        <span class="hoy-story-label">${s.short || s.name}</span>
+                    </button>
+                `).join('')}
+            </div>
         </div>`;
 }
 
@@ -794,6 +807,13 @@ function setupHomeBacklogAutoHide() {
 
 function attachHoyBacklogListeners() {
     if (!Flags.isEnabled('fan.hoy.backlog') || state.tab !== 'hoy' || state.app !== 'fan') return;
+    // Stories: la tira colapsada despliega/colapsa el carrusel completo.
+    $$('[data-hoy-strip]').forEach(strip => strip.addEventListener('click', () => {
+        const wrap = strip.closest('[data-hoy-stories-wrap]');
+        if (!wrap) return;
+        const open = wrap.classList.toggle('is-open');
+        strip.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }));
     // Stories: marcar como vista sin re-render (anillo → gris).
     $$('[data-hoy-story]').forEach(s => s.addEventListener('click', () => s.classList.add('is-seen')));
     // Las tarjetas de Monterosa abren la noticia mediante el mismo
