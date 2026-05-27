@@ -818,8 +818,24 @@ function setupHoyStoriesPull() {
     const fullH    = (w) => { const i = w.querySelector('.hoy-stories'); return i ? i.offsetHeight : 92; };
     const isOpen   = (w) => w.classList.contains('is-open');
     const setH     = (w, px) => { w.style.height = px + 'px'; };
-    const snapOpen  = (w) => { w.classList.remove('is-dragging'); w.classList.add('is-open'); setH(w, fullH(w)); };
-    const snapClose = (w) => { w.classList.remove('is-dragging', 'is-open'); setH(w, 0); };
+    // Animamos la altura por JS (no con transition CSS) para que el contenido
+    // se re-rasterice frame a frame de forma fiable al desplegar/colapsar.
+    let raf = 0;
+    const animateH = (w, to, after) => {
+        cancelAnimationFrame(raf);
+        const from = parseFloat(w.style.height) || 0;
+        const dur = 240, t0 = performance.now();
+        const tick = (t) => {
+            const k = Math.min(1, (t - t0) / dur);
+            const e = 1 - Math.pow(1 - k, 3); // easeOutCubic
+            setH(w, from + (to - from) * e);
+            if (k < 1) raf = requestAnimationFrame(tick);
+            else if (after) after();
+        };
+        raf = requestAnimationFrame(tick);
+    };
+    const snapOpen  = (w) => { w.classList.add('is-open'); animateH(w, fullH(w)); };
+    const snapClose = (w) => { animateH(w, 0, () => w.classList.remove('is-open')); };
     const pointY   = (e) => (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
 
     // El mockup simula el scroll con arrastre de RATÓN (no usa touch nativo),
@@ -842,7 +858,7 @@ function setupHoyStoriesPull() {
         if (!active) {
             if (delta > 4 && scroller.scrollTop <= 0) {
                 active = true;
-                w.classList.add('is-dragging');
+                cancelAnimationFrame(raf);
             } else {
                 return;
             }
@@ -861,11 +877,15 @@ function setupHoyStoriesPull() {
         if (h >= fullH(w) * THRESHOLD) snapOpen(w); else snapClose(w);
     };
 
-    scroller.addEventListener('mousedown', onDown);
+    // Escuchamos el inicio del gesto en todo el marco del teléfono (no sólo
+    // en #screenBody) para que el "pull" funcione aunque el dedo arranque
+    // sobre la cabecera fija o el notch. El movimiento/fin van en window.
+    const surface = document.getElementById('phoneScreen') || scroller;
+    surface.addEventListener('mousedown', onDown);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-    scroller.addEventListener('touchstart', onDown, { passive: true });
-    scroller.addEventListener('touchmove', onMove, { passive: false });
+    surface.addEventListener('touchstart', onDown, { passive: true });
+    window.addEventListener('touchmove', onMove, { passive: false });
     window.addEventListener('touchend', onUp);
 
     // Estando abierto, al desplazar el feed hacia abajo se colapsa (Telegram).
@@ -882,7 +902,7 @@ function setupHoyStoriesPull() {
         const full = fullH(w);
         if (!isOpen(w) && scroller.scrollTop <= 0 && e.deltaY < 0) {
             wheelAccum += -e.deltaY;
-            w.classList.add('is-dragging');
+            cancelAnimationFrame(raf);
             setH(w, Math.min(full, wheelAccum));
             if (wheelAccum >= full * THRESHOLD) { snapOpen(w); wheelAccum = 0; }
             if (e.cancelable) e.preventDefault();
