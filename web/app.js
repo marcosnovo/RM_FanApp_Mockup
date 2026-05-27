@@ -704,13 +704,22 @@ function hoyStoriesData() {
     return [club, ...players.slice(0, 7)];
 }
 
-// Estilo Telegram: por defecto NO ocupa espacio (altura 0). Las stories
-// se revelan tirando hacia abajo (overscroll) cuando el feed está arriba
-// del todo; ver setupHoyStoriesPull().
+// Estilo Telegram. Por defecto sólo se ve un "peek" mínimo: unos avatares
+// solapados con anillo = "hay stories (nuevas)". Al tirar hacia abajo, ese
+// peek se transforma/crece hasta la fila completa de stories (donde se
+// reproducen). Ver setupHoyStoriesPull().
 function renderHoyStories() {
     const stories = hoyStoriesData();
+    const peek = stories.slice(0, 4).map((s, i) => `
+        <span class="hoy-peek-av" style="background:${s.color}; z-index:${10 - i}">${s.initials}</span>
+    `).join('');
     return `
         <div class="hoy-stories-wrap" data-hoy-stories-wrap>
+            <div class="hoy-stories-peek" data-hoy-peek>
+                <span class="hoy-peek-stack">${peek}</span>
+                <span class="hoy-peek-text">Stories<span class="hoy-peek-new">${stories.length} nuevas</span></span>
+                <span class="hoy-peek-grip">${I.chevronDown}</span>
+            </div>
             <div class="hoy-stories" role="region">
                 ${stories.map(s => `
                     <button class="hoy-story" data-hoy-story="${s.id}">
@@ -798,72 +807,80 @@ function setupHomeBacklogAutoHide() {
     }, { passive: true });
 }
 
-// Stories estilo Telegram: ocultas (altura 0) hasta que el usuario tira
-// hacia abajo estando arriba del todo del feed. El gesto crece la altura
-// siguiendo al dedo; al soltar, si pasa el umbral se queda abierto, si no
-// se colapsa. Estando abierto, al hacer scroll hacia abajo se vuelve a
-// ocultar. Soporta touch (móvil/mockup) y wheel (escritorio para probar).
+// Stories estilo Telegram con un "progreso" p∈[0,1]:
+//   p=0 → sólo el peek (avatares solapados con anillo = "hay stories nuevas")
+//   p=1 → fila completa abierta (donde se reproducen)
+// Al tirar hacia abajo (arriba del todo del feed) el peek se transforma/crece
+// hasta la fila completa; al soltar hace "snap" a 0 ó 1. Tocar el peek abre.
+// Estando abierto, al hacer scroll hacia abajo se colapsa. Soporta ratón
+// (el mockup simula scroll con arrastre de ratón), touch y wheel.
 function setupHoyStoriesPull() {
     const scroller = $('#screenBody');
     if (!scroller || scroller.dataset.hoyPull === '1') return;
     scroller.dataset.hoyPull = '1'; // enlazar una sola vez; el scroller persiste
 
-    const THRESHOLD = 0.4; // fracción de la altura para que "enganche"
-    let dragging = false;   // hay un puntero/dedo presionado arriba del todo
-    let active = false;     // el gesto ya se reconoció como "pull" descendente
-    let startY = 0;
-    let wheelAccum = 0;
+    const PULL_DIST = 90;  // px de arrastre para abrir del todo
+    const STICK = 0.4;     // progreso mínimo al soltar para que "enganche"
+    let dragging = false, active = false, startY = 0, startP = 0, wheelAccum = 0, raf = 0;
 
-    const wrapEl   = () => document.querySelector('[data-hoy-stories-wrap]');
-    const fullH    = (w) => { const i = w.querySelector('.hoy-stories'); return i ? i.offsetHeight : 92; };
-    const isOpen   = (w) => w.classList.contains('is-open');
-    const setH     = (w, px) => { w.style.height = px + 'px'; };
-    // Animamos la altura por JS (no con transition CSS) para que el contenido
-    // se re-rasterice frame a frame de forma fiable al desplegar/colapsar.
-    let raf = 0;
-    const animateH = (w, to, after) => {
+    const wrapEl = () => document.querySelector('[data-hoy-stories-wrap]');
+    const parts  = (w) => ({ peek: w.querySelector('.hoy-stories-peek'), full: w.querySelector('.hoy-stories') });
+    const getP   = (w) => parseFloat(w.dataset.p) || 0;
+    const isOpen = (w) => getP(w) > 0.5;
+    const pointY = (e) => (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+
+    // Aplica el progreso: altura + crossfade/morph entre peek y fila completa.
+    // No usamos transition CSS (height+overflow) para repintar fiable; todo va
+    // por JS frame a frame.
+    const applyP = (w, p) => {
+        p = Math.max(0, Math.min(1, p));
+        const { peek, full } = parts(w);
+        if (!peek || !full) return;
+        const ph = peek.offsetHeight || 44;
+        const fh = full.offsetHeight || 92;
+        w.style.height = (ph + (fh - ph) * p) + 'px';
+        peek.style.opacity = String(Math.max(0, 1 - p * 1.6));
+        peek.style.transform = `scale(${1 + p * 0.06})`;
+        full.style.opacity = String(Math.max(0, (p - 0.08) / 0.92));
+        full.style.transform = `translateY(${(1 - p) * 10}px)`;
+        const open = p > 0.5;
+        full.style.pointerEvents = open ? 'auto' : 'none';
+        peek.style.pointerEvents = open ? 'none' : 'auto';
+        w.classList.toggle('is-open', open);
+        w.dataset.p = String(p);
+    };
+
+    const animateP = (w, to) => {
         cancelAnimationFrame(raf);
-        const from = parseFloat(w.style.height) || 0;
-        const dur = 240, t0 = performance.now();
+        const from = getP(w), dur = 260, t0 = performance.now();
         const tick = (t) => {
             const k = Math.min(1, (t - t0) / dur);
             const e = 1 - Math.pow(1 - k, 3); // easeOutCubic
-            setH(w, from + (to - from) * e);
+            applyP(w, from + (to - from) * e);
             if (k < 1) raf = requestAnimationFrame(tick);
-            else if (after) after();
         };
         raf = requestAnimationFrame(tick);
     };
-    const snapOpen  = (w) => { w.classList.add('is-open'); animateH(w, fullH(w)); };
-    const snapClose = (w) => { animateH(w, 0, () => w.classList.remove('is-open')); };
-    const pointY   = (e) => (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+    const snapOpen  = (w) => animateP(w, 1);
+    const snapClose = (w) => animateP(w, 0);
 
-    // El mockup simula el scroll con arrastre de RATÓN (no usa touch nativo),
-    // así que escuchamos ambos. Sólo iniciamos el "pull" si el feed está
-    // arriba del todo y las stories están ocultas.
     const onDown = (e) => {
         const w = wrapEl();
         if (!w || isOpen(w) || scroller.scrollTop > 0) return;
-        dragging = true;
-        active = false;
-        startY = pointY(e);
+        dragging = true; active = false;
+        startY = pointY(e); startP = getP(w);
     };
 
     const onMove = (e) => {
         if (!dragging) return;
         const w = wrapEl();
         if (!w) return;
-        const full = fullH(w);
         const delta = pointY(e) - startY;
         if (!active) {
-            if (delta > 4 && scroller.scrollTop <= 0) {
-                active = true;
-                cancelAnimationFrame(raf);
-            } else {
-                return;
-            }
+            if (delta > 4 && scroller.scrollTop <= 0) { active = true; cancelAnimationFrame(raf); }
+            else return;
         }
-        setH(w, Math.max(0, Math.min(full, delta)));
+        applyP(w, startP + delta / PULL_DIST);
         if (e.cancelable) e.preventDefault();
     };
 
@@ -873,13 +890,20 @@ function setupHoyStoriesPull() {
         const w = wrapEl();
         if (!w || !active) { active = false; return; }
         active = false;
-        const h = parseFloat(w.style.height) || 0;
-        if (h >= fullH(w) * THRESHOLD) snapOpen(w); else snapClose(w);
+        if (getP(w) >= STICK) snapOpen(w); else snapClose(w);
     };
 
-    // Escuchamos el inicio del gesto en todo el marco del teléfono (no sólo
-    // en #screenBody) para que el "pull" funcione aunque el dedo arranque
-    // sobre la cabecera fija o el notch. El movimiento/fin van en window.
+    // Tocar el peek también abre (afford. de descubrimiento, como Telegram).
+    const onClick = (e) => {
+        const peek = e.target.closest && e.target.closest('[data-hoy-peek]');
+        if (!peek) return;
+        const w = wrapEl();
+        if (w && !isOpen(w)) snapOpen(w);
+    };
+
+    // Escuchamos el inicio del gesto en todo el marco del teléfono (no sólo en
+    // #screenBody) para que el "pull" funcione aunque el dedo arranque sobre la
+    // cabecera fija o el notch. El movimiento/fin van en window.
     const surface = document.getElementById('phoneScreen') || scroller;
     surface.addEventListener('mousedown', onDown);
     window.addEventListener('mousemove', onMove);
@@ -887,6 +911,7 @@ function setupHoyStoriesPull() {
     surface.addEventListener('touchstart', onDown, { passive: true });
     window.addEventListener('touchmove', onMove, { passive: false });
     window.addEventListener('touchend', onUp);
+    surface.addEventListener('click', onClick);
 
     // Estando abierto, al desplazar el feed hacia abajo se colapsa (Telegram).
     scroller.addEventListener('scroll', () => {
@@ -899,12 +924,11 @@ function setupHoyStoriesPull() {
     scroller.addEventListener('wheel', (e) => {
         const w = wrapEl();
         if (!w) return;
-        const full = fullH(w);
         if (!isOpen(w) && scroller.scrollTop <= 0 && e.deltaY < 0) {
-            wheelAccum += -e.deltaY;
             cancelAnimationFrame(raf);
-            setH(w, Math.min(full, wheelAccum));
-            if (wheelAccum >= full * THRESHOLD) { snapOpen(w); wheelAccum = 0; }
+            wheelAccum += -e.deltaY;
+            applyP(w, wheelAccum / PULL_DIST);
+            if (wheelAccum >= PULL_DIST * STICK) { snapOpen(w); wheelAccum = 0; }
             if (e.cancelable) e.preventDefault();
         } else if (isOpen(w) && e.deltaY > 0) {
             snapClose(w);

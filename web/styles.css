@@ -17140,25 +17140,65 @@ input.has-mismatch {
     .home-bl-autohide .home-segment-bar { transition: none; }
 }
 
-/* ── 3) Stories entre el header y el feed (.hoy-stories) ──────────
-   Estilo Telegram: por defecto NO ocupa espacio (altura 0). Se revelan
-   tirando hacia abajo (pull-to-reveal, ver setupHoyStoriesPull en app.js).
-   La altura la controla SIEMPRE el JS (durante el arrastre y en el "snap"
-   animado por requestAnimationFrame), por eso no usamos transition CSS:
-   evitamos el bug de re-rasterizado de capas al animar height+overflow. */
+/* ── 3) Stories entre el header y el feed (estilo Telegram) ───────
+   Por defecto sólo se ve el "peek" (avatares solapados con anillo = hay
+   stories nuevas), que ocupa poquísimo. Al tirar hacia abajo, el peek se
+   transforma/crece hasta la fila completa (.hoy-stories), que está en
+   position:absolute para no añadir altura hasta que se expande. Toda la
+   altura y el crossfade los controla el JS (setupHoyStoriesPull). */
 .hoy-stories-wrap {
-    height: 0;
+    position: relative;
     overflow: hidden;
     background: var(--rm-bg);
 }
 
+/* Peek: indicador compacto de "hay stories nuevas" (estado por defecto) */
+.hoy-stories-peek {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    box-sizing: border-box;
+    padding: 6px 14px;
+    will-change: opacity, transform;
+}
+.hoy-peek-stack { display: inline-flex; align-items: center; }
+.hoy-peek-av {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 10px;
+    box-shadow: 0 0 0 2px var(--rm-bg), 0 0 0 4px #FEBE10;
+}
+.hoy-peek-av + .hoy-peek-av { margin-left: -12px; }
+.hoy-peek-text {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 700; color: var(--rm-text, #0f172a);
+}
+.hoy-peek-new {
+    font-size: 11px; font-weight: 700; color: #fff;
+    background: #C62828; padding: 1px 7px; border-radius: 999px;
+}
+.hoy-peek-grip {
+    margin-left: auto; width: 16px; height: 16px;
+    color: var(--rm-text-secondary, #475569);
+    animation: hoyPeekBounce 1.8s ease-in-out infinite;
+}
+.hoy-peek-grip svg { width: 100%; height: 100%; }
+@keyframes hoyPeekBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+
+/* Fila completa: absolute para no contribuir altura hasta expandir */
 .hoy-stories {
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    opacity: 0;
+    pointer-events: none;
     display: flex;
     gap: 12px;
     padding: 10px 14px 8px;
     overflow-x: auto;
     scrollbar-width: none;
     background: var(--rm-bg);
+    will-change: opacity, transform;
 }
 .hoy-stories::-webkit-scrollbar { display: none; }
 .hoy-story {
