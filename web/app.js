@@ -404,22 +404,21 @@ function renderAppLoginBar() {
 function renderHoy() {
     const match = HEADER_MATCHES[state.matchIndex];
 
-    // ── Posible backlog: cada experimento se aplica SÓLO si su sub-flag
-    // está activo. `isEnabled` ya cascadea con el padre, así que el flag
-    // padre por sí solo no añade ninguna clase (la Home no cambia) ──────
-    const compactHeader = Flags.isEnabled('fan.hoy.backlog.compact-header');
+    // ── Backlog: cada experimento se aplica según su sub-flag ────────
     const hideOnScroll  = Flags.isEnabled('fan.hoy.backlog.hide-on-scroll');
     const stories       = Flags.isEnabled('fan.hoy.backlog.stories');
-    // Estilo de la tarjeta de partido cuando el header compacto está activo:
-    // COL) colapsable (por defecto) · A) escudos · B) píldora (excluyentes).
-    const compactStyle = !compactHeader ? null
-        : Flags.isEnabled('fan.hoy.backlog.compact-header.style-escudos') ? 'A'
-        : Flags.isEnabled('fan.hoy.backlog.compact-header.style-pildora') ? 'B'
-        : 'COL';
+
+    // El header de partido es SIEMPRE el diseño de producción (Figma):
+    // escudos con glow + goleadores + marcador + línea de competición.
+    // La clase `home-bl-compact` (que aplica ese estilo) va SIEMPRE.
+    // El paginador (dots) vive ARRIBA en la cabecera por defecto; SÓLO
+    // cuando se activan las Stories baja debajo del partido (y las
+    // Stories ocupan la parte de arriba).
+    const dotsArriba = !stories;
     const wrapClass = [
         'home-wrap',
-        compactHeader ? 'home-bl-compact'  : '',
-        hideOnScroll  ? 'home-bl-autohide' : ''
+        'home-bl-compact',
+        hideOnScroll ? 'home-bl-autohide' : ''
     ].filter(Boolean).join(' ');
 
     // Upcoming matches only expose Directo/Jornada; finished & live expose all 4
@@ -451,7 +450,7 @@ function renderHoy() {
                 </button>
 
                 <div class="home-top-center">
-                    ${compactHeader ? `<div class="home-top-dots" id="homeDotsFade">${dotsButtons}</div>` : ''}
+                    ${dotsArriba ? `<div class="home-top-dots" id="homeDotsFade">${dotsButtons}</div>` : ''}
                     <div class="home-top-collapsed" id="homeCollapsedFade">
                         <div class="home-top-mini-crest">${smallHomeCrest}</div>
                         <span class="home-top-datetime">${match.dateString.replace(' · ', ' - ')}</span>
@@ -472,16 +471,16 @@ function renderHoy() {
                     <div class="match-carousel" id="matchCarousel">
                         <button class="carousel-nav prev" data-carousel-prev>${I.chevronLeft}</button>
                         <div class="match-carousel-track" id="matchTrack" style="transform: translateX(-${state.matchIndex * 100}%)">
-                            ${HEADER_MATCHES.map(m => renderMatchCard(m, compactStyle)).join('')}
+                            ${HEADER_MATCHES.map(m => renderMatchCard(m, true)).join('')}
                         </div>
                         <button class="carousel-nav next" data-carousel-next>${I.chevronRight}</button>
                     </div>
                 </div>
 
-                <!-- Paginador: en la Home baseline va aquí, bajo el partido y
-                     sobre las pestañas. En el header compacto va en la cabecera
-                     (ver arriba), así que aquí se omite. -->
-                ${!compactHeader ? `<div class="home-match-dots" id="homeDotsFade">${dotsButtons}</div>` : ''}
+                <!-- Paginador: por defecto va ARRIBA en la cabecera (ver arriba).
+                     Sólo con Stories activas baja aquí, bajo el partido y sobre
+                     las pestañas (las Stories ocupan la parte de arriba). -->
+                ${!dotsArriba ? `<div class="home-match-dots" id="homeDotsFade">${dotsButtons}</div>` : ''}
 
                 <div class="home-segment-bar" id="homeSegmentBar">
                     ${segments.map(([key, label]) => `

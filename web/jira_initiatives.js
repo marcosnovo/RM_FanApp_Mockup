@@ -710,31 +710,6 @@ register('fan.hoy.backlog', {
     dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
 });
 
-register('fan.hoy.backlog.compact-header', {
-    flagKey: 'fan.hoy.backlog.compact-header',
-    title: 'Backlog · Header de partido compacto (≤25-30%)',
-    epic: 'Fan App · Hoy · Backlog',
-    estimate: 'M (2 sprints)',
-    priority: 'Alta',
-    context: 'El header de partido actual (fila superior + carrusel de partidos + barra de segmentos) ocupa demasiado alto y empuja el contenido. Queremos el header lo más pequeño posible manteniendo la MISMA información.',
-    problem: 'Un header alto reduce el contenido visible above-the-fold y obliga a hacer scroll para llegar a lo importante.',
-    objective: 'Compactar el header a ≤25-30% de la pantalla (idealmente menos) preservando toda la info: perfil, escudos, equipos, fecha/hora o marcador, competición, radio y segmentos.',
-    inScope: [
-        'Colapsar el carrusel de partidos en una tira única densa (escudo · marcador/hora · escudo) con la competición como kicker minúsculo.',
-        'Cambiar el carrusel por dots pequeños para alternar de partido.',
-        'Barra de segmentos fina (Directo/Resumen/Estadísticas/Jornada).'
-    ],
-    acceptanceCriteria: [
-        'El header desplegado ocupa ≤30% del alto del frame (objetivo 25% o menos).',
-        'No se pierde ninguna información respecto al header actual.',
-        'Sigue permitiendo cambiar de partido y de segmento.'
-    ],
-    uxNotes: [
-        'Mi enfoque: una sola fila densa con iconos en vez de botones etiquetados, marcador/hora centrado, competición en kicker de 9-10px y segmentos en una barra fina. Tipografía ajustada y padding mínimo.'
-    ],
-    dependencies: ['html2canvas + jsPDF para el export a PDF (lazy-load).']
-});
-
 register('fan.hoy.backlog.hide-on-scroll', {
     flagKey: 'fan.hoy.backlog.hide-on-scroll',
     title: 'Backlog · Header que se oculta al hacer scroll (tipo X/Twitter)',
