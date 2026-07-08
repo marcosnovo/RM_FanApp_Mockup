@@ -6575,7 +6575,9 @@ function renderSidebar() {
 
     // Update app switcher buttons
     $$('#appSwitcher .app-switch-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.app === state.app);
+        const isActive = btn.dataset.app === state.app;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
 
     // Build nav sections
@@ -8329,6 +8331,18 @@ function setupOneResize({ handleId, panelSelector, cssVar, defaultW, storageKey,
     const handle = document.getElementById(handleId);
     if (!handle) return;
 
+    // Discoverability: the double-click-to-reset is otherwise invisible.
+    handle.title = 'Arrastra para ajustar · doble clic para restablecer';
+
+    // Expose the current width to assistive tech via the separator role.
+    handle.setAttribute('aria-valuemin', String(SIDE_PANEL_MIN));
+    handle.setAttribute('aria-valuemax', String(SIDE_PANEL_MAX));
+    const currentWidth = () => {
+        const panel = document.querySelector(panelSelector);
+        return panel ? Math.round(panel.getBoundingClientRect().width) : defaultW;
+    };
+    const syncAria = () => handle.setAttribute('aria-valuenow', String(currentWidth()));
+
     // Apply the width saved in localStorage (if any) at boot.
     try {
         const saved = parseInt(localStorage.getItem(storageKey), 10);
@@ -8336,17 +8350,22 @@ function setupOneResize({ handleId, panelSelector, cssVar, defaultW, storageKey,
             document.documentElement.style.setProperty(cssVar, `${saved}px`);
         }
     } catch {}
+    syncAria();
 
     let startX = 0;
     let startW = 0;
 
     const onMove = (e) => {
+        // Evita que un arrastre táctil sobre el handle haga scroll /
+        // rubber-band de la página mientras redimensionas.
+        if (e.touches) e.preventDefault();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         // Left panel grows when dragging right; right panel grows when dragging left.
         const delta = (side === 'left') ? (clientX - startX) : (startX - clientX);
         let next = startW + delta;
         next = Math.max(SIDE_PANEL_MIN, Math.min(SIDE_PANEL_MAX, next));
         document.documentElement.style.setProperty(cssVar, `${next}px`);
+        handle.setAttribute('aria-valuenow', String(Math.round(next)));
     };
 
     const onUp = () => {
@@ -8383,12 +8402,46 @@ function setupOneResize({ handleId, panelSelector, cssVar, defaultW, storageKey,
     handle.addEventListener('dblclick', () => {
         document.documentElement.style.setProperty(cssVar, `${defaultW}px`);
         try { localStorage.removeItem(storageKey); } catch {}
+        syncAria();
+    });
+
+    // Keyboard support (the handle is role="separator" + tabindex=0):
+    //   ← / →  nudge the width by 16px (respecting the panel's side)
+    //   Home   min width · End max width · Enter/Backspace reset default
+    const STEP = 16;
+    const applyWidth = (w, { persist = true } = {}) => {
+        const next = Math.max(SIDE_PANEL_MIN, Math.min(SIDE_PANEL_MAX, Math.round(w)));
+        document.documentElement.style.setProperty(cssVar, `${next}px`);
+        handle.setAttribute('aria-valuenow', String(next));
+        if (persist) { try { localStorage.setItem(storageKey, String(next)); } catch {} }
+    };
+    handle.addEventListener('keydown', (e) => {
+        const w = currentWidth();
+        // Para el usuario, ← siempre "achica visualmente" el panel y →
+        // lo agranda, independientemente de en qué lado esté.
+        const grow  = (side === 'left') ? 'ArrowRight' : 'ArrowLeft';
+        const shrink = (side === 'left') ? 'ArrowLeft' : 'ArrowRight';
+        if (e.key === grow)         { e.preventDefault(); applyWidth(w + STEP); }
+        else if (e.key === shrink)  { e.preventDefault(); applyWidth(w - STEP); }
+        else if (e.key === 'Home')  { e.preventDefault(); applyWidth(SIDE_PANEL_MIN); }
+        else if (e.key === 'End')   { e.preventDefault(); applyWidth(SIDE_PANEL_MAX); }
+        else if (e.key === 'Enter' || e.key === 'Backspace') {
+            e.preventDefault();
+            document.documentElement.style.setProperty(cssVar, `${defaultW}px`);
+            try { localStorage.removeItem(storageKey); } catch {}
+            handle.setAttribute('aria-valuenow', String(defaultW));
+        }
     });
 }
+
+// La app elegida (Fan / VIP) se persiste para que una recarga no vuelva
+// siempre a Fan — igual que ya se persisten los anchos de panel.
+const ACTIVE_APP_KEY = 'rm_active_app_v1';
 
 function attachAppSwitcher() {
     $$('#appSwitcher .app-switch-btn').forEach(btn => btn.addEventListener('click', () => {
         state.app = btn.dataset.app;
+        try { localStorage.setItem(ACTIVE_APP_KEY, state.app); } catch {}
         // Reset sheets
         state.newsId = null;
         state.vipRestaurantId = null;
@@ -8419,9 +8472,10 @@ function setupStageToolbar() {
         `;
         try {
             await window.FlowExporter.capturePhoneToPNG();
+            toast('Captura PNG generada y descargada.', { type: 'success' });
         } catch (err) {
             console.error('[stage-toolbar] capture failed:', err);
-            alert('No se ha podido generar la captura. Revisa la consola.');
+            toast('No se ha podido generar la captura. Revisa la consola.', { type: 'error' });
         } finally {
             btn.classList.remove('is-busy');
             btn.innerHTML = original;
@@ -9090,7 +9144,7 @@ function attachInviteLinkListeners() {
                 setTimeout(() => { resendBtn.innerHTML = original; resendBtn.classList.remove('is-success'); }, 1600);
             } else {
                 resendBtn.innerHTML = original;
-                alert(r.error || 'No se pudo reenviar el email.');
+                toast(r.error || 'No se pudo reenviar el email.', { type: 'error' });
             }
         });
     }
@@ -9644,7 +9698,7 @@ async function renderSettings() {
         const r = await Auth.inviteUser(invitedEmail, invitedRole);
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Invitar'; }
         if (!r.ok) {
-            alert(r.error);
+            toast(r.error || 'No se pudo enviar la invitación.', { type: 'error' });
             return;
         }
         // Guarda la etiqueta asociada al email (persiste por navegador).
@@ -9657,7 +9711,7 @@ async function renderSettings() {
     $$('.settings-user-role').forEach(sel => sel.addEventListener('change', async () => {
         sel.disabled = true;
         const r = await Auth.setRole(sel.dataset.userId, sel.value);
-        if (!r.ok) alert(r.error);
+        if (!r.ok) toast(r.error || 'No se pudo cambiar el rol.', { type: 'error' });
         await renderSettings();
     }));
 
@@ -9707,7 +9761,7 @@ async function renderSettings() {
             r = await Auth.deleteUser(userId);
         }
         settingsUI.confirmingDelete = null;
-        if (r && !r.ok) alert(r.error);
+        if (r && !r.ok) toast(r.error || 'No se pudo eliminar.', { type: 'error' });
         await renderSettings();
     }));
 
@@ -9759,30 +9813,45 @@ function sortFlagsByDependency(flags) {
 if (typeof state.flagsSearch === 'undefined') state.flagsSearch = '';
 if (typeof state.flagsFilter === 'undefined') state.flagsFilter = 'all';   // 'all' | 'active' | 'inactive'
 if (typeof state.flagsCollapsed === 'undefined') state.flagsCollapsed = {}; // { [cat]: bool } — categorías plegadas
-if (typeof state.flagsOpen === 'undefined') state.flagsOpen = true;         // panel entero
+// Panel entero abierto/cerrado — persistido para no reabrirse en cada recarga.
+const FLAGS_OPEN_KEY = 'rm_flags_panel_open_v1';
+if (typeof state.flagsOpen === 'undefined') {
+    let openDefault = true;
+    try {
+        const saved = localStorage.getItem(FLAGS_OPEN_KEY);
+        if (saved !== null) openDefault = saved === '1';
+    } catch {}
+    state.flagsOpen = openDefault;
+}
 // Plegado por flag padre (sub-árbol). { [parentFlagKey]: true if collapsed }.
 // Por defecto colapsamos los padres con muchos hijos para que el panel
 // no ocupe pantallas enteras — el usuario expande lo que quiera con
 // el chevron. Persistido en localStorage para no perder la elección.
 const FLAGS_TREE_COLLAPSE_KEY = 'rm_flags_tree_collapse_v1';
+// Defaults: colapsar todos los padres con hijos, EXCEPTO
+// `fan.hoy.concept-mix` (queremos ver los módulos de Mi Mix de un
+// vistazo). Extraído a helper para reusarlo en "Por defecto".
+function _defaultFlagsTreeCollapsed() {
+    const def = {};
+    if (typeof FLAGS !== 'undefined') {
+        const parents = new Set();
+        FLAGS.forEach(f => { if (f.requires) parents.add(f.requires); });
+        parents.forEach(k => {
+            if (k !== 'fan.hoy.concept-mix') def[k] = true;
+        });
+    }
+    return def;
+}
 if (typeof state.flagsTreeCollapsed === 'undefined') {
     try {
         const saved = localStorage.getItem(FLAGS_TREE_COLLAPSE_KEY);
         if (saved) {
-            state.flagsTreeCollapsed = JSON.parse(saved);
+            // Merge de los defaults sobre lo guardado para claves aún no
+            // presentes: así un flag padre AÑADIDO después arranca
+            // colapsado como es la intención, en vez de expandido.
+            state.flagsTreeCollapsed = { ..._defaultFlagsTreeCollapsed(), ...JSON.parse(saved) };
         } else {
-            // Defaults: colapsar todos los padres con hijos, EXCEPTO
-            // `fan.hoy.concept-mix` (queremos ver los módulos de Mi Mix
-            // de un vistazo).
-            const def = {};
-            if (typeof FLAGS !== 'undefined') {
-                const parents = new Set();
-                FLAGS.forEach(f => { if (f.requires) parents.add(f.requires); });
-                parents.forEach(k => {
-                    if (k !== 'fan.hoy.concept-mix') def[k] = true;
-                });
-            }
-            state.flagsTreeCollapsed = def;
+            state.flagsTreeCollapsed = _defaultFlagsTreeCollapsed();
         }
     } catch {
         state.flagsTreeCollapsed = {};
@@ -10122,18 +10191,26 @@ function _attachFlagsPanelListeners() {
     const head = $('#flagsHead');
     if (head) head.addEventListener('click', () => {
         state.flagsOpen = !state.flagsOpen;
+        try { localStorage.setItem(FLAGS_OPEN_KEY, state.flagsOpen ? '1' : '0'); } catch {}
         renderSidebarFlags();
     });
 
     // Buscador (no re-render global; update local)
     const search = $('#flagsSearch');
     if (search) search.addEventListener('input', e => {
+        // Guarda el caret ANTES del re-render para restaurarlo en la
+        // misma posición (antes se forzaba al final, lo que rompía la
+        // edición en medio de la query o al borrar un carácter).
+        const caret = e.target.selectionStart;
         state.flagsSearch = e.target.value;
         renderSidebarFlags();
         const again = $('#flagsSearch');
         if (again) {
             again.focus();
-            try { again.setSelectionRange(again.value.length, again.value.length); } catch {}
+            try {
+                const pos = (caret == null) ? again.value.length : Math.min(caret, again.value.length);
+                again.setSelectionRange(pos, pos);
+            } catch {}
         }
     });
     const clear = $('#flagsSearchClear');
@@ -10211,9 +10288,9 @@ function _attachFlagsPanelListeners() {
             const next = current.filter(k => k !== dragKey);
             const idx = next.indexOf(droppedOn);
             next.splice(idx, 0, dragKey);
+            // setOrder dispara Flags.onChange, que ya re-renderiza el
+            // frame y el panel — no hace falta un render() extra aquí.
             Flags.setOrder(dragParent, next);
-            // Render() lo dispara Flags.onChange ya, pero por si acaso:
-            if (typeof render === 'function') render();
         });
     });
 
@@ -10247,19 +10324,33 @@ function _attachFlagsPanelListeners() {
         });
     });
 
-    // Reset a defaults
+    // Reset a defaults — restablece TODO: valores, orden custom de
+    // sub-flags y colapso del árbol, para que "Por defecto" deje el
+    // panel como en un arranque limpio (antes sólo tocaba los valores).
     const resetD = $('#flagsResetDefaults');
     if (resetD) resetD.addEventListener('click', () => {
-        Flags.resetAll();
+        Flags.batch(() => {
+            Flags.resetAll();
+            Flags.resetAllOrder();
+        });
+        state.flagsTreeCollapsed = _defaultFlagsTreeCollapsed();
+        _saveFlagsTreeCollapsed();
+        // El batch ya disparó un render vía onChange; refrescamos el
+        // panel para reflejar también el colapso restablecido.
+        renderSidebarFlags();
+        toast('Funcionalidades restablecidas a sus valores por defecto.', { type: 'success' });
     });
 
-    // Desactivar todas
+    // Desactivar todas — en un solo batch para evitar N re-renders de
+    // toda la app (uno por flag). Respeta la cascada porque Flags.set
+    // sigue apagando los hijos de cada padre.
     const disable = $('#flagsDisableAll');
     if (disable) disable.addEventListener('click', () => {
-        // Apaga todos los flags del app actual (uno por uno para respetar cascada).
         const app = state.app;
-        Flags.forApp(app).forEach(f => {
-            if (f.rawEnabled) Flags.set(f.key, false);
+        Flags.batch(() => {
+            Flags.forApp(app).forEach(f => {
+                if (f.rawEnabled) Flags.set(f.key, false);
+            });
         });
     });
 }
@@ -10354,6 +10445,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         attachAppSwitcher();
         setupStageToolbar();
         setupTouchSimulation();
+
+        // Rehydrate the last-selected app (Fan / VIP) so a reload keeps
+        // you where you were instead of snapping back to Fan.
+        try {
+            const savedApp = localStorage.getItem(ACTIVE_APP_KEY);
+            if (savedApp === 'fan' || savedApp === 'vip') state.app = savedApp;
+        } catch {}
 
         // Rehydrate feature-flag state that lives in localStorage
         if (typeof HoyLoginHeader  !== 'undefined') HoyLoginHeader.hydrate();

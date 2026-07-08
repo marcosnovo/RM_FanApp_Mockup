@@ -361,7 +361,14 @@ function _saveOrder() {
     } catch {}
 }
 
+// Batching: while suspended, `_fire` is a no-op and we remember that a
+// change happened, so a bulk operation (e.g. "disable all") notifies
+// listeners ONCE at the end instead of re-rendering the whole app per flag.
+let _suspendDepth = 0;
+let _pendingFire  = false;
+
 function _fire(key, value) {
+    if (_suspendDepth > 0) { _pendingFire = true; return; }
     _listeners.forEach(cb => { try { cb(key, value); } catch {} });
 }
 
@@ -457,6 +464,31 @@ const Flags = {
     resetAll() {
         _overrides = {};
         _save();
+        _fire(null, null);
+    },
+
+    /**
+     * Run a batch of mutations firing listeners only ONCE at the end.
+     * Use for bulk operations (disable-all, multi-set) so the app
+     * re-renders a single time instead of once per flag. Nestable.
+     */
+    batch(fn) {
+        _suspendDepth++;
+        try {
+            fn();
+        } finally {
+            _suspendDepth--;
+            if (_suspendDepth === 0 && _pendingFire) {
+                _pendingFire = false;
+                _listeners.forEach(cb => { try { cb(null, null); } catch {} });
+            }
+        }
+    },
+
+    /** Clear ALL custom child orders (back to declaration order). */
+    resetAllOrder() {
+        _order = {};
+        _saveOrder();
         _fire(null, null);
     },
 

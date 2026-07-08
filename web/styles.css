@@ -109,17 +109,27 @@ body.resizing-side * {
 .side-resize-handle {
     position: absolute;
     top: 0;
-    right: -3px;            /* pisar el borde para capturar el cursor */
-    width: 6px;
+    right: -5px;            /* pisar el borde para capturar el cursor */
+    width: 10px;           /* hit-area cómodo (antes 6px, difícil de agarrar) */
     height: 100%;
     z-index: 50;
     cursor: col-resize;
     background: transparent;
     transition: background 0.15s;
 }
+/* Hover/active/keyboard-focus comparten el mismo realce. El color final
+   (sobre el fondo claro del panel) se define en una sola regla — antes
+   estaba duplicado más abajo con otra opacidad. */
 .side-resize-handle:hover,
-.side-resize-handle.active {
-    background: rgba(62, 49, 250, 0.35);
+.side-resize-handle.active,
+.side-resize-handle:focus-visible {
+    background: rgba(62, 49, 250, 0.20);
+    outline: none;
+}
+/* El foco por teclado también muestra la "cue" con flechas. */
+.side-resize-handle:focus-visible + .side-resize-cue {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.05);
 }
 
 /* Indicador visible al pasar por encima (flechas izquierda/derecha) */
@@ -409,7 +419,10 @@ body.resizing-side * {
 }
 
 .nav-tab:focus-visible,
-.nav-sub:focus-visible {
+.nav-sub:focus-visible,
+.app-switch-btn:focus-visible,
+.stage-tool-btn:focus-visible,
+.side-user-row:focus-visible {
     outline: 2px solid var(--rm-primary);
     outline-offset: 2px;
 }
@@ -14624,11 +14637,8 @@ input.has-mismatch {
     border-color: rgba(15, 33, 69, 0.24) !important;
 }
 
-/* Resize cue — softer purple over the new light background */
-.side-resize-handle:hover,
-.side-resize-handle.active {
-    background: rgba(62, 49, 250, 0.20);
-}
+/* (La regla de realce del resize handle se unificó en la definición
+   original, arriba — antes estaba aquí duplicada con otra opacidad.) */
 
 /* ════════════════════════════════════════════════════════════════
    USER ADMIN PANEL — UX upgrades
@@ -18416,3 +18426,93 @@ input.has-mismatch {
     border-color: #5040E8;
 }
 
+
+/* ════════════════════════════════════════════════════════════════
+   TOAST NOTIFICATIONS (window.MockUI.toast / window.toast)
+   Non-blocking replacement for the scattered native alert() calls.
+   Stacks bottom-centre, auto-dismisses, dark bubbles that read well
+   over the light console chrome.
+   ════════════════════════════════════════════════════════════════ */
+.mock-toast-host {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translateX(-50%);
+    z-index: 12000;              /* above the flow-export overlay (9999) */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;        /* clicks pass through the gaps */
+    width: max-content;
+    max-width: min(440px, calc(100vw - 32px));
+}
+.mock-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px 11px 14px;
+    border-radius: 12px;
+    background: #10152A;
+    color: #EEF1FB;
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: 0.1px;
+    box-shadow: 0 12px 34px rgba(9, 14, 33, 0.34), 0 2px 8px rgba(9, 14, 33, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+    transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+}
+.mock-toast.in  { opacity: 1; transform: translateY(0) scale(1); }
+.mock-toast.out { opacity: 0; transform: translateY(8px) scale(0.98); }
+
+.mock-toast-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+.mock-toast-msg { flex: 1; min-width: 0; }
+.mock-toast-close {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: rgba(238, 241, 251, 0.55);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.mock-toast-close:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.mock-toast-close:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 1px;
+}
+
+/* Accent per type — tints the icon chip + a left rail. */
+.mock-toast-success { border-left: 3px solid #34D399; }
+.mock-toast-success .mock-toast-icon { color: #34D399; background: rgba(52, 211, 153, 0.14); }
+.mock-toast-error   { border-left: 3px solid #F87171; }
+.mock-toast-error   .mock-toast-icon { color: #F87171; background: rgba(248, 113, 113, 0.16); }
+.mock-toast-warn    { border-left: 3px solid #FBBF24; }
+.mock-toast-warn    .mock-toast-icon { color: #FBBF24; background: rgba(251, 191, 36, 0.16); }
+.mock-toast-info    { border-left: 3px solid #60A5FA; }
+.mock-toast-info    .mock-toast-icon { color: #60A5FA; background: rgba(96, 165, 250, 0.16); }
+
+@media (prefers-reduced-motion: reduce) {
+    .mock-toast { transition: opacity 0.15s ease; transform: none; }
+    .mock-toast.in { transform: none; }
+    .mock-toast.out { transform: none; }
+}

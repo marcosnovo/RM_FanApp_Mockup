@@ -122,25 +122,32 @@ function buildMarkdown(def) {
 
 // ── Modal ───────────────────────────────────────────────────────
 let _modalEl = null;
+let _lastFocus = null;          // foco a restaurar al cerrar
+let _prevBodyOverflow = null;   // overflow del body antes del scroll-lock
 
 function openModal(flagKey) {
     const def = REG[flagKey];
     if (!def) {
-        alert('No hay iniciativa registrada para esta funcionalidad.');
+        if (window.MockUI && window.MockUI.toast) {
+            window.MockUI.toast('No hay iniciativa registrada para esta funcionalidad.', { type: 'warn' });
+        }
         return;
     }
     const md = buildMarkdown({ ...def, flagKey });
     closeModal();
 
+    // Recuerda el elemento con foco para devolvérselo al cerrar.
+    _lastFocus = document.activeElement;
+
     const el = document.createElement('div');
     el.className = 'jira-modal-overlay';
     el.innerHTML = `
         <div class="jira-modal-backdrop" data-jira-action="close"></div>
-        <div class="jira-modal-panel" role="dialog" aria-label="Iniciativa de JIRA">
+        <div class="jira-modal-panel" role="dialog" aria-modal="true" aria-labelledby="jiraModalTitle">
             <div class="jira-modal-head">
                 <div class="jira-modal-head-text">
                     <div class="jira-modal-kicker">Iniciativa de JIRA</div>
-                    <div class="jira-modal-title">${escapeHTML(def.title)}</div>
+                    <div class="jira-modal-title" id="jiraModalTitle">${escapeHTML(def.title)}</div>
                 </div>
                 <button class="jira-modal-close" data-jira-action="close" aria-label="Cerrar">
                     <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -163,11 +170,20 @@ function openModal(flagKey) {
                     Copiar al portapapeles
                 </button>
             </div>
-            <div class="jira-modal-foot" id="jiraModalFoot"></div>
+            <div class="jira-modal-foot" id="jiraModalFoot" role="status" aria-live="polite"></div>
         </div>
     `;
     document.body.appendChild(el);
     _modalEl = el;
+
+    // Bloquea el scroll del fondo mientras el modal está abierto.
+    _prevBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // Mueve el foco al botón de cerrar para que teclado / lectores de
+    // pantalla entren en el diálogo.
+    const closeBtn = el.querySelector('.jira-modal-close');
+    if (closeBtn) closeBtn.focus();
 
     el.addEventListener('click', (e) => {
         const tgt = e.target.closest('[data-jira-action]');
@@ -184,6 +200,13 @@ function openModal(flagKey) {
 function closeModal() {
     if (_modalEl) { _modalEl.remove(); _modalEl = null; }
     document.removeEventListener('keydown', _escClose);
+    // Restaura scroll y foco.
+    document.body.style.overflow = _prevBodyOverflow || '';
+    _prevBodyOverflow = null;
+    if (_lastFocus && typeof _lastFocus.focus === 'function') {
+        try { _lastFocus.focus(); } catch {}
+    }
+    _lastFocus = null;
 }
 function _escClose(e) { if (e.key === 'Escape') closeModal(); }
 

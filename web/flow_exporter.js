@@ -28,16 +28,25 @@ function ensureLibs() {
     _libsPromise = Promise.all([
         loadScript(HTML2CANVAS_URL),
         loadScript(JSPDF_URL)
-    ]);
+    // On failure, drop the cached rejection so a later attempt can retry.
+    // Without this, one CDN hiccup would brick every future export/PNG
+    // until a full page reload.
+    ]).catch(err => { _libsPromise = null; throw err; });
     return _libsPromise;
 }
-function loadScript(src) {
+function loadScript(src, { timeout = 15000 } = {}) {
     return new Promise((resolve, reject) => {
         const s = document.createElement('script');
+        // A stalled request never fires onload/onerror, which would hang
+        // the overlay on "Cargando librerías…" forever — guard with a timeout.
+        const timer = setTimeout(() => {
+            s.onload = s.onerror = null;
+            reject(new Error('Timed out loading ' + src));
+        }, timeout);
         s.src = src;
         s.async = true;
-        s.onload = resolve;
-        s.onerror = () => reject(new Error('Failed to load ' + src));
+        s.onload = () => { clearTimeout(timer); resolve(); };
+        s.onerror = () => { clearTimeout(timer); reject(new Error('Failed to load ' + src)); };
         document.head.appendChild(s);
     });
 }
@@ -70,6 +79,16 @@ function showOverlay(text) {
 function hideOverlay() {
     const o = document.getElementById('flowExportOverlay');
     if (o) o.style.display = 'none';
+}
+
+// Non-blocking feedback via the shared toast; falls back to alert() only
+// if mock_utils.js somehow didn't load.
+function notify(msg, type = 'info') {
+    if (window.MockUI && typeof window.MockUI.toast === 'function') {
+        window.MockUI.toast(msg, { type });
+    } else {
+        alert(msg);
+    }
 }
 
 // ── Frame helpers ────────────────────────────────────────────────
@@ -122,6 +141,10 @@ async function capturePhoneToPNG({ filename } = {}) {
     const screen = document.querySelector('.phone-screen');
     if (!screen) throw new Error('No phone screen to capture');
 
+    // Outer guard: whatever fails below (lib load, html2canvas, toBlob),
+    // the overlay MUST come down — otherwise a fixed, pointer-blocking
+    // layer covers the whole console until a reload.
+    try {
     showOverlay('Cargando libreria de captura…');
     await ensureLibs();
 
@@ -194,8 +217,10 @@ async function capturePhoneToPNG({ filename } = {}) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-    hideOverlay();
     return { blob, filename: a.download };
+    } finally {
+        hideOverlay();
+    }
 }
 
 // ── PDF assembler ────────────────────────────────────────────────
@@ -314,7 +339,7 @@ async function runFlow(flagKey) {
         await ensureLibs();
     } catch (err) {
         hideOverlay();
-        alert('No se pudieron cargar las librerías de captura. Revisa tu conexión.');
+        notify('No se pudieron cargar las librerías de captura. Revisa tu conexión.', 'error');
         return;
     }
 
@@ -326,10 +351,13 @@ async function runFlow(flagKey) {
     const totalSteps = paths.reduce((acc, p) => acc + p.steps.length, 0);
 
     // Snapshot — we'll restore via the flow's own `restore` if defined,
-    // else just call cleanup().
-    const snapshot = flow.snapshot ? flow.snapshot() : null;
+    // else just call cleanup(). Declared here but taken INSIDE the try so
+    // that a throwing snapshot() still reaches the finally (overlay down +
+    // restore) instead of leaking the blocking overlay.
+    let snapshot = null;
 
     try {
+        snapshot = flow.snapshot ? flow.snapshot() : null;
         const phone = document.querySelector('.phone');
         if (!phone) throw new Error('No phone element to capture');
 
@@ -375,7 +403,7 @@ async function runFlow(flagKey) {
         pdf.save(filename);
     } catch (err) {
         console.error('[flow-exporter] failed:', err);
-        alert('Hubo un error generando el PDF. Mira la consola para detalles.');
+        notify('Hubo un error generando el PDF. Mira la consola para detalles.', 'error');
     } finally {
         // Restore
         if (flow.restore && snapshot) flow.restore(snapshot);
