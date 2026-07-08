@@ -882,20 +882,8 @@ registerFlow('fan.hoy.backlog', {
         label: 'Baseline (sin experimentos) vs experimentos',
         steps: [
             { caption: '1 · Home experimental (baseline, como hoy)', async run() { scrollHb(0); } },
-            { caption: '2 · Header compacto', async run() { Flags.set('fan.hoy.backlog.compact-header', true); scrollHb(0); } },
-            { caption: '3 · + Stories', async run() { Flags.set('fan.hoy.backlog.stories', true); scrollHb(0); } },
-            { caption: '4 · + Feed compacto', async run() { Flags.set('fan.hoy.backlog.dense-feed', true); scrollHb(0); } }
-        ]
-    }]
-});
-registerFlow('fan.hoy.backlog.compact-header', {
-    title: 'Backlog · Header compacto',
-    snapshot: genericSnapshot, restore: genericRestore,
-    init() { backlogInit('fan.hoy.backlog.compact-header'); },
-    paths: [{
-        label: 'Header compacto (≤25-30%)',
-        steps: [
-            { caption: '1 · Header de partido compacto, misma info', async run() { scrollHb(0); } }
+            { caption: '2 · + Stories', async run() { Flags.set('fan.hoy.backlog.stories', true); scrollHb(0); } },
+            { caption: '3 · + Feed compacto', async run() { Flags.set('fan.hoy.backlog.dense-feed', true); scrollHb(0); } }
         ]
     }]
 });
