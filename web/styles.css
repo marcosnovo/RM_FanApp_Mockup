@@ -1068,6 +1068,23 @@ body.capture-mode .home-indicator { display: none !important; }
     width: 18px;
 }
 
+/* Paginador del carrusel reubicado bajo la tarjeta de partido
+   (antes vivía sobrepuesto en el centro de la cabecera fija). En
+   flujo, centrado, con un poco de aire respecto a la tarjeta y las
+   pestañas Directo/Jornada. */
+.home-match-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    padding: 12px 0 6px;
+}
+/* En su nueva posición los dots caen sobre el fondo CLARO del feed (antes
+   estaban sobre la cabecera oscura), así que van en tono oscuro para
+   contrastar en vez del blanco original. */
+.home-match-dots .home-dot { background: rgba(19, 34, 71, 0.24); }
+.home-match-dots .home-dot.active { background: #132247; }
+
 /* Match carousel card */
 .match-carousel {
     overflow: hidden;
