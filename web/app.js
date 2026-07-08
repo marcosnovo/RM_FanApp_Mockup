@@ -444,11 +444,6 @@ function renderHoy() {
                 </button>
 
                 <div class="home-top-center">
-                    <div class="home-top-dots" id="homeDotsFade">
-                        ${HEADER_MATCHES.map((_, i) => `
-                            <button class="home-dot ${i === state.matchIndex ? 'active' : ''}" data-match="${i}" aria-label="Match ${i + 1}"></button>
-                        `).join('')}
-                    </div>
                     <div class="home-top-collapsed" id="homeCollapsedFade">
                         <div class="home-top-mini-crest">${smallHomeCrest}</div>
                         <span class="home-top-datetime">${match.dateString.replace(' · ', ' - ')}</span>
@@ -473,6 +468,15 @@ function renderHoy() {
                         </div>
                         <button class="carousel-nav next" data-carousel-next>${I.chevronRight}</button>
                     </div>
+                </div>
+
+                <!-- Paginador del carrusel de partidos: reubicado justo bajo
+                     la tarjeta de partido y encima de las pestañas. Conserva
+                     el id #homeDotsFade y la clase .home-dot (mismos handlers). -->
+                <div class="home-match-dots" id="homeDotsFade">
+                    ${HEADER_MATCHES.map((_, i) => `
+                        <button class="home-dot ${i === state.matchIndex ? 'active' : ''}" data-match="${i}" aria-label="Partido ${i + 1}"></button>
+                    `).join('')}
                 </div>
 
                 <div class="home-segment-bar" id="homeSegmentBar">
@@ -6616,10 +6620,12 @@ function setupHomeScrollMorph() {
     if (state.tab !== 'hoy') return;
     const scroller = $('#screenBody');
     const matchArea = $('.home-match-area');
-    const dots = $('#homeDotsFade');
     const collapsed = $('#homeCollapsedFade');
     const fixed = $('#homeTopRowFixed');
-    if (!scroller || !matchArea || !dots || !collapsed || !fixed) return;
+    // Nota: el paginador (#homeDotsFade) ya NO vive en la cabecera fija —
+    // ahora está en el flujo bajo la tarjeta de partido, así que scrollea
+    // con el contenido y no se le aplica fade aquí.
+    if (!scroller || !matchArea || !collapsed || !fixed) return;
 
     const matchHeight = matchArea.offsetHeight || 210;
 
@@ -6640,11 +6646,6 @@ function setupHomeScrollMorph() {
         const y = scroller.scrollTop;
         // 0 = fully expanded, 1 = fully collapsed
         const p = Math.max(0, Math.min(1, y / matchHeight));
-
-        // Dots fade out in first half
-        const dotsOp = Math.max(0, 1 - p / 0.55);
-        dots.style.opacity = dotsOp;
-        dots.style.pointerEvents = dotsOp > 0.1 ? 'auto' : 'none';
 
         // Crests+date fade in in second half
         const colOp = Math.max(0, Math.min(1, (p - 0.45) / 0.55));
