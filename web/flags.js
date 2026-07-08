@@ -492,6 +492,63 @@ const Flags = {
         _fire(null, null);
     },
 
+    // ── Shareable state (URL param) ─────────────────────────────
+    // This is a demo/A-B console whose point is showing configured
+    // states to others, so we let a whole configuration travel in a
+    // link. We encode only what DIFFERS from defaults (compact) plus
+    // any custom child order.
+
+    /** { o: {key:bool diffs vs default}, r: {parent:[order]} } — omitted if empty. */
+    exportShareState() {
+        const ov = _load();
+        const diff = {};
+        for (const key of Object.keys(ov)) {
+            const def = FLAGS.find(f => f.key === key);
+            const defVal = !!(def && def.default);
+            if (!!ov[key] !== defVal) diff[key] = !!ov[key];
+        }
+        const ord = _loadOrder();
+        const order = {};
+        for (const p of Object.keys(ord)) {
+            if (Array.isArray(ord[p]) && ord[p].length) order[p] = ord[p].slice();
+        }
+        const out = {};
+        if (Object.keys(diff).length)  out.o = diff;
+        if (Object.keys(order).length) out.r = order;
+        return out;
+    },
+
+    /** URL-safe base64 of exportShareState(), or '' if nothing to share. */
+    encodeShareState() {
+        const state = this.exportShareState();
+        if (!Object.keys(state).length) return '';
+        const json = JSON.stringify(state);
+        // Flag keys are ASCII, so btoa is safe. URL-safe alphabet, no padding.
+        return btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    },
+
+    /**
+     * Apply a share-state param (from encodeShareState). REPLACES the
+     * current overrides + order so the recipient sees exactly the
+     * sender's configuration, and persists it. Returns true on success.
+     */
+    applyShareState(param) {
+        if (!param) return false;
+        try {
+            const b64 = param.replace(/-/g, '+').replace(/_/g, '/');
+            const decoded = JSON.parse(atob(b64));
+            _overrides = (decoded && decoded.o && typeof decoded.o === 'object') ? { ...decoded.o } : {};
+            _order     = (decoded && decoded.r && typeof decoded.r === 'object') ? { ...decoded.r } : {};
+            _save();
+            _saveOrder();
+            _fire(null, null);
+            return true;
+        } catch (e) {
+            console.warn('[flags] invalid share state:', e);
+            return false;
+        }
+    },
+
     /** All registered flags, with their current enabled state. */
     all() {
         return FLAGS.map(f => ({ ...f, enabled: this.isEnabled(f.key) }));

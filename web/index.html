@@ -17,7 +17,7 @@
     <!-- Cibeles Design System tokens (Madridistas) -->
     <link rel="stylesheet" href="tokens/cibeles-tokens.css">
     <!-- ⚠️ CACHE-BUST CHECKLIST · bump ALL `?v=` together on every ship.
-         Sites: this stylesheet (below) + the 7 <script> tags at the end of
+         Sites: this stylesheet (below) + the 8 <script> tags at the end of
          <body>. Miss one and a client serves a stale file against fresh
          siblings — a subtle, hard-to-debug class of bug. Current: v=81 -->
     <link rel="stylesheet" href="styles.css?v=81">
@@ -184,6 +184,19 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>
             </div>
         </aside>
+
+        <!-- Drawer toggles + scrim: sólo visibles en viewports estrechos,
+             donde los paneles pasan a ser cajones off-canvas en vez de
+             desaparecer. Los wirea app.js (setupResponsiveDrawers). -->
+        <button class="drawer-toggle drawer-toggle-left" id="drawerToggleLeft"
+                aria-label="Abrir navegación" aria-controls="sidePanel" aria-expanded="false" hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+        </button>
+        <button class="drawer-toggle drawer-toggle-right" id="drawerToggleRight"
+                aria-label="Abrir funcionalidades" aria-controls="sidePanelRight" aria-expanded="false" hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"/><circle cx="9" cy="8" r="2.2" fill="currentColor"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="15" cy="16" r="2.2" fill="currentColor"/></svg>
+        </button>
+        <div class="drawer-scrim" id="drawerScrim" hidden></div>
     </div>
 
     <!-- Auth overlay (login / forgot / reset / setup)
@@ -234,6 +247,8 @@
     <script defer src="flags.js?v=81"></script>
     <script defer src="data.js?v=81"></script>
     <script defer src="app.js?v=81"></script>
+    <!-- Auth UI extraído de app.js (mismos símbolos globales). -->
+    <script defer src="auth_ui.js?v=81"></script>
     <script defer src="flow_exporter.js?v=81"></script>
     <script defer src="jira_initiatives.js?v=81"></script>
 </body>

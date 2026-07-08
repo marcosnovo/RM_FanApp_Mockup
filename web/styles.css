@@ -3110,13 +3110,63 @@ body.capture-mode .home-indicator { display: none !important; }
     font-size: 14px;
 }
 
+/* ── Responsive drawers ──────────────────────────────────────────
+   En viewports estrechos los paneles no caben junto al móvil. En vez
+   de OCULTARLOS (dejando la navegación / las funcionalidades
+   inaccesibles), pasan a ser cajones off-canvas que se abren con un
+   botón flotante + scrim. Ver setupResponsiveDrawers() en app.js. */
+.drawer-toggle {
+    display: none;                 /* sólo visible dentro de las media queries */
+    position: fixed;
+    top: 14px;
+    z-index: 9100;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    color: var(--side-text, #0f2145);
+    border: 1px solid var(--side-border, rgba(15, 33, 69, 0.12));
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(9, 14, 33, 0.16);
+    cursor: pointer;
+    transition: background 0.14s;
+}
+.drawer-toggle:hover { background: var(--side-hover, #f2f4f9); }
+.drawer-toggle:focus-visible { outline: 2px solid var(--rm-primary, #3e31fa); outline-offset: 2px; }
+.drawer-toggle-left  { left: 14px; }
+.drawer-toggle-right { right: 14px; }
+
+.drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 14, 33, 0.42);
+    z-index: 8500;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+.drawer-scrim.show { opacity: 1; }
+
 @media (max-width: 1280px) {
-    /* Cuando no hay sitio para los dos sidebars + el móvil, escondemos
-       el panel derecho. Las funcionalidades siguen accesibles toggleando
-       la visibilidad desde fuera (no implementado todavía) — por ahora
-       priorizamos que el móvil quede bien centrado. */
     .app-layout { grid-template-columns: var(--side-panel-w) minmax(0, 1fr); }
-    .side-panel-right { display: none; }
+    /* Panel derecho → cajón off-canvas desde la derecha. */
+    .side-panel-right {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        height: 100dvh;
+        width: min(var(--side-panel-right-w), 88vw);
+        transform: translateX(100%);
+        transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        z-index: 9000;
+        box-shadow: -18px 0 44px rgba(9, 14, 33, 0.30);
+    }
+    .side-panel-right.drawer-open { transform: translateX(0); }
+    .drawer-toggle-right { display: inline-flex; }
+    /* Redimensionar no aplica en modo cajón. */
+    .side-resize-handle-right,
+    .side-resize-cue-right { display: none; }
 }
 
 @media (max-width: 900px) {
@@ -3126,7 +3176,25 @@ body.capture-mode .home-indicator { display: none !important; }
 
 @media (max-width: 720px) {
     .app-layout { grid-template-columns: 1fr; }
-    .side-panel { display: none; }
+    /* Panel izquierdo → cajón off-canvas desde la izquierda.
+       OJO: el panel derecho también lleva la clase .side-panel, así que
+       excluimos .side-panel-right para no reposicionarlo aquí. */
+    .side-panel:not(.side-panel-right) {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        height: 100dvh;
+        width: min(var(--side-panel-w), 86vw);
+        transform: translateX(-100%);
+        transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        z-index: 9000;
+        box-shadow: 18px 0 44px rgba(9, 14, 33, 0.30);
+    }
+    .side-panel:not(.side-panel-right).drawer-open { transform: translateX(0); }
+    .drawer-toggle-left { display: inline-flex; }
+    .side-panel:not(.side-panel-right) .side-resize-handle,
+    .side-panel:not(.side-panel-right) .side-resize-cue { display: none; }
 }
 
 /* ================================================================
@@ -11933,6 +12001,121 @@ input.has-mismatch {
 .jira-modal-foot.ok  { color: #8ad0a0; }
 .jira-modal-foot.err { color: #e08c8c; }
 
+/* ── "Todas las iniciativas" — listado agregado agrupado por epic ── */
+.jira-list-panel { width: min(720px, 100%); }
+.jira-list-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 20px 6px;
+    padding: 9px 12px;
+    background: #0f1018;
+    border: 1px solid #2c2d3a;
+    border-radius: 10px;
+    color: #9a9ab0;
+}
+.jira-list-search svg { flex-shrink: 0; }
+.jira-list-search input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: #e8e8f0;
+    font-family: inherit;
+    font-size: 13px;
+}
+.jira-list-search input::placeholder { color: #6b6b80; }
+
+.jira-list-body {
+    padding: 6px 14px 16px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.jira-list-count {
+    font-size: 11px;
+    color: #8a8aa0;
+    padding: 4px 6px 8px;
+}
+.jira-list-empty {
+    padding: 28px 8px;
+    text-align: center;
+    color: #9a9ab0;
+    font-size: 13px;
+}
+.jira-list-group { margin-bottom: 14px; }
+.jira-list-group-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 8px;
+    position: sticky;
+    top: 0;
+    background: #15161f;
+    z-index: 1;
+}
+.jira-list-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #c9a36e;
+}
+.jira-list-group-count {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #9a9ab0;
+    background: #232432;
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+.jira-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    margin-bottom: 5px;
+    background: #1a1b26;
+    border: 1px solid #262735;
+    border-radius: 10px;
+    color: #e8e8f0;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.13s, border-color 0.13s;
+}
+.jira-list-item:hover { background: #21222f; border-color: #3a3b4d; }
+.jira-list-item:focus-visible { outline: 2px solid #c9a36e; outline-offset: 2px; }
+.jira-list-item-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    min-width: 0;
+}
+.jira-list-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.jira-chip {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: #2a2b39;
+    color: #c2c2d2;
+    border: 1px solid transparent;
+}
+.jira-chip.prio-high { background: rgba(224, 90, 90, 0.16); color: #f0a0a0; border-color: rgba(224, 90, 90, 0.3); }
+.jira-chip.prio-med  { background: rgba(224, 170, 80, 0.16); color: #edc07a; border-color: rgba(224, 170, 80, 0.3); }
+.jira-chip.prio-low  { background: rgba(120, 180, 120, 0.16); color: #9ed09e; border-color: rgba(120, 180, 120, 0.3); }
+.jira-chip.est { background: #232432; color: #a8a8c0; }
+
 /* Overlay shown while a flow capture is running. Sits above
    everything else on the page. */
 .flow-export-overlay {
@@ -14635,6 +14818,35 @@ input.has-mismatch {
     background: var(--side-hover) !important;
     color: var(--side-text) !important;
     border-color: rgba(15, 33, 69, 0.24) !important;
+}
+
+/* "Copiar enlace de esta configuración" — acción de compartir, ancho
+   completo bajo los dos botones del footer. */
+.flags-share-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    margin-top: 6px;
+    padding: 8px;
+    background: rgba(62, 49, 250, 0.06);
+    border: 1px solid rgba(62, 49, 250, 0.22);
+    border-radius: 8px;
+    color: var(--rm-primary, #3e31fa);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.flags-share-btn:hover {
+    background: rgba(62, 49, 250, 0.12);
+    border-color: rgba(62, 49, 250, 0.4);
+}
+.flags-share-btn:focus-visible {
+    outline: 2px solid var(--rm-primary, #3e31fa);
+    outline-offset: 2px;
 }
 
 /* (La regla de realce del resize handle se unificó en la definición
