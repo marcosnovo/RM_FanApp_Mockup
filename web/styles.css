@@ -17290,6 +17290,40 @@ input.has-mismatch {
 .home-bl-compact .home-segment-bar { height: 36px; }   /* el `top` lo fija el JS = alto real del top-row */
 .home-bl-compact .home-segment-label { height: 32px; }
 
+/* ── Header compacto · diseño de producción (Figma node 5092:3926) ──
+   Reemplaza a los estilos A/B/COL. Superficie oscura continua desde el
+   top-row hasta la línea de competición; luego las pestañas van sobre
+   blanco. NOTA: sin píldora/caja de "Penaltis" (diseño a máximos). */
+.home-bl-compact .home-top-center { height: 24px; }     /* alberga los dots en la cabecera */
+.home-bl-compact .home-match-area { background: #14152e; padding: 0; margin-top: 0; }
+.mch-card { min-width: 100%; box-sizing: border-box; background: #14152e; color: #fff; padding: 8px 0 6px; }
+.mch-scorer { display: flex; align-items: flex-start; gap: 4px; padding: 4px 8px; }
+.mch-squad { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mch-crest { position: relative; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
+.mch-crest::before {
+    content: ''; position: absolute; width: 42px; height: 42px; border-radius: 50%;
+    background: #fff; filter: blur(22px); opacity: .40; z-index: 0;
+}
+.mch-crest > svg, .mch-crest svg, .mch-crest img { position: relative; z-index: 1; width: 48px !important; height: 48px !important; }
+.mch-name { font-size: 14px; font-weight: 700; color: #fff; text-align: center; line-height: 1.15; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mch-goals { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; line-height: 1.33; color: #acb4c1; text-align: center; }
+.mch-goals span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mch-center { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 2px; }
+.mch-date { font-size: 14px; color: #acb4c1; white-space: nowrap; }
+.mch-score { display: flex; align-items: center; gap: 4px; font-size: 32px; font-weight: 800; line-height: 40px; color: #fff; font-variant-numeric: tabular-nums; }
+.mch-dash { font-size: 24px; font-weight: 400; color: #a7aabb; }
+.mch-time { font-size: 30px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+.mch-badge.live { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 6px; background: #ca024f; font-size: 11px; font-weight: 700; letter-spacing: .3px; color: #fbfdff; }
+.mch-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: mcLivePulse 1.2s ease-in-out infinite; }
+.mch-comp { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 6px; padding: 6px 16px 4px; font-size: 12.5px; color: #fff; text-align: center; }
+.mch-comp-main { font-weight: 600; }
+.mch-comp-dot { color: #ffffff8a; }
+.mch-comp-item { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+.mch-comp-item svg { flex: 0 0 auto; opacity: .95; }
+/* El header compacto navega por el paginador (dots) — como en Figma —, así
+   que ocultamos los chevrones del carrusel para que no pisen los goleadores. */
+.home-bl-compact .carousel-nav { display: none; }
+
 /* Marcador compacto horizontal: competición (kicker) · equipos+resultado
    (principal) · fecha y lugar (secundario). */
 /* Estilos de tarjeta del header compacto (sub-flags A/B/C) ─────────

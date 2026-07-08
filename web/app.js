@@ -434,6 +434,13 @@ function renderHoy() {
     const smallHomeCrest = bigCrestFor(match.homeTeam);
     const smallAwayCrest = bigCrestFor(match.awayTeam);
 
+    // Botones del paginador (carrusel de partidos). Van EN LA CABECERA con
+    // el header compacto (diseño Figma) y DEBAJO del partido en la Home
+    // baseline. En ambos casos conservan #homeDotsFade + .home-dot.
+    const dotsButtons = HEADER_MATCHES.map((_, i) =>
+        `<button class="home-dot ${i === state.matchIndex ? 'active' : ''}" data-match="${i}" aria-label="Partido ${i + 1}"></button>`
+    ).join('');
+
     return `
         <div class="${wrapClass}" id="homeWrap">
             <!-- Fixed top row (morphs during scroll) -->
@@ -444,6 +451,7 @@ function renderHoy() {
                 </button>
 
                 <div class="home-top-center">
+                    ${compactHeader ? `<div class="home-top-dots" id="homeDotsFade">${dotsButtons}</div>` : ''}
                     <div class="home-top-collapsed" id="homeCollapsedFade">
                         <div class="home-top-mini-crest">${smallHomeCrest}</div>
                         <span class="home-top-datetime">${match.dateString.replace(' · ', ' - ')}</span>
@@ -470,14 +478,10 @@ function renderHoy() {
                     </div>
                 </div>
 
-                <!-- Paginador del carrusel de partidos: reubicado justo bajo
-                     la tarjeta de partido y encima de las pestañas. Conserva
-                     el id #homeDotsFade y la clase .home-dot (mismos handlers). -->
-                <div class="home-match-dots" id="homeDotsFade">
-                    ${HEADER_MATCHES.map((_, i) => `
-                        <button class="home-dot ${i === state.matchIndex ? 'active' : ''}" data-match="${i}" aria-label="Partido ${i + 1}"></button>
-                    `).join('')}
-                </div>
+                <!-- Paginador: en la Home baseline va aquí, bajo el partido y
+                     sobre las pestañas. En el header compacto va en la cabecera
+                     (ver arriba), así que aquí se omite. -->
+                ${!compactHeader ? `<div class="home-match-dots" id="homeDotsFade">${dotsButtons}</div>` : ''}
 
                 <div class="home-segment-bar" id="homeSegmentBar">
                     ${segments.map(([key, label]) => `
@@ -527,97 +531,69 @@ function renderMatchCard(match, compact) {
     // `compact` llega como 'A' (escudos) o 'B' (píldora). En ambos el nombre
     // va pegado al escudo y el estado en directo se marca con punto rojo
     // pulsante + "EN VIVO" + minuto.
+    // ── Header compacto (backlog) — diseño de producción (Figma) ────
+    // Reemplaza los estilos previos A/B/COL. Escudos con glow + nombre +
+    // goleadores a los lados; centro con fecha, marcador grande y estado
+    // en vivo; línea de competición con iconos. NOTA: la píldora/caja de
+    // "Penaltis" es diseño a máximos (solo en eliminatoria que termina en
+    // empate y va a la tanda), así que NO se pinta aquí.
     if (compact) {
         const parts = match.dateString.split(' · ');
-        const dayPart = parts[0] || match.dateString;
         const timePart = parts[1] || '';
-        const metaHTML = renderCompactMeta(dayPart, match.matchInfo);
         const isLive = match.status === 'live';
-        const liveTag = `<span class="mc-live"><i class="mc-live-dot"></i>EN VIVO${match.minute ? ` · ${match.minute}` : ''}</span>`;
+        const liveBadge = isLive
+            ? `<div class="mch-badge live"><i class="mch-badge-dot"></i>EN VIVO${match.minute ? ` · ${match.minute}` : ''}</div>`
+            : '';
 
-        // Estado bajo el marcador: en directo / final / (próximo no lleva)
-        const statusTag = isLive ? liveTag : (isUpcoming ? '' : `<span class="mc-final">Final</span>`);
+        const goalsHTML = (scorers) => {
+            if (isUpcoming || !scorers) return '';
+            const lines = scorers.split(' · ').map(s => `<span>${s}</span>`).join('');
+            return `<div class="mch-goals">${lines}</div>`;
+        };
 
-        // COL) Colapsable: marcador en UNA línea (nombres a los lados en ancho
-        // fijo, escudos+marcador SIEMPRE centrados) + botón explícito que
-        // despliega el detalle (competición, fecha, estadio, fase, goleadores).
-        if (compact === 'COL') {
-            const centerCol = isUpcoming
-                ? `<span class="mcc-score">${timePart}</span>`
-                : `<span class="mcc-score">${match.homeScore ?? 0} - ${match.awayScore ?? 0}</span>`;
-            const scorers = (!isUpcoming && (match.homeScorers || match.awayScorers))
-                ? `<div class="mcc-scorers"><span>${match.homeScorers || ''}</span><span>${match.awayScorers || ''}</span></div>`
-                : '';
-            return `
-                <div class="mcc-card" data-mcc>
-                    <div class="mcc-bar">
-                        <span class="mcc-name mcc-name-home">${match.homeTeam}</span>
-                        <span class="mcc-crest">${homeCrest}</span>
-                        <span class="mcc-score-wrap">${centerCol}</span>
-                        <span class="mcc-crest">${awayCrest}</span>
-                        <span class="mcc-name mcc-name-away">${match.awayTeam}</span>
-                    </div>
-                    ${isLive ? `<div class="mcc-livebar">${liveTag}</div>` : ''}
-                    <div class="mcc-details">
-                        <div class="mcc-comp">${compLabel}</div>
-                        ${metaHTML}
-                        ${scorers}
-                    </div>
-                    <button class="mcc-toggle" data-mcc-toggle aria-expanded="false">
-                        <span class="mcc-toggle-label">Ver detalles del partido</span>${I.chevronDown}
-                    </button>
-                </div>`;
-        }
+        const center = isUpcoming
+            ? `<div class="mch-time">${timePart}</div>`
+            : `<div class="mch-score"><span>${match.homeScore ?? 0}</span><span class="mch-dash">–</span><span>${match.awayScore ?? 0}</span></div>`;
 
-        // B) Marcador en píldora (contenido, nombre bajo el escudo)
-        if (compact === 'B') {
-            const centerB = isUpcoming
-                ? `<span class="mcb-time">${timePart}</span><button class="mcb-cal" aria-label="Añadir al calendario">${I.calendarPlus}</button>`
-                : `<span class="mcb-score">${match.homeScore ?? 0} - ${match.awayScore ?? 0}</span>`;
-            return `
-                <div class="mcb-card">
-                    <div class="mcb-comp">${compLabel}</div>
-                    <div class="mcb-box">
-                        <div class="mcb-team">
-                            <span class="mcb-crest">${homeCrest}</span>
-                            <span class="mcb-name">${match.homeTeam}</span>
-                        </div>
-                        <div class="mcb-center">
-                            <div class="mcb-center-main">${centerB}</div>
-                            ${statusTag}
-                        </div>
-                        <div class="mcb-team">
-                            <span class="mcb-crest">${awayCrest}</span>
-                            <span class="mcb-name">${match.awayTeam}</span>
-                        </div>
-                    </div>
-                    ${metaHTML}
-                </div>`;
-        }
+        // Línea de competición: "<deporte+equipo> · [icono] <competición> · [icono] <estadio>"
+        const infoLines = (match.matchInfo || '').split('\n');
+        let sportTeam = (infoLines[0] || '').replace(/ · /g, ' ').trim();
+        if (match.category === 'masc' && /^Fútbol\b/.test(sportTeam)) sportTeam = sportTeam.replace(/^Fútbol/, 'Fútbol masculino');
+        else if (match.category === 'fem') sportTeam = sportTeam.replace(/^Fútbol( Femenino)?/, 'Fútbol femenino');
+        const venue = (() => {
+            const seg = (infoLines[1] || '').split(' · ');
+            return seg.length ? seg[seg.length - 1].trim() : '';
+        })();
+        const compMap = { 'CHAMPIONS LEAGUE': 'Champions League', 'LALIGA EA SPORTS': 'LaLiga', 'COPA DEL REY': 'Copa del Rey', 'SUPERCOPA': 'Supercopa' };
+        const compName = compMap[match.competition] || (match.competition.charAt(0) + match.competition.slice(1).toLowerCase());
+        const compIcon = `<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 2.6l2.6 5.6 6 .7-4.4 4.1 1.2 6-5.4-3-5.4 3 1.2-6L3.4 8.9l6-.7z"/></svg>`;
+        const stadiumIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="8" rx="9" ry="3.4"/><path d="M3 8v5c0 1.9 4 3.4 9 3.4s9-1.5 9-3.4V8"/></svg>`;
 
-        // A) Escudos protagonistas (vertical compacto) — por defecto
-        let centerA;
-        if (isUpcoming) {
-            centerA = `<span class="mca-time">${timePart}</span>
-                       <button class="mca-cal" aria-label="Añadir al calendario">${I.calendarPlus}</button>`;
-        } else {
-            centerA = `<span class="mca-score">${match.homeScore ?? 0} - ${match.awayScore ?? 0}</span>${statusTag}`;
-        }
         return `
-            <div class="mca-card">
-                <div class="mca-comp">${compLabel}</div>
-                <div class="mca-row">
-                    <div class="mca-team">
-                        <span class="mca-crest">${homeCrest}</span>
-                        <span class="mca-name">${match.homeTeam}</span>
+            <div class="mch-card">
+                <div class="mch-scorer">
+                    <div class="mch-squad">
+                        <div class="mch-crest">${homeCrest}</div>
+                        <div class="mch-name">${match.homeTeam}</div>
+                        ${goalsHTML(match.homeScorers)}
                     </div>
-                    <div class="mca-center">${centerA}</div>
-                    <div class="mca-team">
-                        <span class="mca-crest">${awayCrest}</span>
-                        <span class="mca-name">${match.awayTeam}</span>
+                    <div class="mch-center">
+                        <div class="mch-date">${match.dateString}</div>
+                        ${center}
+                        ${liveBadge}
+                    </div>
+                    <div class="mch-squad">
+                        <div class="mch-crest">${awayCrest}</div>
+                        <div class="mch-name">${match.awayTeam}</div>
+                        ${goalsHTML(match.awayScorers)}
                     </div>
                 </div>
-                ${metaHTML}
+                <div class="mch-comp">
+                    <span class="mch-comp-main">${sportTeam}</span>
+                    <span class="mch-comp-dot">·</span>
+                    <span class="mch-comp-item">${compIcon}<span>${compName}</span></span>
+                    ${venue ? `<span class="mch-comp-dot">·</span><span class="mch-comp-item">${stadiumIcon}<span>${venue}</span></span>` : ''}
+                </div>
             </div>`;
     }
 
@@ -6622,10 +6598,11 @@ function setupHomeScrollMorph() {
     const matchArea = $('.home-match-area');
     const collapsed = $('#homeCollapsedFade');
     const fixed = $('#homeTopRowFixed');
-    // Nota: el paginador (#homeDotsFade) ya NO vive en la cabecera fija —
-    // ahora está en el flujo bajo la tarjeta de partido, así que scrollea
-    // con el contenido y no se le aplica fade aquí.
     if (!scroller || !matchArea || !collapsed || !fixed) return;
+    // El paginador sólo se desvanece con el scroll cuando vive DENTRO de la
+    // cabecera fija (header compacto). En la Home baseline está en el flujo
+    // bajo el partido y scrollea con el contenido (dots = null → sin fade).
+    const dots = fixed.querySelector('#homeDotsFade');
 
     const matchHeight = matchArea.offsetHeight || 210;
 
@@ -6646,6 +6623,13 @@ function setupHomeScrollMorph() {
         const y = scroller.scrollTop;
         // 0 = fully expanded, 1 = fully collapsed
         const p = Math.max(0, Math.min(1, y / matchHeight));
+
+        // Dots fade out in first half (sólo si viven en la cabecera)
+        if (dots) {
+            const dotsOp = Math.max(0, 1 - p / 0.55);
+            dots.style.opacity = dotsOp;
+            dots.style.pointerEvents = dotsOp > 0.1 ? 'auto' : 'none';
+        }
 
         // Crests+date fade in in second half
         const colOp = Math.max(0, Math.min(1, (p - 0.45) / 0.55));
