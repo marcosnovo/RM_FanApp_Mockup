@@ -16,7 +16,11 @@
 
     <!-- Cibeles Design System tokens (Madridistas) -->
     <link rel="stylesheet" href="tokens/cibeles-tokens.css">
-    <link rel="stylesheet" href="styles.css?v=80">
+    <!-- ⚠️ CACHE-BUST CHECKLIST · bump ALL `?v=` together on every ship.
+         Sites: this stylesheet (below) + the 8 <script> tags at the end of
+         <body>. Miss one and a client serves a stale file against fresh
+         siblings — a subtle, hard-to-debug class of bug. Current: v=81 -->
+    <link rel="stylesheet" href="styles.css?v=81">
 
     <!-- RM Neue is the brand font; fall back to Inter (Cibeles uses near-identical metrics) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -38,14 +42,14 @@
             </div>
 
             <!-- App switcher -->
-            <div class="app-switcher" id="appSwitcher">
-                <button class="app-switch-btn active" data-app="fan">
+            <div class="app-switcher" id="appSwitcher" role="tablist" aria-label="Cambiar de app">
+                <button class="app-switch-btn active" data-app="fan" role="tab" aria-selected="true">
                     <span class="app-switch-icon">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
                     </span>
                     Fan App
                 </button>
-                <button class="app-switch-btn" data-app="vip">
+                <button class="app-switch-btn" data-app="vip" role="tab" aria-selected="false">
                     <span class="app-switch-icon">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2 L15.5 8.5 L23 9.5 L17.5 14.5 L18.5 22 L12 18.5 L5.5 22 L6.5 14.5 L1 9.5 L8.5 8.5 Z"/></svg>
                     </span>
@@ -70,7 +74,9 @@
 
             <!-- Handle para redimensionar el ancho del panel con el ratón.
                  Al pasar el cursor aparece el indicador con flechas. -->
-            <div class="side-resize-handle" id="sideResizeHandle" aria-label="Ajustar ancho del panel"></div>
+            <div class="side-resize-handle" id="sideResizeHandle"
+                 role="separator" aria-orientation="vertical" tabindex="0"
+                 aria-label="Ajustar ancho del panel (flechas ← → para redimensionar, doble clic para restablecer)"></div>
             <div class="side-resize-cue" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,6 9,12 15,18"/></svg>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>
@@ -170,12 +176,27 @@
             <div class="side-flags" id="sideFlags"></div>
 
             <!-- Handle para redimensionar el panel desde el borde IZQUIERDO -->
-            <div class="side-resize-handle side-resize-handle-right" id="sideResizeHandleRight" aria-label="Ajustar ancho del panel derecho"></div>
+            <div class="side-resize-handle side-resize-handle-right" id="sideResizeHandleRight"
+                 role="separator" aria-orientation="vertical" tabindex="0"
+                 aria-label="Ajustar ancho del panel derecho (flechas ← → para redimensionar, doble clic para restablecer)"></div>
             <div class="side-resize-cue side-resize-cue-right" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,6 9,12 15,18"/></svg>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>
             </div>
         </aside>
+
+        <!-- Drawer toggles + scrim: sólo visibles en viewports estrechos,
+             donde los paneles pasan a ser cajones off-canvas en vez de
+             desaparecer. Los wirea app.js (setupResponsiveDrawers). -->
+        <button class="drawer-toggle drawer-toggle-left" id="drawerToggleLeft"
+                aria-label="Abrir navegación" aria-controls="sidePanel" aria-expanded="false" hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+        </button>
+        <button class="drawer-toggle drawer-toggle-right" id="drawerToggleRight"
+                aria-label="Abrir funcionalidades" aria-controls="sidePanelRight" aria-expanded="false" hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"/><circle cx="9" cy="8" r="2.2" fill="currentColor"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="15" cy="16" r="2.2" fill="currentColor"/></svg>
+        </button>
+        <div class="drawer-scrim" id="drawerScrim" hidden></div>
     </div>
 
     <!-- Auth overlay (login / forgot / reset / setup)
@@ -219,11 +240,16 @@
          don't keep a stale copy (Python http.server and GH Pages both respect
          a different query string as a different cache entry). -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-    <script defer src="auth.js?v=80"></script>
-    <script defer src="flags.js?v=80"></script>
-    <script defer src="data.js?v=80"></script>
-    <script defer src="app.js?v=80"></script>
-    <script defer src="flow_exporter.js?v=80"></script>
-    <script defer src="jira_initiatives.js?v=80"></script>
+    <!-- mock_utils.js MUST load first: it defines window.MockUI (toast,
+         escapeHtml, copyToClipboard…) that the modules below rely on. -->
+    <script defer src="mock_utils.js?v=81"></script>
+    <script defer src="auth.js?v=81"></script>
+    <script defer src="flags.js?v=81"></script>
+    <script defer src="data.js?v=81"></script>
+    <script defer src="app.js?v=81"></script>
+    <!-- Auth UI extraído de app.js (mismos símbolos globales). -->
+    <script defer src="auth_ui.js?v=81"></script>
+    <script defer src="flow_exporter.js?v=81"></script>
+    <script defer src="jira_initiatives.js?v=81"></script>
 </body>
 </html>

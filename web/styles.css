@@ -109,17 +109,27 @@ body.resizing-side * {
 .side-resize-handle {
     position: absolute;
     top: 0;
-    right: -3px;            /* pisar el borde para capturar el cursor */
-    width: 6px;
+    right: -5px;            /* pisar el borde para capturar el cursor */
+    width: 10px;           /* hit-area cómodo (antes 6px, difícil de agarrar) */
     height: 100%;
     z-index: 50;
     cursor: col-resize;
     background: transparent;
     transition: background 0.15s;
 }
+/* Hover/active/keyboard-focus comparten el mismo realce. El color final
+   (sobre el fondo claro del panel) se define en una sola regla — antes
+   estaba duplicado más abajo con otra opacidad. */
 .side-resize-handle:hover,
-.side-resize-handle.active {
-    background: rgba(62, 49, 250, 0.35);
+.side-resize-handle.active,
+.side-resize-handle:focus-visible {
+    background: rgba(62, 49, 250, 0.20);
+    outline: none;
+}
+/* El foco por teclado también muestra la "cue" con flechas. */
+.side-resize-handle:focus-visible + .side-resize-cue {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.05);
 }
 
 /* Indicador visible al pasar por encima (flechas izquierda/derecha) */
@@ -409,7 +419,10 @@ body.resizing-side * {
 }
 
 .nav-tab:focus-visible,
-.nav-sub:focus-visible {
+.nav-sub:focus-visible,
+.app-switch-btn:focus-visible,
+.stage-tool-btn:focus-visible,
+.side-user-row:focus-visible {
     outline: 2px solid var(--rm-primary);
     outline-offset: 2px;
 }
@@ -3097,13 +3110,63 @@ body.capture-mode .home-indicator { display: none !important; }
     font-size: 14px;
 }
 
+/* ── Responsive drawers ──────────────────────────────────────────
+   En viewports estrechos los paneles no caben junto al móvil. En vez
+   de OCULTARLOS (dejando la navegación / las funcionalidades
+   inaccesibles), pasan a ser cajones off-canvas que se abren con un
+   botón flotante + scrim. Ver setupResponsiveDrawers() en app.js. */
+.drawer-toggle {
+    display: none;                 /* sólo visible dentro de las media queries */
+    position: fixed;
+    top: 14px;
+    z-index: 9100;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    color: var(--side-text, #0f2145);
+    border: 1px solid var(--side-border, rgba(15, 33, 69, 0.12));
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(9, 14, 33, 0.16);
+    cursor: pointer;
+    transition: background 0.14s;
+}
+.drawer-toggle:hover { background: var(--side-hover, #f2f4f9); }
+.drawer-toggle:focus-visible { outline: 2px solid var(--rm-primary, #3e31fa); outline-offset: 2px; }
+.drawer-toggle-left  { left: 14px; }
+.drawer-toggle-right { right: 14px; }
+
+.drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 14, 33, 0.42);
+    z-index: 8500;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+.drawer-scrim.show { opacity: 1; }
+
 @media (max-width: 1280px) {
-    /* Cuando no hay sitio para los dos sidebars + el móvil, escondemos
-       el panel derecho. Las funcionalidades siguen accesibles toggleando
-       la visibilidad desde fuera (no implementado todavía) — por ahora
-       priorizamos que el móvil quede bien centrado. */
     .app-layout { grid-template-columns: var(--side-panel-w) minmax(0, 1fr); }
-    .side-panel-right { display: none; }
+    /* Panel derecho → cajón off-canvas desde la derecha. */
+    .side-panel-right {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        height: 100dvh;
+        width: min(var(--side-panel-right-w), 88vw);
+        transform: translateX(100%);
+        transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        z-index: 9000;
+        box-shadow: -18px 0 44px rgba(9, 14, 33, 0.30);
+    }
+    .side-panel-right.drawer-open { transform: translateX(0); }
+    .drawer-toggle-right { display: inline-flex; }
+    /* Redimensionar no aplica en modo cajón. */
+    .side-resize-handle-right,
+    .side-resize-cue-right { display: none; }
 }
 
 @media (max-width: 900px) {
@@ -3113,7 +3176,25 @@ body.capture-mode .home-indicator { display: none !important; }
 
 @media (max-width: 720px) {
     .app-layout { grid-template-columns: 1fr; }
-    .side-panel { display: none; }
+    /* Panel izquierdo → cajón off-canvas desde la izquierda.
+       OJO: el panel derecho también lleva la clase .side-panel, así que
+       excluimos .side-panel-right para no reposicionarlo aquí. */
+    .side-panel:not(.side-panel-right) {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        height: 100dvh;
+        width: min(var(--side-panel-w), 86vw);
+        transform: translateX(-100%);
+        transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        z-index: 9000;
+        box-shadow: 18px 0 44px rgba(9, 14, 33, 0.30);
+    }
+    .side-panel:not(.side-panel-right).drawer-open { transform: translateX(0); }
+    .drawer-toggle-left { display: inline-flex; }
+    .side-panel:not(.side-panel-right) .side-resize-handle,
+    .side-panel:not(.side-panel-right) .side-resize-cue { display: none; }
 }
 
 /* ================================================================
@@ -11920,6 +12001,121 @@ input.has-mismatch {
 .jira-modal-foot.ok  { color: #8ad0a0; }
 .jira-modal-foot.err { color: #e08c8c; }
 
+/* ── "Todas las iniciativas" — listado agregado agrupado por epic ── */
+.jira-list-panel { width: min(720px, 100%); }
+.jira-list-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 20px 6px;
+    padding: 9px 12px;
+    background: #0f1018;
+    border: 1px solid #2c2d3a;
+    border-radius: 10px;
+    color: #9a9ab0;
+}
+.jira-list-search svg { flex-shrink: 0; }
+.jira-list-search input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: #e8e8f0;
+    font-family: inherit;
+    font-size: 13px;
+}
+.jira-list-search input::placeholder { color: #6b6b80; }
+
+.jira-list-body {
+    padding: 6px 14px 16px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.jira-list-count {
+    font-size: 11px;
+    color: #8a8aa0;
+    padding: 4px 6px 8px;
+}
+.jira-list-empty {
+    padding: 28px 8px;
+    text-align: center;
+    color: #9a9ab0;
+    font-size: 13px;
+}
+.jira-list-group { margin-bottom: 14px; }
+.jira-list-group-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 8px;
+    position: sticky;
+    top: 0;
+    background: #15161f;
+    z-index: 1;
+}
+.jira-list-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #c9a36e;
+}
+.jira-list-group-count {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #9a9ab0;
+    background: #232432;
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+.jira-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    margin-bottom: 5px;
+    background: #1a1b26;
+    border: 1px solid #262735;
+    border-radius: 10px;
+    color: #e8e8f0;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.13s, border-color 0.13s;
+}
+.jira-list-item:hover { background: #21222f; border-color: #3a3b4d; }
+.jira-list-item:focus-visible { outline: 2px solid #c9a36e; outline-offset: 2px; }
+.jira-list-item-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    min-width: 0;
+}
+.jira-list-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.jira-chip {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: #2a2b39;
+    color: #c2c2d2;
+    border: 1px solid transparent;
+}
+.jira-chip.prio-high { background: rgba(224, 90, 90, 0.16); color: #f0a0a0; border-color: rgba(224, 90, 90, 0.3); }
+.jira-chip.prio-med  { background: rgba(224, 170, 80, 0.16); color: #edc07a; border-color: rgba(224, 170, 80, 0.3); }
+.jira-chip.prio-low  { background: rgba(120, 180, 120, 0.16); color: #9ed09e; border-color: rgba(120, 180, 120, 0.3); }
+.jira-chip.est { background: #232432; color: #a8a8c0; }
+
 /* Overlay shown while a flow capture is running. Sits above
    everything else on the page. */
 .flow-export-overlay {
@@ -14624,11 +14820,37 @@ input.has-mismatch {
     border-color: rgba(15, 33, 69, 0.24) !important;
 }
 
-/* Resize cue — softer purple over the new light background */
-.side-resize-handle:hover,
-.side-resize-handle.active {
-    background: rgba(62, 49, 250, 0.20);
+/* "Copiar enlace de esta configuración" — acción de compartir, ancho
+   completo bajo los dos botones del footer. */
+.flags-share-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    margin-top: 6px;
+    padding: 8px;
+    background: rgba(62, 49, 250, 0.06);
+    border: 1px solid rgba(62, 49, 250, 0.22);
+    border-radius: 8px;
+    color: var(--rm-primary, #3e31fa);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
+.flags-share-btn:hover {
+    background: rgba(62, 49, 250, 0.12);
+    border-color: rgba(62, 49, 250, 0.4);
+}
+.flags-share-btn:focus-visible {
+    outline: 2px solid var(--rm-primary, #3e31fa);
+    outline-offset: 2px;
+}
+
+/* (La regla de realce del resize handle se unificó en la definición
+   original, arriba — antes estaba aquí duplicada con otra opacidad.) */
 
 /* ════════════════════════════════════════════════════════════════
    USER ADMIN PANEL — UX upgrades
@@ -18416,3 +18638,93 @@ input.has-mismatch {
     border-color: #5040E8;
 }
 
+
+/* ════════════════════════════════════════════════════════════════
+   TOAST NOTIFICATIONS (window.MockUI.toast / window.toast)
+   Non-blocking replacement for the scattered native alert() calls.
+   Stacks bottom-centre, auto-dismisses, dark bubbles that read well
+   over the light console chrome.
+   ════════════════════════════════════════════════════════════════ */
+.mock-toast-host {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translateX(-50%);
+    z-index: 12000;              /* above the flow-export overlay (9999) */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;        /* clicks pass through the gaps */
+    width: max-content;
+    max-width: min(440px, calc(100vw - 32px));
+}
+.mock-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px 11px 14px;
+    border-radius: 12px;
+    background: #10152A;
+    color: #EEF1FB;
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: 0.1px;
+    box-shadow: 0 12px 34px rgba(9, 14, 33, 0.34), 0 2px 8px rgba(9, 14, 33, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+    transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+}
+.mock-toast.in  { opacity: 1; transform: translateY(0) scale(1); }
+.mock-toast.out { opacity: 0; transform: translateY(8px) scale(0.98); }
+
+.mock-toast-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+.mock-toast-msg { flex: 1; min-width: 0; }
+.mock-toast-close {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: rgba(238, 241, 251, 0.55);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.mock-toast-close:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.mock-toast-close:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 1px;
+}
+
+/* Accent per type — tints the icon chip + a left rail. */
+.mock-toast-success { border-left: 3px solid #34D399; }
+.mock-toast-success .mock-toast-icon { color: #34D399; background: rgba(52, 211, 153, 0.14); }
+.mock-toast-error   { border-left: 3px solid #F87171; }
+.mock-toast-error   .mock-toast-icon { color: #F87171; background: rgba(248, 113, 113, 0.16); }
+.mock-toast-warn    { border-left: 3px solid #FBBF24; }
+.mock-toast-warn    .mock-toast-icon { color: #FBBF24; background: rgba(251, 191, 36, 0.16); }
+.mock-toast-info    { border-left: 3px solid #60A5FA; }
+.mock-toast-info    .mock-toast-icon { color: #60A5FA; background: rgba(96, 165, 250, 0.16); }
+
+@media (prefers-reduced-motion: reduce) {
+    .mock-toast { transition: opacity 0.15s ease; transform: none; }
+    .mock-toast.in { transform: none; }
+    .mock-toast.out { transform: none; }
+}

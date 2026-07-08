@@ -25,7 +25,11 @@ function has(key) { return !!REG[key]; }
 window.JiraInitiatives = {
     register, has,
     get: (key) => REG[key],
-    show: openModal
+    show: openModal,
+    // Aggregate access for the "all initiatives" browser.
+    list: () => Object.keys(REG).map(key => ({ key, ...REG[key] })),
+    count: () => Object.keys(REG).length,
+    showList: openListModal
 };
 
 // ── Markdown builder ────────────────────────────────────────────
@@ -122,25 +126,32 @@ function buildMarkdown(def) {
 
 // ── Modal ───────────────────────────────────────────────────────
 let _modalEl = null;
+let _lastFocus = null;          // foco a restaurar al cerrar
+let _prevBodyOverflow = null;   // overflow del body antes del scroll-lock
 
 function openModal(flagKey) {
     const def = REG[flagKey];
     if (!def) {
-        alert('No hay iniciativa registrada para esta funcionalidad.');
+        if (window.MockUI && window.MockUI.toast) {
+            window.MockUI.toast('No hay iniciativa registrada para esta funcionalidad.', { type: 'warn' });
+        }
         return;
     }
     const md = buildMarkdown({ ...def, flagKey });
     closeModal();
 
+    // Recuerda el elemento con foco para devolvérselo al cerrar.
+    _lastFocus = document.activeElement;
+
     const el = document.createElement('div');
     el.className = 'jira-modal-overlay';
     el.innerHTML = `
         <div class="jira-modal-backdrop" data-jira-action="close"></div>
-        <div class="jira-modal-panel" role="dialog" aria-label="Iniciativa de JIRA">
+        <div class="jira-modal-panel" role="dialog" aria-modal="true" aria-labelledby="jiraModalTitle">
             <div class="jira-modal-head">
                 <div class="jira-modal-head-text">
                     <div class="jira-modal-kicker">Iniciativa de JIRA</div>
-                    <div class="jira-modal-title">${escapeHTML(def.title)}</div>
+                    <div class="jira-modal-title" id="jiraModalTitle">${escapeHTML(def.title)}</div>
                 </div>
                 <button class="jira-modal-close" data-jira-action="close" aria-label="Cerrar">
                     <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -163,11 +174,20 @@ function openModal(flagKey) {
                     Copiar al portapapeles
                 </button>
             </div>
-            <div class="jira-modal-foot" id="jiraModalFoot"></div>
+            <div class="jira-modal-foot" id="jiraModalFoot" role="status" aria-live="polite"></div>
         </div>
     `;
     document.body.appendChild(el);
     _modalEl = el;
+
+    // Bloquea el scroll del fondo mientras el modal está abierto.
+    _prevBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // Mueve el foco al botón de cerrar para que teclado / lectores de
+    // pantalla entren en el diálogo.
+    const closeBtn = el.querySelector('.jira-modal-close');
+    if (closeBtn) closeBtn.focus();
 
     el.addEventListener('click', (e) => {
         const tgt = e.target.closest('[data-jira-action]');
@@ -184,6 +204,13 @@ function openModal(flagKey) {
 function closeModal() {
     if (_modalEl) { _modalEl.remove(); _modalEl = null; }
     document.removeEventListener('keydown', _escClose);
+    // Restaura scroll y foco.
+    document.body.style.overflow = _prevBodyOverflow || '';
+    _prevBodyOverflow = null;
+    if (_lastFocus && typeof _lastFocus.focus === 'function') {
+        try { _lastFocus.focus(); } catch {}
+    }
+    _lastFocus = null;
 }
 function _escClose(e) { if (e.key === 'Escape') closeModal(); }
 
@@ -193,6 +220,117 @@ function flash(text, ok = true) {
     f.textContent = text;
     f.className = 'jira-modal-foot ' + (ok ? 'ok' : 'err');
     setTimeout(() => { if (f) { f.textContent = ''; f.className = 'jira-modal-foot'; } }, 2500);
+}
+
+// ── Aggregate "all initiatives" browser ─────────────────────────
+let _listQuery = '';
+
+function _priorityClass(p) {
+    const s = (p || '').toLowerCase();
+    if (s.includes('crít') || s.includes('alta')) return 'high';
+    if (s.includes('media')) return 'med';
+    if (s.includes('baja')) return 'low';
+    return '';
+}
+
+// Agrupa las iniciativas por epic (respetando el orden de registro) y
+// devuelve [{ epic, items: [{key, title, priority, estimate}] }].
+function _groupedInitiatives(query) {
+    const q = (query || '').trim().toLowerCase();
+    const groups = new Map();
+    for (const key of Object.keys(REG)) {
+        const def = REG[key];
+        const hay = `${def.title || ''} ${def.epic || ''} ${key}`.toLowerCase();
+        if (q && !hay.includes(q)) continue;
+        const epic = def.epic || 'Sin epic';
+        if (!groups.has(epic)) groups.set(epic, []);
+        groups.get(epic).push({ key, title: def.title || key, priority: def.priority, estimate: def.estimate });
+    }
+    return [...groups.entries()].map(([epic, items]) => ({ epic, items }));
+}
+
+function _renderListBody(query) {
+    const groups = _groupedInitiatives(query);
+    const total = Object.keys(REG).length;
+    const shown = groups.reduce((n, g) => n + g.items.length, 0);
+    if (!groups.length) {
+        return `<div class="jira-list-empty">Ninguna iniciativa coincide con «${escapeHTML(query)}».</div>`;
+    }
+    const chip = (val, cls) => val ? `<span class="jira-chip ${cls}">${escapeHTML(val)}</span>` : '';
+    const groupsHTML = groups.map(g => `
+        <div class="jira-list-group">
+            <div class="jira-list-group-head">
+                <span class="jira-list-group-title">${escapeHTML(g.epic)}</span>
+                <span class="jira-list-group-count">${g.items.length}</span>
+            </div>
+            ${g.items.map(it => `
+                <button class="jira-list-item" data-jira-open="${escapeHTML(it.key)}">
+                    <span class="jira-list-item-title">${escapeHTML(it.title)}</span>
+                    <span class="jira-list-item-meta">
+                        ${chip(it.priority, 'prio-' + _priorityClass(it.priority))}
+                        ${chip(it.estimate, 'est')}
+                    </span>
+                </button>
+            `).join('')}
+        </div>
+    `).join('');
+    return `<div class="jira-list-count">${shown} de ${total} iniciativas</div>${groupsHTML}`;
+}
+
+function openListModal() {
+    closeModal();
+    _lastFocus = document.activeElement;
+    _listQuery = '';
+
+    const el = document.createElement('div');
+    el.className = 'jira-modal-overlay';
+    el.innerHTML = `
+        <div class="jira-modal-backdrop" data-jira-action="close"></div>
+        <div class="jira-modal-panel jira-list-panel" role="dialog" aria-modal="true" aria-labelledby="jiraListTitle">
+            <div class="jira-modal-head">
+                <div class="jira-modal-head-text">
+                    <div class="jira-modal-kicker">Iniciativas de JIRA</div>
+                    <div class="jira-modal-title" id="jiraListTitle">Todas las iniciativas</div>
+                </div>
+                <button class="jira-modal-close" data-jira-action="close" aria-label="Cerrar">
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="jira-list-search">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="19" y1="19" x2="15" y2="15"/></svg>
+                <input type="search" id="jiraListSearch" placeholder="Filtrar por título, epic o key" autocomplete="off">
+            </div>
+            <div class="jira-list-body" id="jiraListBody">${_renderListBody('')}</div>
+        </div>
+    `;
+    document.body.appendChild(el);
+    _modalEl = el;
+    _prevBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const search = el.querySelector('#jiraListSearch');
+    const body = el.querySelector('#jiraListBody');
+    if (search) {
+        search.focus();
+        search.addEventListener('input', (e) => {
+            _listQuery = e.target.value;
+            body.innerHTML = _renderListBody(_listQuery);
+        });
+    }
+
+    el.addEventListener('click', (e) => {
+        const closeTgt = e.target.closest('[data-jira-action="close"]');
+        if (closeTgt) { closeModal(); return; }
+        const openTgt = e.target.closest('[data-jira-open]');
+        if (openTgt) {
+            // Cerrar la lista y abrir la ficha de la iniciativa.
+            openModal(openTgt.dataset.jiraOpen);
+        }
+    });
+
+    document.addEventListener('keydown', _escClose);
 }
 
 async function copyMd(md) {
