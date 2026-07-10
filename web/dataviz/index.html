@@ -406,9 +406,11 @@ function vizStaircase(){
     const shots=MATCH.shotsData.filter(s=>s.team===team).sort((a,b)=>a.min-b.min);
     let cum=0, d=`M ${x(0)} ${y(0)}`;
     shots.forEach(s=>{ d+=` L ${x(s.min)} ${y(cum)}`; cum+=s.xg; d+=` L ${x(s.min)} ${y(cum)}`; });
-    // close the gap to the official total (remaining shots not in the sample)
-    d+=` L ${x(90)} ${y(cum)}`;
-    if (total>cum) d+=` L ${x(90)} ${y(total)}`;
+    // Close the gap to the official total (remaining shots not in the sample) at the
+    // LAST plotted minute so the path stays monotonic in x — a stoppage-time shot
+    // (e.g. ARG at 92') must never make the staircase backtrack to an earlier minute.
+    const lastMin = shots.length ? shots[shots.length-1].min : 0;
+    if (total>cum) d+=` L ${x(lastMin)} ${y(total)}`;
     d+=` L ${x(T_END)} ${y(total)}`;
     svg.appendChild(el('path',{d,fill:'none',stroke:color,'stroke-width':2,'stroke-linejoin':'round'}));
     // shot dots
