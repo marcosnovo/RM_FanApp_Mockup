@@ -317,144 +317,83 @@ function possHomeAt(m){ return clamp(58 + 6*Math.sin(m/13) + (m/95)*4, 30, 78); 
    ============================================================================ */
 function vizMomentum(upto = T_END){
   /* ---- geometry (viewBox width fixed at 390; height free) ---- */
-  const W=390, H=234, padL=14, padR=14, top=54, bot=198;
-  const mid=(top+bot)/2, amp=52, hillScale=52, hillW=6.5;
+  const W=390, H=222, padL=14, padR=14, top=48, bot=190;
+  const mid=(top+bot)/2, amp=54;
   const x = m => padL + (m/T_END)*(W-padL-padR);
-  const fy = m => mid + momentumAt(m)*amp;   // home+ → frontier lower → more blue above
+  const fy = m => mid + momentumAt(m)*amp;            // home + → frontier lower → more blue above
 
   /* ---- theme-aware colours ---- */
   const cHome=css('--home'), cAway=css('--away'), cInk=css('--ink'),
-        cMuted=css('--muted'), cBorder=css('--border'), cSurf=css('--surface-2'),
-        cGold=css('--gold');
+        cMuted=css('--muted'), cBorder=css('--border'), cGold=css('--gold');
 
-  const svg = el('svg',{class:'viz', viewBox:`0 0 ${W} ${H}`, role:'img',
-    'aria-labelledby':'m1t m1d'});
+  const svg = el('svg',{class:'viz', viewBox:`0 0 ${W} ${H}`, role:'img','aria-labelledby':'m1t m1d'});
   svg.appendChild(el('title',{id:'m1t'},'Momentum del partido, tipo lecho de río'));
   svg.appendChild(el('desc',{id:'m1d'},
-    'Banda de 90 minutos. La frontera fluida se inclina hacia el equipo que domina cada minuto (arriba en azul manda Argentina, abajo en rojo Egipto). Las colinas son remates, con altura proporcional a su xG, y los destellos verticales marcan los cinco goles.'));
+    'Banda de 90 minutos cuya frontera fluida se inclina hacia el equipo que domina cada minuto: arriba en azul manda Argentina, abajo en rojo Egipto. Cada círculo es un remate con tamaño proporcional a su xG, y los destellos verticales marcan los cinco goles.'));
 
-  /* ---- sample the frontier once per minute up to `upto` (progressive reveal) ---- */
-  const mm=[]; for(let m=0;m<=upto;m+=1) mm.push(m);
-  if (mm[mm.length-1] < upto) mm.push(upto);
-  if (mm.length<2) mm.push(mm[0]);
-  const P = mm.map(m=>[x(m), fy(m)]);
-  const lastX = P[P.length-1][0];
+  /* ---- sample the frontier once per minute up to `upto` (progressive reveal in Live) ---- */
+  const pts=[]; for(let m=0;m<=upto;m+=1) pts.push([x(m),fy(m)]);
+  if(pts.length<2) pts.push([x(0),fy(0)]);
 
-  /* Catmull-Rom → cubic bézier: one segment string per gap (passes through samples,
-     so goal/shot markers sit exactly on the curve). */
-  const seg = i => {
-    const p0=P[i-1]||P[i], p1=P[i], p2=P[i+1], p3=P[i+2]||P[i+1];
-    const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
-    const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
-    return `C ${c1x.toFixed(2)},${c1y.toFixed(2)} ${c2x.toFixed(2)},${c2y.toFixed(2)} ${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
-  };
-  let curve=''; for(let i=0;i<P.length-1;i++) curve+=' '+seg(i);
-  const start=`${P[0][0].toFixed(2)},${P[0][1].toFixed(2)}`;
-
-  /* ================= layer 1 · faint minute gridlines ================= */
-  [15,30,45,60,75].forEach(m=>{ if(m>upto) return;
-    svg.appendChild(el('line',{x1:x(m),y1:top,x2:x(m),y2:bot,
-      stroke:cBorder,'stroke-width':0.5,'stroke-opacity':0.35}));
-  });
-
-  /* ================= layer 2 · goal flash columns (behind the river) ================= */
-  MATCH.goals.forEach(g=>{ if(g.min>upto) return;
-    const cx=x(g.min), col=g.team==='home'?cHome:cAway;
-    svg.appendChild(el('rect',{x:cx-2.5,y:top,width:5,height:bot-top,
-      fill:col,'fill-opacity':0.10}));
-  });
-
-  /* ================= layer 3 · equilibrium axis (neutral momentum) ================= */
-  svg.appendChild(el('line',{x1:padL,y1:mid,x2:lastX,y2:mid,
-    stroke:cMuted,'stroke-width':0.5,'stroke-dasharray':'1 3','stroke-opacity':0.30}));
-
-  /* ================= layer 4 · the two river banks (opacity layers) ================= */
-  svg.appendChild(el('path',{d:`M ${P[0][0].toFixed(2)},${top} L ${start}${curve} L ${lastX.toFixed(2)},${top} Z`,
-    fill:cHome,'fill-opacity':0.16}));
-  svg.appendChild(el('path',{d:`M ${P[0][0].toFixed(2)},${bot} L ${start}${curve} L ${lastX.toFixed(2)},${bot} Z`,
-    fill:cAway,'fill-opacity':0.16}));
-
-  /* ================= layer 5 · shoreline — each bézier tinted by who leads that minute ================= */
-  for(let i=0;i<P.length-1;i++){
-    const midMin=(mm[i]+mm[i+1])/2;
-    const col=momentumAt(midMin)>=0 ? cHome : cAway;
-    svg.appendChild(el('path',{d:`M ${P[i][0].toFixed(2)},${P[i][1].toFixed(2)} ${seg(i)}`,
-      fill:'none',stroke:col,'stroke-width':1.4,'stroke-opacity':0.75,'stroke-linecap':'round'}));
+  /* Catmull-Rom → cubic bezier: a genuinely smooth river, drawn by hand
+     (no charting library, so the prototype stays self-contained / offline). */
+  function smooth(P){
+    if(P.length<3) return `M ${P[0][0].toFixed(2)} ${P[0][1].toFixed(2)} L ${P[P.length-1][0].toFixed(2)} ${P[P.length-1][1].toFixed(2)}`;
+    let d=`M ${P[0][0].toFixed(2)} ${P[0][1].toFixed(2)}`;
+    for(let i=0;i<P.length-1;i++){
+      const p0=P[i-1]||P[i], p1=P[i], p2=P[i+1], p3=P[i+2]||P[i+1];
+      const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+      const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+      d+=` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`;
+    }
+    return d;
   }
+  const front=smooth(pts);
+  const firstX=pts[0][0], lastX=pts[pts.length-1][0];
 
-  /* ================= layer 6 · hills = shots (height ∝ xG; up=ARG, down=EGY) ================= */
-  MATCH.shotsData.forEach(s=>{ if(s.min>upto) return;
-    const cx=x(s.min), base=fy(s.min), up=s.team==='home';
-    const col=up?cHome:cAway, h=s.xg*hillScale;
-    const tip=clamp(up?base-h:base+h, top+2, bot-2);
-    const fo=s.goal?0.85:(s.onTarget?0.5:0.22);
-    svg.appendChild(el('path',{
-      d:`M ${(cx-hillW).toFixed(2)},${base.toFixed(2)} `+
-        `C ${(cx-hillW*0.45).toFixed(2)},${base.toFixed(2)} ${(cx-hillW*0.55).toFixed(2)},${tip.toFixed(2)} ${cx.toFixed(2)},${tip.toFixed(2)} `+
-        `C ${(cx+hillW*0.55).toFixed(2)},${tip.toFixed(2)} ${(cx+hillW*0.45).toFixed(2)},${base.toFixed(2)} ${(cx+hillW).toFixed(2)},${base.toFixed(2)} Z`,
-      fill:col,'fill-opacity':fo,stroke:col,'stroke-width':0.5,
-      'stroke-opacity':s.goal?0.9:0.55}));
-    // apex dot = shot on target (redundant, non-colour encoding of danger)
-    if(s.onTarget) svg.appendChild(el('circle',{cx,cy:tip,r:1.5,
-      fill:col,stroke:cSurf,'stroke-width':0.5}));
+  /* ---- full-coverage fills: blue above the frontier (home), red below (away) ---- */
+  svg.appendChild(el('path',{d:`${front} L ${lastX} ${top} L ${firstX} ${top} Z`, fill:cHome,'fill-opacity':0.22}));
+  svg.appendChild(el('path',{d:`${front} L ${lastX} ${bot} L ${firstX} ${bot} Z`, fill:cAway,'fill-opacity':0.22}));
+  /* faint 50-50 reference so the tilt reads against a baseline */
+  svg.appendChild(el('line',{x1:padL,y1:mid,x2:W-padR,y2:mid,stroke:cMuted,'stroke-width':0.5,'stroke-dasharray':'1 4','stroke-opacity':0.45}));
+  /* the flowing frontier itself */
+  svg.appendChild(el('path',{d:front,fill:'none',stroke:cInk,'stroke-width':1.4,'stroke-opacity':0.5,'stroke-linecap':'round'}));
+  /* band frame */
+  svg.appendChild(el('rect',{x:padL,y:top,width:W-padL-padR,height:bot-top,rx:8,fill:'none',stroke:cBorder,'stroke-width':0.5}));
+
+  /* ---- shots = clean xG bubbles sitting in each team's territory (no more spikes) ----
+     radius ∝ √xG (area reads as xG) · on-target = filled · off-target = hollow · goal = gold ring */
+  MATCH.shotsData.forEach(s=>{
+    if(s.min>upto) return;
+    const home=s.team==='home';
+    const cx=x(s.min), base=fy(s.min);
+    const r=2.4+Math.sqrt(s.xg)*11;
+    const cy = home ? base-r-1.5 : base+r+1.5;       // nudge into own colour
+    const col = home ? cHome : cAway;
+    if(s.onTarget){
+      svg.appendChild(el('circle',{cx,cy,r,fill:col,'fill-opacity':s.goal?0.9:0.6,stroke:col,'stroke-width':1}));
+    }else{
+      svg.appendChild(el('circle',{cx,cy,r,fill:col,'fill-opacity':0.10,stroke:col,'stroke-width':1}));
+    }
+    if(s.goal) svg.appendChild(el('circle',{cx,cy,r:r+2.6,fill:'none',stroke:cGold,'stroke-width':1.3}));
   });
 
-  /* ================= layer 7 · goals — dashed guide + ringed marker on the frontier ================= */
-  MATCH.goals.forEach(g=>{ if(g.min>upto) return;
-    const cx=x(g.min), col=g.team==='home'?cHome:cAway, cy=fy(g.min);
-    svg.appendChild(el('line',{x1:cx,y1:top,x2:cx,y2:bot,stroke:col,
-      'stroke-width':1,'stroke-dasharray':'1.5 3.5','stroke-opacity':0.55}));
-    svg.appendChild(el('circle',{cx,cy,r:5,fill:'none',stroke:col,'stroke-width':1}));
-    svg.appendChild(el('circle',{cx,cy,r:2.8,fill:col,stroke:cSurf,'stroke-width':1}));
+  /* ---- goals = vertical flash + dashed line + staggered label ---- */
+  MATCH.goals.forEach((g,i)=>{
+    if(g.min>upto) return;
+    const cx=x(g.min), home=g.team==='home', col=home?cHome:cAway, short=home?MATCH.home.short:MATCH.away.short;
+    svg.appendChild(el('line',{x1:cx,y1:top,x2:cx,y2:bot,stroke:col,'stroke-width':1,'stroke-dasharray':'2 3','stroke-opacity':0.5}));
+    const ly=12+(i%3)*11;                              // 3 rows so clustered goals don't collide
+    const anchor = cx>W-64 ? 'end' : (cx<48?'start':'middle');
+    svg.appendChild(el('line',{x1:cx,y1:ly+2,x2:cx,y2:top,stroke:col,'stroke-width':0.5,'stroke-opacity':0.35}));
+    svg.appendChild(el('text',{x:cx,y:ly,'text-anchor':anchor,'font-size':8,fill:col,'font-weight':500},`${minLabel(g.min)} gol ${short}`));
   });
 
-  /* ================= layer 8 · band frame (hairline, on top) ================= */
-  svg.appendChild(el('rect',{x:padL,y:top,width:W-padL-padR,height:bot-top,
-    fill:'none',stroke:cBorder,'stroke-width':0.5}));
-
-  /* ================= layer 9 · live "now" marker (only mid-match) ================= */
-  if (upto < T_END-0.01){
-    const nx=x(upto);
-    svg.appendChild(el('line',{x1:nx,y1:top,x2:nx,y2:bot,stroke:cGold,
-      'stroke-width':1,'stroke-opacity':0.55}));
-    svg.appendChild(el('circle',{class:'rm-now',cx:nx,cy:fy(upto),r:3,
-      fill:cGold,stroke:cSurf,'stroke-width':1}));
-  }
-
-  /* ================= layer 10 · team anchors ================= */
-  svg.appendChild(el('text',{x:padL+3,y:top+13,'font-size':10,'font-weight':500,
-    fill:cHome},'Argentina'));
-  svg.appendChild(el('text',{x:W-padR-3,y:bot-6,'text-anchor':'end','font-size':10,
-    'font-weight':500,fill:cAway},'Egipto'));
-
-  /* ================= layer 11 · minute axis ================= */
-  [0,15,30,45,60,75,90].forEach(m=>{
-    svg.appendChild(el('line',{x1:x(m),y1:bot,x2:x(m),y2:bot+3.5,
-      stroke:cBorder,'stroke-width':0.5}));
-    svg.appendChild(el('text',{x:x(m),y:bot+14,'text-anchor':'middle','font-size':7.5,
-      fill:cMuted,style:'font-variant-numeric:tabular-nums'},`${m}'`));
-  });
-
-  /* ================= layer 12 · goal labels — de-overlapped lane above the band ================= */
-  const gls = MATCH.goals.filter(g=>g.min<=upto)
-    .map(g=>({cx:x(g.min), min:g.min, col:g.team==='home'?cHome:cAway,
-              short:g.team==='home'?MATCH.home.short:MATCH.away.short}))
-    .sort((a,b)=>a.cx-b.cx);
-  const rowRight=[], rowY=[18,30,42];
-  gls.forEach(g=>{
-    const txt=`${minLabel(g.min)} gol ${g.short}`;
-    const halfW=txt.length*2.2+2;
-    let row=0; while(row<rowY.length-1 && g.cx-halfW < (rowRight[row]||-99)) row++;
-    rowRight[row]=g.cx+halfW;
-    const tx=clamp(g.cx, padL+halfW, W-padR-halfW);
-    const ly=rowY[row];
-    // leader from label to the top of the band at the true goal minute
-    svg.appendChild(el('line',{x1:g.cx,y1:top,x2:tx,y2:ly+2.5,
-      stroke:g.col,'stroke-width':0.5,'stroke-opacity':0.5}));
-    svg.appendChild(el('text',{x:tx,y:ly,'text-anchor':'middle','font-size':8,
-      'font-weight':500,fill:g.col,style:'font-variant-numeric:tabular-nums'},txt));
-  });
-
+  /* ---- team anchors + minute axis + Live "now" marker ---- */
+  svg.appendChild(el('text',{x:padL+3,y:top+12,'font-size':9.5,'font-weight':500,fill:cHome},'Argentina'));
+  svg.appendChild(el('text',{x:W-padR-3,y:bot-6,'text-anchor':'end','font-size':9.5,'font-weight':500,fill:cAway},'Egipto'));
+  [0,15,30,45,60,75,90].forEach(m=>svg.appendChild(el('text',{x:x(m),y:H-4,'text-anchor':'middle','font-size':7,fill:cMuted},`${m}'`)));
+  if(upto<T_END) svg.appendChild(el('line',{x1:x(upto),y1:top,x2:x(upto),y2:bot,stroke:cGold,'stroke-width':1}));
   return svg;
 }
 
@@ -616,96 +555,62 @@ function vizStaircase(){
    so ARG's larger share pulls the knot toward ARG. `frac` overridable for Live.
    ============================================================================ */
 function vizTug(frac){
-  const W=390,H=126;
-  const ropeY=82;
-  const L=30,R=360,len=R-L,cx=(L+R)/2;
-
-  const awayShare = frac!=null ? frac : MATCH.possession[1]/100;      // knot pos from left = EGY share
+  /* Posesión como CONTROL DEL CAMPO. El equipo con más balón ocupa más terreno,
+     así que "más posesión = más área" (se corrige la paradoja del tira y afloja,
+     donde el que ganaba tenía menos barra). `frac` = cuota de EGY (0..1) para Live. */
+  const W=390,H=118,padL=16,padR=16,barY=52,barH=42;
+  const L=padL,R=W-padR,len=R-L;
   const homePct = frac!=null ? Math.round((1-frac)*100) : MATCH.possession[0];
   const awayPct = 100-homePct;
-  const kx = clamp(L+len*awayShare, L+16, R-16);
+  const cxL = L + len*(homePct/100);      // línea de control: ARG ocupa [L, cxL]
+  const midX = L + len/2;                 // medio campo (50%)
 
-  const home=css('--home'), away=css('--away');
-  const ink=css('--ink'), muted=css('--muted'), border=css('--border'),
-        surf=css('--surface-2'), gold=css('--gold');
-
-  const homeWins = homePct>=awayPct;
-  const winColor = homeWins?home:away;
-  const lead = Math.abs(homePct-awayPct);
-  const hi=Math.max(homePct,awayPct), lo=Math.min(homePct,awayPct);
+  const cHome=css('--home'), cAway=css('--away'), cMuted=css('--muted'),
+        cBorder=css('--border'), cSurf=css('--surface-2'), cInk=css('--ink'), cGold=css('--gold');
 
   const svg=el('svg',{class:'viz',viewBox:`0 0 ${W} ${H}`,role:'img','aria-labelledby':'m3t m3d'});
-  svg.appendChild(el('title',{id:'m3t'},'Posesión: tira y afloja'));
+  svg.appendChild(el('title',{id:'m3t'},'Posesión como control del campo'));
   svg.appendChild(el('desc',{id:'m3d'},
-    `Una cuerda con un nudo central. El nudo está desplazado hacia ${homeWins?MATCH.home.name:MATCH.away.name}, que domina la posesión ${hi} a ${lo}.`));
+    'El campo se reparte según la posesión: el equipo con más balón ocupa más terreno y empuja la línea de control hacia el campo rival. Argentina controla el 64% del terreno, Egipto el 36%.'));
 
-  // --- displacement band: how far the knot is dragged from the 50–50 centre ---
-  const bx0=Math.min(cx,kx), bx1=Math.max(cx,kx);
-  svg.appendChild(el('rect',{x:bx0,y:ropeY-6,width:bx1-bx0,height:12,rx:6,
-    fill:winColor,'fill-opacity':0.12}));
+  /* ---- rounded pitch strip, split into two territories via clip ---- */
+  const clipId='possclip';
+  const defs=el('defs');
+  const cp=el('clipPath',{id:clipId}); cp.appendChild(el('rect',{x:L,y:barY,width:len,height:barH,rx:9})); defs.appendChild(cp);
+  svg.appendChild(defs);
+  const g=el('g',{'clip-path':`url(#${clipId})`});
+  g.appendChild(el('rect',{x:L,y:barY,width:cxL-L,height:barH,fill:cHome,'fill-opacity':0.85}));       // territorio ARG
+  g.appendChild(el('rect',{x:cxL,y:barY,width:R-cxL,height:barH,fill:cAway,'fill-opacity':0.85}));     // territorio EGY
+  /* mini marcas de campo: medio campo + círculo central (referencia 50%) */
+  g.appendChild(el('line',{x1:midX,y1:barY,x2:midX,y2:barY+barH,stroke:cSurf,'stroke-width':1,'stroke-dasharray':'3 3','stroke-opacity':0.8}));
+  g.appendChild(el('circle',{cx:midX,cy:barY+barH/2,r:12,fill:'none',stroke:cSurf,'stroke-width':1,'stroke-opacity':0.7}));
+  svg.appendChild(g);
+  svg.appendChild(el('rect',{x:L,y:barY,width:len,height:barH,rx:9,fill:'none',stroke:cBorder,'stroke-width':0.5}));
 
-  // --- rope body: soft underlay per half, then a braided twist on top ---
-  svg.appendChild(el('line',{x1:L,y1:ropeY,x2:kx,y2:ropeY,stroke:home,'stroke-width':6,'stroke-linecap':'round','stroke-opacity':0.22}));
-  svg.appendChild(el('line',{x1:kx,y1:ropeY,x2:R,y2:ropeY,stroke:away,'stroke-width':6,'stroke-linecap':'round','stroke-opacity':0.22}));
+  /* ---- control line + ball ---- */
+  svg.appendChild(el('line',{x1:cxL,y1:barY-7,x2:cxL,y2:barY+barH+7,stroke:cInk,'stroke-width':1.5}));
+  svg.appendChild(el('circle',{cx:cxL,cy:barY+barH/2,r:5.5,fill:cSurf,stroke:cInk,'stroke-width':1.5}));
+  svg.appendChild(el('circle',{cx:cxL,cy:barY+barH/2,r:2,fill:cGold}));
 
-  function braid(x0,x1,color){
-    const amp=3.1, per=12, step=2;
-    const xs=[]; for(let x=x0;x<x1;x+=step) xs.push(x); xs.push(x1);
-    let dA='',dB='';
-    xs.forEach((x,i)=>{
-      const t=(x-L)/per*Math.PI*2;
-      const yA=ropeY+Math.sin(t)*amp, yB=ropeY-Math.sin(t)*amp;
-      dA+=(i?'L':'M')+x.toFixed(1)+' '+yA.toFixed(1)+' ';
-      dB+=(i?'L':'M')+x.toFixed(1)+' '+yB.toFixed(1)+' ';
-    });
-    svg.appendChild(el('path',{d:dB,fill:'none',stroke:color,'stroke-width':2,'stroke-linecap':'round','stroke-opacity':0.5}));
-    svg.appendChild(el('path',{d:dA,fill:'none',stroke:color,'stroke-width':2,'stroke-linecap':'round','stroke-opacity':0.92}));
+  /* ---- team labels + big percentages at the ends ---- */
+  svg.appendChild(el('text',{x:L,y:22,'font-size':10,'font-weight':500,fill:cHome},'Argentina'));
+  svg.appendChild(el('text',{x:L,y:43,'font-size':21,'font-weight':500,fill:cHome},`${homePct}%`));
+  svg.appendChild(el('text',{x:R,y:22,'text-anchor':'end','font-size':10,'font-weight':500,fill:cAway},'Egipto'));
+  svg.appendChild(el('text',{x:R,y:43,'text-anchor':'end','font-size':21,'font-weight':500,fill:cAway},`${awayPct}%`));
+
+  /* ---- "push past midfield" annotation: winner shoved the control line into rival half ---- */
+  const push = homePct-50;                    // +14 → ARG empuja hacia la derecha
+  const y=barY+barH+12;
+  if(Math.abs(push)>=1){
+    const dir = push>0, col = dir?cHome:cAway;
+    // conector desde medio campo hasta la línea de control + etiqueta debajo
+    svg.appendChild(el('line',{x1:midX,y1:y,x2:cxL,y2:y,stroke:col,'stroke-width':1.2}));
+    svg.appendChild(el('circle',{cx:midX,cy:y,r:1.6,fill:col}));
+    const dir2 = dir?1:-1;
+    svg.appendChild(el('path',{d:`M ${cxL} ${y} l ${-dir2*3} -2 l 0 4 Z`,fill:col}));
+    svg.appendChild(el('text',{x:(midX+cxL)/2,y:barY+barH+23,'text-anchor':'middle','font-size':8,'font-weight':500,fill:col},
+      `${dir?'+':'−'}${Math.abs(push)} en campo rival`));
   }
-  braid(L,kx,home);
-  braid(kx,R,away);
-
-  // --- tension / segment marks along the rope (every 10%) ---
-  for(let i=1;i<10;i++){
-    const tx=L+len*i/10;
-    if(Math.abs(tx-kx)<12) continue;
-    const c=tx<kx?home:away;
-    svg.appendChild(el('line',{x1:tx,y1:ropeY-4.5,x2:tx,y2:ropeY+4.5,stroke:c,'stroke-width':0.75,'stroke-opacity':0.4}));
-  }
-
-  // --- end grips (each team's hold) ---
-  svg.appendChild(el('rect',{x:L-7,y:ropeY-10,width:7,height:20,rx:3,fill:home}));
-  svg.appendChild(el('rect',{x:R,y:ropeY-10,width:7,height:20,rx:3,fill:away}));
-
-  // --- 50–50 equilibrium reference ---
-  svg.appendChild(el('line',{x1:cx,y1:ropeY-19,x2:cx,y2:ropeY+19,stroke:border,'stroke-width':0.75,'stroke-dasharray':'2 3'}));
-  svg.appendChild(el('path',{d:`M ${cx-3} ${ropeY-19} L ${cx+3} ${ropeY-19} L ${cx} ${ropeY-15} Z`,fill:muted}));
-  svg.appendChild(el('text',{x:cx,y:ropeY-22,'text-anchor':'middle','font-size':8,fill:muted},'50'));
-
-  // --- knot: flat capsule with binding wraps + gold marker heart ---
-  svg.appendChild(el('rect',{x:kx-11,y:ropeY-15,width:22,height:30,rx:7,fill:surf,stroke:ink,'stroke-width':0.75}));
-  svg.appendChild(el('rect',{x:kx-11,y:ropeY-15,width:11,height:30,rx:7,fill:home,'fill-opacity':0.14}));
-  svg.appendChild(el('rect',{x:kx,y:ropeY-15,width:11,height:30,rx:7,fill:away,'fill-opacity':0.14}));
-  [-7,0,7].forEach(dy=>svg.appendChild(el('line',{x1:kx-11,y1:ropeY+dy,x2:kx+11,y2:ropeY+dy,stroke:ink,'stroke-width':0.5,'stroke-opacity':0.28})));
-  svg.appendChild(el('circle',{cx:kx,cy:ropeY,r:3.2,fill:gold}));
-
-  // --- displacement arrow: direction + size of the pull ---
-  const aY=ropeY+30;
-  if(lead>0){
-    const dir=kx<cx?-1:1;
-    svg.appendChild(el('line',{x1:cx,y1:aY,x2:kx-dir*5,y2:aY,stroke:winColor,'stroke-width':1}));
-    svg.appendChild(el('path',{d:`M ${kx} ${aY} L ${kx-dir*5} ${aY-3.2} L ${kx-dir*5} ${aY+3.2} Z`,fill:winColor}));
-    svg.appendChild(el('text',{x:(cx+kx)/2,y:aY-4,'text-anchor':'middle','font-size':9.5,'font-weight':500,fill:winColor,class:'tug-num'},`+${lead}`));
-  }
-
-  // --- names + big percentages at each end ---
-  svg.appendChild(el('text',{x:L-7,y:26,'font-size':9.5,'font-weight':500,fill:home},MATCH.home.name));
-  svg.appendChild(el('text',{x:L-7,y:52,'font-size':29,'font-weight':500,fill:home,class:'tug-num'},`${homePct}%`));
-  svg.appendChild(el('text',{x:R+7,y:26,'text-anchor':'end','font-size':9.5,'font-weight':500,fill:away},MATCH.away.name));
-  svg.appendChild(el('text',{x:R+7,y:52,'text-anchor':'end','font-size':29,'font-weight':500,fill:away,class:'tug-num'},`${awayPct}%`));
-
-  // --- caption ---
-  svg.appendChild(el('text',{x:cx,y:H-4,'text-anchor':'middle','font-size':8,fill:muted},'el nudo se desplaza hacia quien más controla el balón'));
-
   return svg;
 }
 
@@ -717,133 +622,68 @@ function vizTug(frac){
    deterministically — higher xG sits nearer the goal (assumption, see report).
    ============================================================================ */
 function vizConstellation(){
-  const W=390,H=290,cx=W/2,goalY=34;
-  const field='#0A1330';
-  // radial abstraction: distance from goal encodes xG (danger); NO lateral pitch coords.
-  const Rmin=48, Rmax=206, XGMAX=0.8;              // xG 0.8 -> nearest the goal
-  const AMIN=13*Math.PI/180, AMAX=70*Math.PI/180;  // fan half-spread per side
-  const TEAM={
-    home:{star:'#7FA8E8',core:'#CFE0FA',label:'#AEC6F0',name:'Argentina'},
-    away:{star:'#E58F8F',core:'#FAD0D0',label:'#F0B3B3',name:'Egipto'}
-  };
+  /* Reemplazo de la "constelación" (confusa, con ángulos inventados) por un
+     diagrama de remates por PELIGRO: cada círculo es un remate colocado según su
+     xG real (eje horizontal), tamaño ∝ xG, una fila por equipo. Honesto: no
+     inventa posición en el campo; sólo usa datos reales (xG, a puerta, gol). */
+  const W=390,H=210,padL=66,padR=18,top=22,bot=162;
+  const xgMax=0.8;
+  const x=v=>padL+(clamp(v,0,xgMax)/xgMax)*(W-padL-padR);
+  const laneH=(bot-top)/2;
+  const laneY={home:top+laneH*0.5, away:top+laneH*1.5};
+
+  const cHome=css('--home'), cAway=css('--away'), cMuted=css('--muted'),
+        cBorder=css('--border'), cInk=css('--ink'), cGold=css('--gold');
+
   const svg=el('svg',{class:'viz',viewBox:`0 0 ${W} ${H}`,role:'img','aria-labelledby':'m4t m4d'});
-  svg.appendChild(el('title',{id:'m4t'},'Mapa de tiros — constelación radial de xG'));
-  svg.appendChild(el('desc',{id:'m4d'},'Cada remate es una estrella que orbita la portería. La distancia a la portería codifica el xG: cuanto más cerca, más peligro; el tamaño también es el xG y el brillo indica si fue a puerta. El lado señala el equipo —Egipto a la izquierda, Argentina a la derecha— y el ángulo, el orden cronológico del disparo. Es una abstracción radial, no una posición lateral real. Los goles son estrellas llenas con su minuto y una línea dorada los une por orden: la remontada de Argentina, de dos abajo a tres arriba.'));
+  svg.appendChild(el('title',{id:'m4t'},'Remates por peligro (xG)'));
+  svg.appendChild(el('desc',{id:'m4d'},
+    'Cada círculo es un remate colocado según su xG (más a la derecha = más peligro); el tamaño también crece con el xG. Relleno = a puerta, aro dorado = gol, contorno hueco = fuera. Una fila por equipo: Argentina arriba, Egipto abajo.'));
 
-  // ---- defs: clip to rounded sky ----
-  const clip=el('clipPath',{id:'m4clip'});
-  clip.appendChild(el('rect',{x:0,y:0,width:W,height:H,rx:12}));
-  svg.appendChild(el('defs',{},clip));
+  /* ---- xG scale (vertical gridlines + ticks) ---- */
+  [0,0.2,0.4,0.6,0.8].forEach(v=>{
+    svg.appendChild(el('line',{x1:x(v),y1:top,x2:x(v),y2:bot,stroke:cBorder,'stroke-width':0.5,'stroke-opacity':0.55}));
+    svg.appendChild(el('text',{x:x(v),y:bot+12,'text-anchor':'middle','font-size':7,fill:cMuted},es(v.toFixed(1))));
+  });
+  svg.appendChild(el('text',{x:(padL+(W-padR))/2,y:H-3,'text-anchor':'middle','font-size':7.5,fill:cMuted},'xG del remate  ·  más peligro →'));
 
-  // ---- night sky (club deep blue, flat) ----
-  svg.appendChild(el('rect',{x:0,y:0,width:W,height:H,rx:12,fill:field}));
-
-  const sky=el('g',{'clip-path':'url(#m4clip)'});
-
-  // ---- deterministic polar positions: xG -> distance, team -> side, minute -> angle ----
-  const pts=MATCH.shotsData.map(s=>{
-    const xgN=clamp(s.xg,0,XGMAX)/XGMAX;
-    const R=lerp(Rmax,Rmin,xgN);
-    const side=s.team==='home'?1:-1;
-    const mag=lerp(AMIN,AMAX,clamp(s.min,0,95)/95);
-    const th=side*mag;
-    const px=clamp(cx+Math.sin(th)*R,16,W-16);
-    const py=clamp(goalY+Math.cos(th)*R,goalY+10,246);
-    return {...s,px,py,R,th};
+  /* ---- lanes ---- */
+  [['home','Argentina',cHome,MATCH.shots[0]],['away','Egipto',cAway,MATCH.shots[1]]].forEach(([team,name,col,total])=>{
+    const ly=laneY[team];
+    svg.appendChild(el('line',{x1:padL,y1:ly,x2:W-padR,y2:ly,stroke:col,'stroke-width':0.5,'stroke-opacity':0.30}));
+    svg.appendChild(el('text',{x:padL-9,y:ly-3,'text-anchor':'end','font-size':9,'font-weight':500,fill:col},name));
+    svg.appendChild(el('text',{x:padL-9,y:ly+9,'text-anchor':'end','font-size':7.5,fill:cMuted},`${total} tiros`));
   });
 
-  // ---- xG range rings (dotted arcs) + a descending xG scale down the goal axis ----
-  sky.appendChild(el('line',{x1:cx,y1:goalY,x2:cx,y2:goalY+Rmax,stroke:'#3A4A80',
-    'stroke-opacity':0.35,'stroke-width':0.5,'stroke-dasharray':'1 5'}));
-  [0.6,0.4,0.2].forEach(xg=>{
-    const R=lerp(Rmax,Rmin,xg/XGMAX);
-    sky.appendChild(el('path',{d:ringArc(R),fill:'none',stroke:'#8894C0','stroke-opacity':0.22,
-      'stroke-width':0.75,'stroke-dasharray':'0.5 4.5','stroke-linecap':'round'}));
-    sky.appendChild(el('text',{x:(cx-4).toFixed(1),y:(goalY+R+2.4).toFixed(1),'text-anchor':'end',
-      'font-size':6.5,fill:'#9AA6CE','fill-opacity':0.85,style:'font-variant-numeric:tabular-nums'},es(xg.toFixed(1))));
+  /* ---- place shots (big first so small ones stay visible); store positions ---- */
+  const jitter=rng(11), placed=[];
+  MATCH.shotsData.slice().sort((a,b)=>b.xg-a.xg).forEach(s=>{
+    const col=s.team==='home'?cHome:cAway;
+    const cx=x(s.xg);
+    const r=3+Math.sqrt(s.xg)*13;
+    const spread=(laneH/2)-r-6;
+    const cy=laneY[s.team]+(jitter()-0.5)*2*Math.max(spread,0);
+    placed.push({s,cx,cy,r,col});
   });
-  sky.appendChild(el('text',{x:(cx-4).toFixed(1),y:(goalY+10).toFixed(1),'text-anchor':'end',
-    'font-size':6.5,fill:'#9AA6CE','fill-opacity':0.7},'xG'));
-
-  // ---- goal mouth in club gold: the shared origin every star orbits ----
-  sky.appendChild(el('path',{d:goalArc(20),fill:'none',stroke:'#C8A24B','stroke-opacity':0.55,'stroke-width':0.6}));
-  sky.appendChild(el('line',{x1:cx-22,y1:goalY,x2:cx+22,y2:goalY,stroke:'#C8A24B','stroke-opacity':0.65,'stroke-width':2.5,'stroke-linecap':'round'}));
-  sky.appendChild(el('line',{x1:cx-22,y1:goalY,x2:cx-22,y2:goalY+4.5,stroke:'#C8A24B','stroke-opacity':0.5,'stroke-width':1}));
-  sky.appendChild(el('line',{x1:cx+22,y1:goalY,x2:cx+22,y2:goalY+4.5,stroke:'#C8A24B','stroke-opacity':0.5,'stroke-width':1}));
-
-  // ---- comeback line: goals joined in chronological order (crosses left->right = the swing) ----
-  const goals=pts.filter(p=>p.goal).sort((a,b)=>a.min-b.min);
-  let ln='';
-  goals.forEach((g,i)=> ln+=(i?'L':'M')+g.px.toFixed(1)+' '+g.py.toFixed(1)+' ');
-  sky.appendChild(el('path',{d:ln,fill:'none',stroke:'#C8A24B','stroke-opacity':0.32,
-    'stroke-width':0.7,'stroke-dasharray':'1.5 3','stroke-linecap':'round','stroke-linejoin':'round'}));
-
-  // ---- misses first (dimmer), then goals on top ----
-  pts.filter(p=>!p.goal).forEach(s=>{
-    const c=TEAM[s.team], dR=1.7+s.xg*4.3;
-    if(s.onTarget){                                            // on target -> brighter, with halo ring
-      sky.appendChild(el('circle',{cx:s.px.toFixed(1),cy:s.py.toFixed(1),r:(dR+2.6).toFixed(1),fill:'none',stroke:c.star,'stroke-opacity':0.4,'stroke-width':0.6}));
-      sky.appendChild(el('circle',{cx:s.px.toFixed(1),cy:s.py.toFixed(1),r:dR.toFixed(1),fill:c.star,'fill-opacity':0.92}));
-      sky.appendChild(el('circle',{cx:s.px.toFixed(1),cy:s.py.toFixed(1),r:Math.max(0.9,dR*0.4).toFixed(1),fill:c.core,'fill-opacity':0.9}));
-    } else {                                                   // off target -> dim speck
-      sky.appendChild(el('circle',{cx:s.px.toFixed(1),cy:s.py.toFixed(1),r:dR.toFixed(1),fill:c.star,'fill-opacity':0.4,stroke:c.star,'stroke-opacity':0.45,'stroke-width':0.5}));
+  placed.forEach(({s,cx,cy,r,col})=>{
+    if(s.onTarget){
+      svg.appendChild(el('circle',{cx,cy,r,fill:col,'fill-opacity':s.goal?0.9:0.6,stroke:col,'stroke-width':1}));
+    }else{
+      svg.appendChild(el('circle',{cx,cy,r,fill:col,'fill-opacity':0.09,stroke:col,'stroke-width':1.2}));
+    }
+    if(s.goal){
+      svg.appendChild(el('circle',{cx,cy,r:r+2.6,fill:'none',stroke:cGold,'stroke-width':1.3}));
+      svg.appendChild(el('text',{x:cx,y:cy+r+9,'text-anchor':'middle','font-size':7,fill:cMuted},minLabel(s.min)));
     }
   });
 
-  goals.forEach(s=>{
-    const c=TEAM[s.team], sR=4.2+s.xg*7;
-    sky.appendChild(el('circle',{cx:s.px.toFixed(1),cy:s.py.toFixed(1),r:(sR+7).toFixed(1),fill:'none',stroke:c.star,'stroke-opacity':0.16,'stroke-width':0.75}));
-    sky.appendChild(el('circle',{cx:s.px.toFixed(1),cy:s.py.toFixed(1),r:(sR+3.5).toFixed(1),fill:'none',stroke:c.star,'stroke-opacity':0.45,'stroke-width':0.75}));
-    sky.appendChild(el('path',{d:sparkle(s.px,s.py,sR),fill:c.star,'fill-opacity':1}));
-    sky.appendChild(el('path',{d:sparkle(s.px,s.py,sR*0.5),fill:c.core,'fill-opacity':0.95}));
-    sky.appendChild(el('text',{x:s.px.toFixed(1),y:(s.py-sR-7).toFixed(1),'text-anchor':'middle','font-size':8.5,
-      'font-weight':500,fill:c.label,style:'font-variant-numeric:tabular-nums'},minLabel(s.min)));
-  });
-
-  svg.appendChild(sky);
-
-  // ---- legend (in-field, bottom) ----
-  const lg=el('g',{'font-size':8,fill:'#AEB6D6','font-weight':400});
-  const y1=H-24, y2=H-9;
-  // gol (sparkle)
-  lg.appendChild(el('path',{d:sparkle(20,y1-2.5,4),fill:'#E0CFA0','fill-opacity':0.95}));
-  lg.appendChild(el('text',{x:28,y:y1},'gol'));
-  // a puerta (halo)
-  lg.appendChild(el('circle',{cx:64,cy:y1-2.5,r:4.2,fill:'none',stroke:'#AEB6D6','stroke-opacity':0.5,'stroke-width':0.6}));
-  lg.appendChild(el('circle',{cx:64,cy:y1-2.5,r:2.4,fill:'#AEB6D6'}));
-  lg.appendChild(el('text',{x:72,y:y1},'a puerta'));
-  // tamaño = xG
-  [1.6,2.6,3.8].forEach((rr,i)=>lg.appendChild(el('circle',{cx:132+i*10,cy:y1-2.5,r:rr,fill:'#8A93B8'})));
-  lg.appendChild(el('text',{x:158,y:y1},'tamaño = xG'));
-  // teams with side hint
-  lg.appendChild(el('circle',{cx:20,cy:y2-2.5,r:3.4,fill:TEAM.away.star}));
-  lg.appendChild(el('text',{x:28,y:y2},'Egipto (izq.)'));
-  lg.appendChild(el('circle',{cx:110,cy:y2-2.5,r:3.4,fill:TEAM.home.star}));
-  lg.appendChild(el('text',{x:118,y:y2},'Argentina (der.)'));
-  lg.appendChild(el('text',{x:W-14,y:y2,'text-anchor':'end',fill:'#8A93B8'},'distancia a la portería = xG'));
-  svg.appendChild(lg);
-
-  return svg;
-
-  // ---- local helpers ----
-  function sparkle(x0,y0,R){
-    const inner=R*0.34; let d='';
-    for(let k=0;k<8;k++){ const rr=k%2?inner:R; const a=Math.PI/4*k;
-      d+=(k?'L':'M')+(x0+Math.sin(a)*rr).toFixed(1)+' '+(y0-Math.cos(a)*rr).toFixed(1)+' '; }
-    return d+'Z';
+  /* ---- annotate the standout chance: Messi's missed penalty (0.76 xG) ---- */
+  const pen=placed.find(o=>o.s.xg===0.76);
+  if(pen){
+    svg.appendChild(el('text',{x:pen.cx,y:pen.cy-pen.r-4,'text-anchor':'middle','font-size':7.5,'font-weight':500,fill:cMuted},'penalti fallado 21\''));
   }
-  function ringArc(R){
-    let d=''; const N=40;
-    for(let i=0;i<=N;i++){ const t=-AMAX+2*AMAX*i/N;
-      d+=(i?'L':'M')+(cx+Math.sin(t)*R).toFixed(1)+' '+(goalY+Math.cos(t)*R).toFixed(1)+' '; }
-    return d;
-  }
-  function goalArc(R){
-    let d=''; const N=14, span=1.15;
-    for(let i=0;i<=N;i++){ const t=-span+2*span*i/N;
-      d+=(i?'L':'M')+(cx+Math.sin(t)*R).toFixed(1)+' '+(goalY+Math.cos(t)*R).toFixed(1)+' '; }
-    return d;
-  }
+
+  return svg;   // la leyenda vive en el subtítulo de la tarjeta; el campo queda limpio
 }
 
 /* ============================================================================
@@ -1287,7 +1127,7 @@ function legend(items){
 
 // 1 — Momentum (hero)
 mount('1','Momentum — “lecho de río”',
-  'Altura de la colina = xG del remate · destello = gol · la banda se inclina hacia quien presiona.',
+  'Tamaño del círculo = xG del remate · aro dorado = gol · la banda se inclina hacia quien presiona.',
   ()=>vizMomentum(),
   ()=>rawTable(['Min','Equipo','xG','A puerta','Gol'],
     MATCH.shotsData.map(s=>[minLabel(s.min),s.team==='home'?'ARG':'EGY',es(s.xg.toFixed(2)),s.onTarget?'sí':'no',s.goal?'sí':'no'])));
@@ -1299,15 +1139,15 @@ mount('2','xG acumulado — “escalera”',
   ()=>rawTable(['Equipo','xG total'],[['Argentina',es(MATCH.xg[0].toFixed(2))],['Egipto',es(MATCH.xg[1].toFixed(2))]]),
   legend([['#4A82D6','Argentina'],['#D96B6B','Egipto']]));
 
-// 3 — Possession tug of war
-mount('3','Posesión — “tira y afloja”',
-  'El nudo se desplaza hacia quien tiene más balón. En modo Live, deriva con el partido.',
+// 3 — Possession as field control
+mount('3','Posesión — “control del campo”',
+  'El equipo con más balón ocupa más terreno y empuja la línea de control hacia el campo rival.',
   ()=>vizTug(),
   ()=>rawTable(['Equipo','Posesión'],[['Argentina',MATCH.possession[0]+'%'],['Egipto',MATCH.possession[1]+'%']]));
 
-// 4 — Constellation shot map
-mount('4','Mapa de tiros — “constelación”',
-  'Cada estrella es un remate; tamaño = xG, brillo = a puerta, estrella llena = gol.',
+// 4 — Shots by danger (xG dot plot)
+mount('4','Remates por peligro — “xG”',
+  'Cada círculo es un remate por su xG; relleno = a puerta, aro dorado = gol, contorno = fuera.',
   ()=>vizConstellation(),
   ()=>rawTable(['Min','Equipo','xG','A puerta','Gol'],
     MATCH.shotsData.map(s=>[minLabel(s.min),s.team==='home'?'ARG':'EGY',es(s.xg.toFixed(2)),s.onTarget?'sí':'no',s.goal?'sí':'no'])));
