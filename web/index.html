@@ -19,8 +19,8 @@
     <!-- ⚠️ CACHE-BUST CHECKLIST · bump ALL `?v=` together on every ship.
          Sites: this stylesheet (below) + the 8 <script> tags at the end of
          <body>. Miss one and a client serves a stale file against fresh
-         siblings — a subtle, hard-to-debug class of bug. Current: v=84 -->
-    <link rel="stylesheet" href="styles.css?v=84">
+         siblings — a subtle, hard-to-debug class of bug. Current: v=85 -->
+    <link rel="stylesheet" href="styles.css?v=85">
 
     <!-- RM Neue is the brand font; fall back to Inter (Cibeles uses near-identical metrics) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -39,6 +39,19 @@
                     <div class="side-title">Real Madrid</div>
                     <div class="side-subtitle" id="sideSubtitle">Fan App Mockup</div>
                 </div>
+                <!-- Acceso directo al prototipo autónomo de Data Visualizations (Match Center).
+                     Se abre en una pestaña nueva para no perder la consola de mockups. -->
+                <a class="side-dataviz-link" href="dataviz/index.html" target="_blank" rel="noopener"
+                   title="Abrir el prototipo de Data Visualizations (Match Center)"
+                   aria-label="Abrir Data Visualizations en una pestaña nueva">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="4" y1="20" x2="4" y2="12"></line>
+                        <line x1="10" y1="20" x2="10" y2="6"></line>
+                        <line x1="16" y1="20" x2="16" y2="14"></line>
+                        <line x1="22" y1="20" x2="22" y2="9"></line>
+                    </svg>
+                    <span>DataViz</span>
+                </a>
             </div>
 
             <!-- App switcher -->
@@ -242,14 +255,14 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
     <!-- mock_utils.js MUST load first: it defines window.MockUI (toast,
          escapeHtml, copyToClipboard…) that the modules below rely on. -->
-    <script defer src="mock_utils.js?v=84"></script>
-    <script defer src="auth.js?v=84"></script>
-    <script defer src="flags.js?v=84"></script>
-    <script defer src="data.js?v=84"></script>
-    <script defer src="app.js?v=84"></script>
+    <script defer src="mock_utils.js?v=85"></script>
+    <script defer src="auth.js?v=85"></script>
+    <script defer src="flags.js?v=85"></script>
+    <script defer src="data.js?v=85"></script>
+    <script defer src="app.js?v=85"></script>
     <!-- Auth UI extraído de app.js (mismos símbolos globales). -->
-    <script defer src="auth_ui.js?v=84"></script>
-    <script defer src="flow_exporter.js?v=84"></script>
-    <script defer src="jira_initiatives.js?v=84"></script>
+    <script defer src="auth_ui.js?v=85"></script>
+    <script defer src="flow_exporter.js?v=85"></script>
+    <script defer src="jira_initiatives.js?v=85"></script>
 </body>
 </html>
