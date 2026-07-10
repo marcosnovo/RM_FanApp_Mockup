@@ -290,6 +290,36 @@ body.resizing-side * {
     margin-top: 2px;
 }
 
+/* Acceso a Data Visualizations (arriba a la izquierda, junto al título) */
+.side-dataviz-link {
+    margin-left: auto;
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--side-tint);
+    border: 1px solid var(--side-border);
+    color: var(--side-text);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.side-dataviz-link svg { color: #C8A24B; flex-shrink: 0; } /* oro Real Madrid */
+.side-dataviz-link:hover {
+    background: var(--rm-primary);
+    border-color: var(--rm-primary);
+    color: #fff;
+}
+.side-dataviz-link:hover svg { color: #fff; }
+.side-dataviz-link:focus-visible {
+    outline: 2px solid var(--rm-primary);
+    outline-offset: 2px;
+}
+
 /* App switcher (Fan App / VIP App) */
 .app-switcher {
     margin: 0 16px;
